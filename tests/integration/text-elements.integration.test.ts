@@ -166,10 +166,11 @@ describe('text elements via SAPRead/SAPWrite', () => {
       const read = (part?: string) =>
         call('SAPRead', { type: 'TEXT_ELEMENTS', objectType: type, name, ...(part ? { include: part } : {}) });
       const write = async (textPart: string, source: string) => {
-        await call('SAPWrite', { action: 'edit_text_symbols', type, name, textPart, source });
+        const message = await call('SAPWrite', { action: 'edit_text_symbols', type, name, textPart, source });
         const poolUri = `/sap/bc/adt/textelements/${collection}/${name.toLowerCase()}`;
         const inactive = await client.getInactiveObjects();
         expect(inactive.filter((entry) => entry.uri.toLowerCase() === poolUri)).toEqual([]);
+        return message;
       };
 
       await write('symbols', '@MaxLength:20\n001=Hello\n\n@MaxLength:20\n002=Second\n');
@@ -210,16 +211,16 @@ describe('text elements via SAPRead/SAPWrite', () => {
       expect(malformed.isError).toBe(true);
       expect(malformed.content[0]?.text).toMatch(/406|inconsisten|text elements contain errors/i);
       expect(await read('symbols')).toBe(symbols);
-      await write('symbols', '@MaxLength:20\n001=Replacement\n');
+      expect(await write('symbols', '@MaxLength:20\n001=Replacement\n')).toContain('Removed texts: 002.');
       expect(await read('symbols')).toContain('001=Replacement');
       expect(await read('symbols')).not.toContain('002=');
 
       // Explicit empty source clears only the selected part, without requiring SAPActivate.
-      await write('symbols', '');
+      expect(await write('symbols', '')).toContain('Removed texts: 001.');
       expect(await read('symbols')).toBe('');
       expect(await read('selections')).toBe(selections);
       expect(await read('headings')).toBe(headings);
-      await write('selections', '');
+      expect(await write('selections', '')).toContain('Removed texts: P_TEST, S_TEST.');
       expect(await read('selections')).not.toMatch(/Parameter label|Selection label/);
       expect(await read('headings')).toBe(headings);
 

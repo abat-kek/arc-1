@@ -24,5 +24,9 @@ the unversioned developer view. Transport check/history use the same object URI;
 SAP still decides recording requirements and whether an object is changeable.
 On BTP, checking a protected SAP object correctly returns the backend's refusal.
 
+The shared URI mapping also corrects activation, ATC, syntax-check and navigation
+routing, which previously fell back to a program URI. Existing activation write
+and package gates still apply; endpoint support is decided by SAP.
+
 SAPWrite creation/update/deletion remains unsupported. KTD documentation creation
 against an existing SMBC parent is a separate, already-supported operation.

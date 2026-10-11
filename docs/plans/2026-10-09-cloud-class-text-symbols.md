@@ -54,6 +54,8 @@ strict docs, pass. Fresh compiled-dispatcher tests on 758 SP02 and 816 SP01 writ
 symbols, replace them with one and explicitly clear the pool; active and pending
 class source remain byte-identical after each pool activation. Both fixtures were
 deleted with confirmed metadata 404. 750 discovery again lacks the class-text service.
-These fresh native runs use the on-prem dispatcher; the Cloud-schema unit controls
-pass, and the earlier dated BTP native evidence above remains separate. No new BTP
-live run is claimed. Roadmap checked: no additional impact.
+Later the same day, combined build `fadfeae5` passed the same lifecycle on BTP 920
+SP05 (client 100, named-user OAuth, owned Cloud package). Active and pending class
+source stayed byte-identical; cleanup returned owner404, zero directory rows and
+no inactive pool entry. This tests the compiled dispatcher, not HTTP MCP/PP.
+Roadmap checked: no additional impact.

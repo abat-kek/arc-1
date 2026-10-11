@@ -93,3 +93,17 @@ errors), hiding that SAP had accepted the change. It now states the PUT outcome 
 that the resulting state is unconfirmed, without claiming a confirmed state, and keeps
 that guidance under `ARC1_MINIMAL_ERRORS`. The revoke instruction appears only when the
 confirmed contract is RELEASED. Merged current main to resolve the roadmap conflict.
+
+## 1.6 refresh (2026-10-11)
+
+Merged released main `2bf00bf1`; independent code review found no additional runtime
+change necessary. All 8,186 unit tests, typecheck, lint, policy, build, budgets and
+strict docs pass. Fresh compiled public-dispatcher C1 release/repeat and exact
+visibility readback pass on 758 SP02 and 816 SP01. The C4 control refuses a read-only
+visibility change on 758; on 816 it reports the applied RELEASED state and mismatch.
+Every released contract was revoked and read back before deletion; owner 404 and
+zero TADIR rows followed. A read-only 750 probe confirms the API-release endpoint404.
+An initial test-harness API_STATE call used an unsupported argument; its class was
+recovered by the supported name/objectType read, all contracts revoked, and deleted.
+BTP evidence above was reviewed but not rerun in this refresh. COMPAT-16 remains
+unchanged: no historical catalog repair or automatic revocation was attempted.

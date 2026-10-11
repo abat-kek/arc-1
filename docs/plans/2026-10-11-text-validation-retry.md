@@ -1,38 +1,36 @@
 # Text-pool validation must not trigger MIME negotiation
 
 PR #974 supplied the reproduction: a selection label exceeding 30 characters
-returns HTTP 406, and ARC-1 repeats the rejected PUT with `Accept: application/xml`.
-The same status also represents genuine content negotiation, so disabling every
-406 retry would break supported backends.
+returns HTTP 406, and ARC-1 repeats the rejected PUT with a generic Accept header.
+Changing Accept cannot repair the submitted text.
 
-## Decision
+## Decision and review
 
-Keep the existing negotiation fallback in one small helper. Suppress it only for
-text-part PUTs with live-verified validation keys: `SEDX_ADT/110` (selection length),
-`SEDX_ADT/107` (invalid annotation), and `DS/512` (inconsistent symbols). Reuse the
-existing XML property extractor. The T100 key identifies the failure regardless
-of exception serialization; no localized message matching or new XML parser is needed.
+Keep the existing fallback in one small helper. On text-part PUT routes only,
+reuse the XML property extractor: a nonempty T100 message class other than
+`SADT_RESOURCE` is an application error, so return the original failure without
+retrying. Check this before extracting MIME-looking text from the error.
 
-Check these keys before extracting MIME-looking text from an error. Preserve
-unknown messages, other routes/methods, 415 handling, the legacy 7.40 fallback,
-and caching only after successful negotiation. This is narrower than treating
-all messages outside `SADT_RESOURCE` as validation failures.
+An initial three-code allowlist was incomplete. Independent probes reproduced
+additional `SEDX_ADT` errors and `00/001` for invalid maximum-length syntax.
+Classifying individual message numbers would require ongoing compatibility work.
+The route boundary keeps this change narrower than #974's global proposal.
 
-## Reproduction and validation
+Preserve `SADT_RESOURCE` negotiation, errors without a message class, other routes
+and methods, 415 handling, legacy 7.40 fallback, and success-only header caching.
+No input parser, settings or tool-schema changes are needed.
 
-Baseline `3b6b003d` (main plus #971), Node 24, direct ADT with the public dispatcher
-for disposable object lifecycles:
+## Verification
 
-- 758 and 816 over HTTPS/Basic: overlong selections (including `@DDICReference`),
-  missing/too-small symbol lengths, and lowercase annotations each cause two PUTs.
-- BTP ABAP, named-user OAuth: the symbol cases also cause two PUTs.
-- A deliberately invalid Accept on a valid text-part GET negotiates successfully
-  on all three systems. 750 discovery has no text-elements service; its native
-  path returns 404. No 7.40 system is available.
-- All disposable objects were deleted and verified absent with native 404s.
+Baseline and fixed probes use disposable objects through the public dispatcher
+and native ADT. On 758 SP02 and 816 SP01 over HTTPS Basic, validation failures
+produce two PUTs on the baseline; genuine GET and PUT negotiation is identified
+by `SADT_RESOURCE/044`. BTP ABAP 920 SP05 uses named-user OAuth and supports class
+symbols. 750 SP02 has no text-elements service (discovery and native 404); no 7.40
+system is available. No principal-propagation or CF-route coverage is claimed.
 
-Unit regressions cover the transport attempt count/original error and follow-up
-write, structured XML variants, known/unknown keys, route scope and MIME inference.
-The live cases pass on runtime `d3807eb5`: one rejected PUT on 758/816/BTP and
-unchanged genuine negotiation. All 8,375 unit tests and repository gates pass. No roadmap impact (FEAT-34 is a separate
-translation-workflow gap).
+Regressions check attempt counts, original-error retention, subsequent writes,
+XML variants, route/method boundaries and genuine negotiation. Full repository
+gates and live checks must pass on the final revision; all probe owners are
+removed and verified absent. No roadmap impact: FEAT-34 concerns translation
+workflows beyond these existing surfaces.

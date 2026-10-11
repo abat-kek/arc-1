@@ -1471,9 +1471,12 @@ describe('AdtHttpClient', () => {
       expect(fetchHeaders(1).Accept).toBe('application/vnd.sap.adt.transportorganizertree.v1+xml');
     });
 
-    it('returns text validation once and keeps the next write on its original media type', async () => {
-      const refused =
-        '<exception><type id="ExceptionResourceNotAcceptable"/><message>Length exceeds 30 characters</message><properties><entry key="T100KEY-ID">SEDX_ADT</entry><entry key="T100KEY-NO">110</entry></properties></exception>';
+    it.each([
+      ['SEDX_ADT', '110'],
+      ['SEDX_ADT', '106'],
+      ['00', '001'],
+    ])('returns %s/%s once and keeps the next write on its original media type', async (id, number) => {
+      const refused = `<exception><type id="ExceptionResourceNotAcceptable"/><message>Invalid text content</message><properties><entry key="T100KEY-ID">${id}</entry><entry key="T100KEY-NO">${number}</entry></properties></exception>`;
       mockFetch.mockResolvedValue(mockResponse(406, refused));
       mockFetch.mockResolvedValueOnce(mockResponse(200, '', { 'x-csrf-token': 'T' }));
       const client = new AdtHttpClient(getDefaultConfig());

@@ -11,7 +11,12 @@ describe('406 Accept fallback', () => {
     ['SEDX_ADT', '110'],
     ['SEDX_ADT', '107'],
     ['DS', '512'],
-  ])('does not negotiate verified text validation %s/%s', (id, number) => {
+    ['SEDX_ADT', '106'],
+    ['SEDX_ADT', '102'],
+    ['SEDX_ADT', '101'],
+    ['00', '001'],
+    ['OTHER', '999'],
+  ])('does not negotiate text-part application errors %s/%s', (id, number) => {
     expect(acceptFallback(exception(id, number), media, 'PUT', path)).toBeUndefined();
   });
 
@@ -35,12 +40,10 @@ describe('406 Accept fallback', () => {
     ).toBeUndefined();
   });
 
-  it.each([
-    ['SADT_RESOURCE', '044'],
-    ['SEDX_ADT', '999'],
-    ['OTHER', '110'],
-  ])('preserves fallback for other structured errors %s/%s', (id, number) => {
-    expect(acceptFallback(exception(id, number), media, 'PUT', path)).toBe('application/xml');
+  it('preserves framework negotiation and errors without an application message class', () => {
+    for (const body of [exception('SADT_RESOURCE', '044'), exception('', ''), 'Not acceptable']) {
+      expect(acceptFallback(body, media, 'PUT', path)).toBe('application/xml');
+    }
   });
 
   it('keeps the validation exception scoped to text-part PUTs', () => {

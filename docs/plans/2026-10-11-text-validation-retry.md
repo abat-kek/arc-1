@@ -33,6 +33,6 @@ for disposable object lifecycles:
 
 Unit regressions cover the transport attempt count/original error and follow-up
 write, structured XML variants, known/unknown keys, route scope and MIME inference.
-The same live cases must be rerun on the final build, expecting one rejected PUT
-and unchanged genuine negotiation. No roadmap impact (FEAT-34 is a separate
+The live cases pass on runtime `d3807eb5`: one rejected PUT on 758/816/BTP and
+unchanged genuine negotiation. All 8,375 unit tests and repository gates pass. No roadmap impact (FEAT-34 is a separate
 translation-workflow gap).

@@ -28,8 +28,10 @@ refuses a change-check against the protected SAP-owned /AIF object.
 
 Reviewed before implementation: no generic read-only SDO framework is necessary
 for one type. Existing guarded fetchSource and shared transport mapping are enough.
-Generic URI-based activation/diagnostics retain their existing safety controls;
-no new create/update/delete capability is advertised. No reusable open PR exists.
+The shared URI map also corrects activation/ATC/syntax/navigation routing
+(formerly a program URI); existing write and package gates still apply. KTD
+parent creation reuses this map instead of a duplicate SMBC path. No new source
+create/update/delete capability is advertised. No reusable open PR exists.
 
 Roadmap checked: no dedicated remaining SMBC item; no roadmap impact.
 
@@ -59,5 +61,4 @@ HTTPS Basic on 750 SP02, 758 SP02 and 816 SP01, and named-user OAuth on BTP:
 
 Full units, typecheck, lint, policy validation, build, file/schema budgets and
 strict MkDocs passed. No full MCP HTTP, PP or BTP customer-owned SMBC lifecycle is
-claimed for this patch. Final review found no need for a new parser, cache, schema
-framework or transport implementation. Roadmap rechecked: no roadmap impact.
+claimed for this patch.

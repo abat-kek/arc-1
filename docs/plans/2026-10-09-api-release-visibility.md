@@ -105,5 +105,8 @@ Every released contract was revoked and read back before deletion; owner 404 and
 zero TADIR rows followed. A read-only 750 probe confirms the API-release endpoint404.
 An initial test-harness API_STATE call used an unsupported argument; its class was
 recovered by the supported name/objectType read, all contracts revoked, and deleted.
-BTP evidence above was reviewed but not rerun in this refresh. COMPAT-16 remains
-unchanged: no historical catalog repair or automatic revocation was attempted.
+Later that day, combined build `fadfeae5` passed C1 release/repeat/revoke and C4
+applied-mismatch reporting on BTP 920 SP05 (client 100, named-user OAuth). All
+released contracts were confirmed revoked before deletion; owner404 and zero
+directory rows confirmed cleanup. This tests the compiled dispatcher, not HTTP
+MCP/PP. COMPAT-16 remains unchanged; no historical catalog repair was attempted.

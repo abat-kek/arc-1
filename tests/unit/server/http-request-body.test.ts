@@ -107,34 +107,35 @@ it('bounds decompressed bytes and releases failed parse reservations', async () 
   await request(app).post('/mcp').type('json').send('{}').expect(200);
 });
 
-it('bounds concurrent admitted bodies until responses complete, without blocking health', async () => {
-  const app = express();
-  app.use(createHttpJsonParser(MAX_HTTP_REQUEST_BYTES));
-  const finish: Array<() => void> = [];
-  app.use((req, res) => {
-    if (req.query.hold) finish.push(() => res.sendStatus(200));
-    else res.sendStatus(200);
-  });
-  const first = request(app)
-    .post('/mcp?hold=1')
-    .type('json')
-    .send('{}')
-    .then((r) => r);
-  const second = request(app)
-    .post('/mcp?hold=1')
-    .type('json')
-    .send('{}')
-    .then((r) => r);
-  try {
-    await vi.waitFor(() => expect(finish).toHaveLength(2));
-    await request(app).post('/mcp').type('json').send('{}').expect(503).expect('Retry-After', '1');
-    await request(app).get('/health').expect(200);
-  } finally {
-    for (const end of finish) end();
-    await Promise.all([first, second]);
-  }
-  await request(app).post('/mcp').type('json').send('{}').expect(200);
-});
+it.each([8 * 1024 * 1024, MAX_HTTP_REQUEST_BYTES])(
+  'accounts for declared bytes (%i), leaving small requests available',
+  async (bytes) => {
+    const app = express();
+    app.use(createHttpJsonParser(MAX_HTTP_REQUEST_BYTES));
+    const finish: Array<() => void> = [];
+    app.use((req, res) => {
+      if (req.query.hold) finish.push(() => res.sendStatus(200));
+      else res.sendStatus(200);
+    });
+    const held = Array.from({ length: (32 * 1024 * 1024) / bytes }, () =>
+      request(app)
+        .post('/mcp?hold=1')
+        .type('json')
+        .send(payload(bytes))
+        .then((r) => r),
+    );
+    try {
+      await vi.waitFor(() => expect(finish).toHaveLength(held.length));
+      await request(app).post('/mcp').type('json').send(payload(102401)).expect(503).expect('Retry-After', '1');
+      await request(app).post('/mcp').type('json').send(payload(102400)).expect(200);
+      await request(app).get('/health').expect(200);
+    } finally {
+      for (const end of finish) end();
+      await Promise.all(held);
+    }
+    await request(app).post('/mcp').type('json').send(payload(bytes)).expect(200);
+  },
+);
 
 it('releases disconnected chunked requests', async () => {
   const app = appWithLimit(MAX_HTTP_REQUEST_BYTES);
@@ -157,12 +158,13 @@ it('releases disconnected chunked requests', async () => {
   const second = open();
   try {
     await vi.waitFor(async () => {
-      expect((await request(server).post('/mcp').type('json').send('{}')).status).toBe(503);
+      expect((await request(server).post('/mcp').type('json').send(payload(102401))).status).toBe(503);
     });
+    await request(server).post('/mcp').type('json').send('{}').expect(200);
     first.destroy();
     second.destroy();
     await vi.waitFor(async () => {
-      expect((await request(server).post('/mcp').type('json').send('{}')).status).toBe(200);
+      expect((await request(server).post('/mcp').type('json').send(payload(102401))).status).toBe(200);
     });
   } finally {
     first.destroy();
@@ -186,4 +188,18 @@ it('wires the limit into the real HTTP server while retaining bearer authenticat
   });
   await request(app).post('/mcp').type('json').send(payload(102401)).expect(401);
   await request(app).post('/mcp').type('json').send(payload(131073)).expect(413);
+});
+
+it('releases large reservations after encoded-body failures', async () => {
+  const app = appWithLimit(MAX_HTTP_REQUEST_BYTES);
+  for (let i = 0; i < 3; i++) {
+    await request(app)
+      .post('/mcp')
+      .type('json')
+      .set('Content-Encoding', 'gzip')
+      .serialize((value) => value)
+      .send(gzipSync('{"private":"secret"'))
+      .expect(400);
+  }
+  await request(app).post('/mcp').type('json').send(payload(MAX_HTTP_REQUEST_BYTES)).expect(200);
 });

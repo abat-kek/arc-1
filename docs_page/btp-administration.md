@@ -332,11 +332,15 @@ and keep the larger tier until sustained evidence justifies reducing it.
 
 For a large source write, set `ARC1_MAX_HTTP_REQUEST_BYTES` in the deployment's
 `.mtaext` properties (100 KiB default; 16 MiB maximum), and align any proxy limit.
-Each in-flight JSON request reserves its limit, with a 100 KiB minimum, against a
-fixed 32 MiB input budget until its response ends; excess requests receive 503
-with `Retry-After`. Allow additional RAM for parsed JSON, source strings and tool
-work. This budget is separate from data-preview response admission. Verify peak
-RSS with concurrent large writes before increasing the setting in a small CF app.
+Bodies above 100 KiB reserve their declared size (capped at the limit), or the
+full limit for unknown/compressed lengths, against a 32 MiB admission budget;
+excess large requests receive 503 with `Retry-After`. Requests with an uncompressed declared size of 100 KiB or less remain
+available. Reservations end on response completion or disconnect, but disconnected
+tools can retain their input until dispatch completes: this is not a live-memory
+bound. Slow unauthenticated uploads can occupy large-body capacity; configure
+proxy body/read timeouts. Verify peak RSS with concurrent large writes and allow
+for JSON, strings and tool work before increasing the setting. Data-preview
+response admission is separate.
 
 ### Non-rolling update for shared Basic
 

@@ -8,12 +8,13 @@ Large source writes therefore need an explicit server-side request contract.
 
 - Add ARC1_MAX_HTTP_REQUEST_BYTES / --max-http-request-bytes, default 102400,
   positive integer capped at 16 MiB. Keep the current default; allow an operator
-  to opt into larger MCP JSON requests. OAuth/form JSON stays at 100 KiB.
+  to opt into larger MCP JSON requests. Other JSON endpoints and URL-encoded forms stay at 100 KiB.
 - Include /mcp, aggregate/pinned paths and Copilot's JSON /authorize alias.
-- Before parsing JSON, reserve its configured maximum against a fixed 32 MiB
-  per-server in-flight input budget. Hold until response completion/disconnect;
-  reject excess admission with 503, never queue. This bounds concurrent parsing
-  before authentication without adding a second operator setting.
+- Before parsing JSON above 100 KiB, reserve its uncompressed declared size
+  (capped at the limit), or the full limit for unknown/compressed lengths, against
+  a 32 MiB budget. Hold until response completion/disconnect; reject excess
+  large-body admission with 503. Default-sized bodies bypass the budget so
+  slow uploads and long tool calls cannot reserve away ordinary traffic.
 - Return concise JSON for malformed/oversized input without echoing payloads.
   Keep URL-encoded bodies at their existing limit and authentication/safety intact.
 - Test exact byte boundaries, UTF-8, chunked/compressed bodies, route aliases,
@@ -23,7 +24,9 @@ Large source writes therefore need an explicit server-side request contract.
 
 Review: raising only Express's limit multiplies pre-auth memory pressure. A small
 admission counter suffices; no generic queue or policy framework. The byte budget
-bounds admitted input, not total process RSS (JSON/string/object overhead remains).
+limits larger admissions, not live memory: disconnected tool calls may retain
+input, and JSON/string/object overhead remains. Slow unauthenticated uploads can
+occupy large-body capacity; proxy read/body timeouts remain necessary.
 
 ## Validation
 
@@ -49,3 +52,27 @@ must measure their actual concurrent workload before increasing the limit.
 Final review retained one parser helper and one counter, without changing tool
 schemas, SAP write gates or default request size. Removed completed OPS-07 from
 the roadmap overview and details.
+
+
+## Independent review follow-up
+
+The initial fixed reservation caused a default-path lockout (330 slow bodies),
+and only two slow bodies or small pending calls exhausted capacity at a 16 MiB
+limit. Confirmed independently on the real authenticated HTTP server: two
+unfinished unauthenticated uploads changed both valid initialization and an
+unauthenticated request to 503. The size-aware rule above preserves ordinary
+traffic while retaining bounded larger-body admission, without auth/router hooks.
+
+A separate real-server test confirmed three disconnected synthetic tools can
+retain 36 MiB beyond the admission budget. This is documented explicitly; adding
+SAP cancellation or dispatch-lifetime accounting would be a separate contract.
+The revised tests cover declared size, small requests at capacity, unknown lengths,
+compressed parse failures and release on completion/disconnect.
+
+Follow-up validation: 8,371 tests and all local gates pass. The actual server now
+returns 401 to unauthenticated small requests and 200 to authenticated
+initialization with two unfinished 16 MiB uploads; the same holds with 330 slow
+uploads at the default limit. A fresh 143181-byte HTTP class write on 758 SP02
+passed activation, exact source read-back, viewer denial and deletion/404 cleanup.
+The earlier 750/816/BTP lifecycle evidence remains applicable to unchanged SAP
+write code; those lifecycles were not repeated for this parser-only correction.

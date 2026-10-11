@@ -5,7 +5,7 @@ import { MAX_HTTP_REQUEST_BYTES } from './types.js';
 const SMALL_BODY_BYTES = 100 * 1024;
 const IN_FLIGHT_BODY_BYTES = 32 * 1024 * 1024;
 
-/** Bound pre-auth JSON parsing and keep its reservation until the HTTP response ends. */
+/** Bound larger JSON admissions until response completion/disconnect; small bodies keep the default behavior. */
 export function createHttpJsonParser(maxRequestBytes: number): RequestHandler {
   if (!Number.isSafeInteger(maxRequestBytes) || maxRequestBytes < 1 || maxRequestBytes > MAX_HTTP_REQUEST_BYTES) {
     throw new Error(`maxHttpRequestBytes must be an integer between 1 and ${MAX_HTTP_REQUEST_BYTES}.`);
@@ -18,14 +18,18 @@ export function createHttpJsonParser(maxRequestBytes: number): RequestHandler {
     // Copilot's /authorize JSON body is classified as JSON-RPC only AFTER parsing.
     const mcp = isMcpHttpTraffic(req) || /^\/authorize\/*$/i.test(req.path);
     const limit = mcp ? maxRequestBytes : SMALL_BODY_BYTES;
-    const reservation = Math.max(limit, SMALL_BODY_BYTES);
-    if (reservedBytes + reservation > IN_FLIGHT_BODY_BYTES) {
+    // An uncompressed Content-Length bounds the body; unknown/compressed lengths reserve the full limit.
+    const encoding = req.headers['content-encoding'];
+    const declared = !encoding || encoding.toLowerCase() === 'identity' ? Number(req.headers['content-length']) : NaN;
+    const reservation = Math.min(limit, Number.isSafeInteger(declared) && declared >= 0 ? declared : limit);
+    const budgeted = reservation > SMALL_BODY_BYTES;
+    if (budgeted && reservedBytes + reservation > IN_FLIGHT_BODY_BYTES) {
       res.setHeader('Retry-After', '1');
       res.status(503).json({ error: 'HTTP_BODY_CAPACITY', message: 'Too many in-flight JSON requests. Retry later.' });
       return;
     }
-    reservedBytes += reservation;
-    let released = false;
+    if (budgeted) reservedBytes += reservation;
+    let released = !budgeted;
     const release = () => {
       if (released) return;
       released = true;

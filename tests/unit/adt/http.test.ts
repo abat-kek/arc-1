@@ -1471,6 +1471,26 @@ describe('AdtHttpClient', () => {
       expect(fetchHeaders(1).Accept).toBe('application/vnd.sap.adt.transportorganizertree.v1+xml');
     });
 
+    it('returns text validation once and keeps the next write on its original media type', async () => {
+      const refused =
+        '<exception><type id="ExceptionResourceNotAcceptable"/><message>Length exceeds 30 characters</message><properties><entry key="T100KEY-ID">SEDX_ADT</entry><entry key="T100KEY-NO">110</entry></properties></exception>';
+      mockFetch.mockResolvedValueOnce(mockResponse(200, '', { 'x-csrf-token': 'T' }));
+      mockFetch.mockResolvedValueOnce(mockResponse(406, refused));
+      const client = new AdtHttpClient(getDefaultConfig());
+      const path = '/sap/bc/adt/textelements/programs/ZTEST/source/selections?lockHandle=LOCK';
+      const media = 'application/vnd.sap.adt.textelements.selections.v1';
+      await expect(client.put(path, 'P_TEST=Too long', media, { Accept: media })).rejects.toMatchObject({
+        statusCode: 406,
+        responseBody: refused,
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      mockFetch.mockResolvedValueOnce(mockResponse(200, ''));
+      await client.put(path, 'P_TEST=Fixed', media, { Accept: media });
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+      expect(fetchHeaders(2).Accept).toBe(media);
+      expect(fetchHeaders(2)['Content-Type']).toBe(media);
+    });
+
     it('retries POST with fallback Content-Type on 415', async () => {
       // CSRF fetch
       mockFetch.mockResolvedValueOnce(mockResponse(200, '', { 'x-csrf-token': 'T' }));

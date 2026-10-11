@@ -334,8 +334,8 @@ For a large source write, set `ARC1_MAX_HTTP_REQUEST_BYTES` in the deployment's
 `.mtaext` properties (100 KiB default; 16 MiB maximum), and align any proxy limit.
 Bodies above 100 KiB reserve their declared size (capped at the limit), or the
 full limit for unknown/compressed lengths, against a 32 MiB admission budget;
-excess large requests receive 503 with `Retry-After`. Requests with an uncompressed declared size of 100 KiB or less remain
-available. Reservations end on response completion or disconnect, but disconnected
+excess large requests receive 503 with `Retry-After`. Requests with an uncompressed
+declared size of 100 KiB or less remain available. Reservations end on response completion or disconnect, but disconnected
 tools can retain their input until dispatch completes: this is not a live-memory
 bound. Slow unauthenticated uploads can occupy large-body capacity; configure
 proxy body/read timeouts. Verify peak RSS with concurrent large writes and allow

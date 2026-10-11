@@ -54,9 +54,11 @@ reduces the combined schema footprint without a new abstraction.
 
 Fresh native single/batch dimension lifecycles on 758 SP02 and 816 SP01 are recorded
 in #963's updated plan, with 750 discovery refusal and all fixture deletions confirmed.
-Those tests exercise the same DDIC engine; current Cloud-schema and safety unit
-controls pass. The earlier BTP 920 SP04 native evidence remains separate; no new
-BTP live run is claimed. FEAT-78's advanced definitions remain deferred.
+Later that day, combined build `fadfeae5` passed these lifecycles on BTP 920 SP05
+(client 100, named-user OAuth), including an owned Cloud data-element row. Both
+TTYPs and the data element returned metadata404 and zero directory rows after
+deletion. This tests the compiled dispatcher, not HTTP MCP/PP. FEAT-78's advanced
+definitions remain deferred.
 
 Final local validation: 8,214 unit tests, typecheck, lint, policy, build, size/schema
 budgets and strict docs pass. The existing help-text test now checks the authoritative

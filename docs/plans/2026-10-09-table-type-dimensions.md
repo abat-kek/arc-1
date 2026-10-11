@@ -84,3 +84,16 @@ Activation rejects DEC 40/2 and CHAR 0, and normalizes DEC 5/7 to 5/5, DEC 31/15
 part of the contract. Keep native semantic validation: duplicating a partial 816 type
 limit table would misrepresent other releases and add maintenance without preserving
 SAP's authoritative behavior. No runtime change is needed for this finding.
+
+## 1.6 refresh (2026-10-11)
+
+Merged released main `2bf00bf1`; independent implementation/plan review found no
+additional runtime correction necessary. 8,185 unit tests and all repository gates,
+including strict docs, pass. Fresh compiled-dispatcher tests on 758 SP02 and 816 SP01
+pass for single and batch DEC 5/2 creation, length-only updates preserving scale,
+explicit zero scale, description preservation, CHAR 32 and dictionary transitions,
+dictionary-dimension refusal, and a successful following update proving unlock.
+All four disposable table types were deleted with confirmed metadata 404. 750 SP02
+refuses before creating a table type. FEAT-78 remains deferred; Cloud exposure is
+still the separate stacked PR #966. No second metadata engine or native type-limit
+matrix is needed.

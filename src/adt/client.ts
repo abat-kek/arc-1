@@ -24,7 +24,7 @@ import { canonicalDataSourceName } from './data-source-name.js';
 import { CDS_DEPENDENCY_GRAPH_PATH, DataSourceBlocklistGuard, parseTableReplacement } from './data-source-policy.js';
 import { parseTableType, type TableTypeInfo } from './ddic-xml.js';
 import { readEnhancementImplementation } from './enhancements.js';
-import { AdtApiError, AdtSafetyError, isNotFoundError } from './errors.js';
+import { AdtApiError, AdtError, AdtSafetyError, isNotFoundError } from './errors.js';
 import { AdtHttpClient, type AdtHttpConfig, type AdtResponse } from './http.js';
 import type { AdtRequestOptions } from './http-deadline.js';
 import { AdtPackageHierarchyResolver, type PackageHierarchyResolver } from './package-hierarchy.js';
@@ -87,6 +87,7 @@ import {
   parseMessageClass,
   parseRevisionFeed,
   parseSearchResults,
+  parseServerDrivenMetadata,
   parseServiceBinding,
   parseSubpackageNodestructure,
   parseSystemInfo,
@@ -686,6 +687,25 @@ export class AdtClient {
     });
   }
 
+  /** Read native business-configuration JSON. Explicit versions must not silently fall back. */
+  async getSmbc(name: string, version?: 'active' | 'inactive'): Promise<SourceReadResult> {
+    checkOperation(this.safety, OperationType.Read, 'GetSMBC');
+    const uri = `/sap/bc/adt/bct/smbctyp/${encodeURIComponent(name.toLowerCase())}`;
+    if (version) {
+      const metadata = await this.http.get(`${uri}?version=${version}`, {
+        Accept: 'application/vnd.sap.adt.blues.v1+xml',
+      });
+      const actual = parseServerDrivenMetadata(metadata.body, 'blueSource').version;
+      if (actual !== version) {
+        throw new AdtError(
+          `Cannot confirm ${version} version of SMBC ${name}: SAP metadata reports ${actual || 'no version'}. ` +
+            'Use version="auto" for the available developer view.',
+        );
+      }
+    }
+    return this.fetchSource(`${uri}/source/main`, { version, accept: 'application/json' });
+  }
+
   /** Get metadata extension source code (DDLX) */
   async getDdlx(name: string, opts?: SourceReadOptions): Promise<SourceReadResult> {
     checkOperation(this.safety, OperationType.Read, 'GetDDLX');
@@ -1055,7 +1075,17 @@ export class AdtClient {
 
       const seen = new Set<string>();
       const matches = rawMatches
-        .filter((r) => r.objectName.toUpperCase() === name)
+        .flatMap((r) => {
+          if (r.objectName.toUpperCase() === name) return [r];
+          // 7.50 decorates display names across types; require the URI to confirm the identity.
+          if (!r.objectName.toUpperCase().startsWith(`${name} (`)) return [];
+          const segment = /^\/sap\/bc\/adt\/(?:[^/?#]+\/)*([^/?#]+)$/i.exec(r.uri)?.[1];
+          try {
+            return segment && decodeURIComponent(segment).toUpperCase() === name ? [{ ...r, objectName: name }] : [];
+          } catch {
+            return [];
+          }
+        })
         .filter((r) => {
           const key = `${r.objectType}\u0000${r.objectName}\u0000${r.packageName}\u0000${r.uri}`;
           if (seen.has(key)) return false;

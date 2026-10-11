@@ -328,6 +328,16 @@ heap limit and the `Data-result safety envelope` log shows the intended raw enve
 widest approved row shape at full configured data concurrency, inspect `cf app`/platform memory,
 and keep the larger tier until sustained evidence justifies reducing it.
 
+### Large MCP request bodies
+
+For a large source write, set `ARC1_MAX_HTTP_REQUEST_BYTES` in the deployment's
+`.mtaext` properties (100 KiB default; 16 MiB maximum), and align any proxy limit.
+Each in-flight JSON request reserves its limit, with a 100 KiB minimum, against a
+fixed 32 MiB input budget until its response ends; excess requests receive 503
+with `Retry-After`. Allow additional RAM for parsed JSON, source strings and tool
+work. This budget is separate from data-preview response admission. Verify peak
+RSS with concurrent large writes before increasing the setting in a small CF app.
+
 ### Non-rolling update for shared Basic
 
 Use a maintenance window. Do not pass a rolling strategy and do not use blue-green deployment:

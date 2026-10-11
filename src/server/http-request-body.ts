@@ -25,21 +25,25 @@ export function createHttpJsonParser(maxRequestBytes: number): RequestHandler {
     const budgeted = reservation > SMALL_BODY_BYTES;
     if (budgeted && reservedBytes + reservation > IN_FLIGHT_BODY_BYTES) {
       res.setHeader('Retry-After', '1');
-      res.status(503).json({ error: 'HTTP_BODY_CAPACITY', message: 'Too many in-flight JSON requests. Retry later.' });
+      res
+        .status(503)
+        .json({ error: 'HTTP_BODY_CAPACITY', message: 'Insufficient capacity for this JSON request. Retry later.' });
       return;
     }
-    if (budgeted) reservedBytes += reservation;
-    let released = !budgeted;
-    const release = () => {
-      if (released) return;
-      released = true;
-      reservedBytes -= reservation;
-    };
-    res.once('finish', release);
-    res.once('close', release);
+    if (budgeted) {
+      reservedBytes += reservation;
+      // 'close' also follows 'finish', and alone covers disconnects; release exactly once.
+      let released = false;
+      const release = () => {
+        if (released) return;
+        released = true;
+        reservedBytes -= reservation;
+      };
+      res.once('finish', release);
+      res.once('close', release);
+    }
     (mcp ? mcpParser : smallParser)(req, res, (err?: { status?: number; type?: string }) => {
       if (!err) return next();
-      release();
       if (err.type === 'entity.too.large') {
         res.status(413).json({
           error: 'HTTP_REQUEST_TOO_LARGE',

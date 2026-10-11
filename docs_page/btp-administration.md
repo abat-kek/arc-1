@@ -330,17 +330,12 @@ and keep the larger tier until sustained evidence justifies reducing it.
 
 ### Large MCP request bodies
 
-For a large source write, set `ARC1_MAX_HTTP_REQUEST_BYTES` in the deployment's
-`.mtaext` properties (100 KiB default; 16 MiB maximum), and align any proxy limit.
-Bodies above 100 KiB reserve their declared size (capped at the limit), or the
-full limit for unknown/compressed lengths, against a 32 MiB admission budget;
-excess large requests receive 503 with `Retry-After`. Requests with an uncompressed
-declared size of 100 KiB or less remain available. Reservations end on response completion or disconnect, but disconnected
-tools can retain their input until dispatch completes: this is not a live-memory
-bound. Slow unauthenticated uploads can occupy large-body capacity; configure
-proxy body/read timeouts. Verify peak RSS with concurrent large writes and allow
-for JSON, strings and tool work before increasing the setting. Data-preview
-response admission is separate.
+For large source writes, set `ARC1_MAX_HTTP_REQUEST_BYTES` in `.mtaext` `properties:`
+(100 KiB default, 16 MiB maximum) and align proxy limits. Follow the
+[request admission rules](configuration-reference.md#http-request-bodies), including
+proxy body/read timeouts. Before raising the limit in a small CF app, measure peak
+RSS with concurrent large writes; admission is not a live-memory bound.
+Data-preview response admission is separate.
 
 ### Non-rolling update for shared Basic
 

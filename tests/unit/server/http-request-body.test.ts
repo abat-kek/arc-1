@@ -203,3 +203,41 @@ it('releases large reservations after encoded-body failures', async () => {
   }
   await request(app).post('/mcp').type('json').send(payload(MAX_HTTP_REQUEST_BYTES)).expect(200);
 });
+
+it('releases a reservation when the client leaves during dispatch', async () => {
+  const app = express();
+  app.use(createHttpJsonParser(MAX_HTTP_REQUEST_BYTES));
+  let pending = 0;
+  app.use((req, res) => {
+    if (req.query.hold)
+      pending++; // Body parsed; the handler waits without sending a response.
+    else res.sendStatus(200);
+  });
+  const server = app.listen(0, '127.0.0.1');
+  await new Promise<void>((resolve) => server.once('listening', resolve));
+  const port = (server.address() as { port: number }).port;
+  const clients = [0, 1].map(() => {
+    const req = httpRequest({
+      host: '127.0.0.1',
+      port,
+      method: 'POST',
+      path: '/mcp?hold=1',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': MAX_HTTP_REQUEST_BYTES },
+    });
+    req.on('error', () => {}); // Expected socket closure on the deliberate client abort.
+    req.end(payload(MAX_HTTP_REQUEST_BYTES));
+    return req;
+  });
+  try {
+    await vi.waitFor(() => expect(pending).toBe(2));
+    await request(server).post('/mcp').type('json').send(payload(102401)).expect(503);
+    for (const client of clients) client.destroy();
+    await vi.waitFor(async () => {
+      expect((await request(server).post('/mcp').type('json').send(payload(102401))).status).toBe(200);
+    });
+  } finally {
+    for (const client of clients) client.destroy();
+    server.closeAllConnections();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+});

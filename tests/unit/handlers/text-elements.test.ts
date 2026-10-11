@@ -627,9 +627,10 @@ describe('text-part removal reports', () => {
       'listHeader',
     ],
     ['selections', before, 'P_TEST=?...\nP_USER=?...\nP_EMPTY=?...', 'P_TEST, P_USER'],
+    ['selections', before, 'P_USER=Fixed name', 'P_TEST'], // FUGR omits removed keys.
   ])('reports cleared %s entries and ignores empty placeholders', async (part, old, next, keys) => {
     mockPart(old, next);
-    const result = await write('', false, part);
+    const result = await write(next, false, part);
     expect(result.isError).toBeUndefined();
     expect(result.content[0]?.text).toContain(`Removed texts: ${keys}.`);
   });

@@ -1,7 +1,7 @@
 import type { TextElementPart } from './text-elements.js';
 
 /** Read SAP's canonical part bodies, not user input: SAP normalizes keys and resolves
- * dictionary labels. An omitted selection comes back as KEY=?..., headings as KEY=. */
+ * dictionary labels. Removed selections are absent or KEY=?..., empty headings KEY=. */
 function entries(part: TextElementPart, body: string): Map<string, { maintained: boolean; ddic: boolean }> {
   const result = new Map<string, { maintained: boolean; ddic: boolean }>();
   let ddic = false;

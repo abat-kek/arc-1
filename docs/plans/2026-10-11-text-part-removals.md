@@ -36,8 +36,11 @@ and do not request activation. If activation fails, preserve the verified remova
 report alongside the existing saved-state hint, including in minimal-error mode.
 The existing cache invalidation and package/scope/safety gates stay in place.
 
-Tests must exercise request order, native normalization, all three parts, explicit
-clear, DDIC annotations, placeholders, and failures before/after saving. Run the
-live lifecycle suite on 758/816, class symbols on BTP, and verify 750's service
-absence. Do not claim 7.40, PP, or unavailable classic objects on BTP as coverage.
+Validation on runtime `7e89e578`: 8,372 unit tests and all repository gates pass;
+seven lifecycle cases pass on both 758/816 (including PROG/FUGR), and BTP class
+symbol reports match native read-back. Follow-up `f63066fa` preserves the legacy
+wrapper's return type and adds a native lowercase-key/DDIC regression, passing
+on both 758/816. Comparing input instead of native read-back makes its unit
+regression fail. Disposable owners were deleted and verified 404. 750 correctly
+reports service absence; no 7.40, PP or BTP classic-object coverage is claimed.
 No roadmap impact; FEAT-34 addresses translation beyond these existing surfaces.

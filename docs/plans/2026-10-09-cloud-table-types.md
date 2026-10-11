@@ -39,6 +39,26 @@ key/range support was introduced. The initial discovery-control test seeded the
 HTTP MIME map instead of the handler feature cache; correcting the test setup
 exercised the existing gate successfully.
 
-Roadmap reviewed: FEAT-65 remains about advanced definitions. This scoped exposure
+Roadmap reviewed: FEAT-78 remains about advanced definitions. This scoped exposure
 does not implement it; the local audit's FEAT-82 recommendation is covered here.
 Depends on the dimension contract in #963.
+
+
+## 1.6 refresh (2026-10-11)
+
+Merged refreshed #963, including released main `2bf00bf1`. Independent review keeps
+the shared read/write implementation and single/batch schema parity. Removed the
+BTP type parameter's incomplete duplicate type list (it omitted TTYP); the enum is
+the authoritative list, and specific surgery/UIAD guidance remains. This also
+reduces the combined schema footprint without a new abstraction.
+
+Fresh native single/batch dimension lifecycles on 758 SP02 and 816 SP01 are recorded
+in #963's updated plan, with 750 discovery refusal and all fixture deletions confirmed.
+Those tests exercise the same DDIC engine; current Cloud-schema and safety unit
+controls pass. The earlier BTP 920 SP04 native evidence remains separate; no new
+BTP live run is claimed. FEAT-78's advanced definitions remain deferred.
+
+Final local validation: 8,214 unit tests, typecheck, lint, policy, build, size/schema
+budgets and strict docs pass. The existing help-text test now checks the authoritative
+BTP enum (including TTYP) instead of requiring a duplicate list in prose; the only
+snapshot change from this review is that prose removal.

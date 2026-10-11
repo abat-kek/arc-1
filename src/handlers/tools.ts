@@ -620,7 +620,7 @@ export function getToolDefinitions(
             type: 'string',
             enum: btp ? SAPWRITE_TYPES_BTP : SAPWRITE_TYPES_ONPREM,
             description: btp
-              ? 'Object type. Supported on BTP: CLAS, INTF, DDLS, DCLS, DDLX, BDEF, SRVD, SRVB, SKTD or KTD (Knowledge Transfer Documents), TABL, TABL/DT, TABL/DS, DOMA, DTEL, MSAG. Class-section surgery actions require type=CLAS. UIAD: checks AFF JSON; create honors header.abapLanguageVersion. Manual cloudDevelopment items are editable; generated items may be read-only.'
+              ? 'Object type. Class-section surgery actions require type=CLAS. UIAD: checks AFF JSON; create honors header.abapLanguageVersion. Manual cloudDevelopment items are editable; generated items may be read-only.'
               : 'Object type (for create/update/delete/edit_method/edit_unit/add_unit/edit_class_definition/add_method/edit_method_signature/delete_method/change_method_visibility). Supported on-prem: PROG, CLAS, INTF, FUNC, FUGR, INCL, DDLS, DCLS, DDLX, BDEF, SRVD, SRVB, SKTD or KTD (Knowledge Transfer Documents), TABL, TABL/DT, TABL/DS, DOMA, DTEL, MSAG. Class-section surgery actions require CLAS. UIAD: validates AFF JSON and saves active; create honors header.abapLanguageVersion. Manual cloudDevelopment items are editable; generated items can be read-only.',
           },
           name: {

@@ -18,7 +18,7 @@ plain names. The #911 function-group resolver does not serve this lookup.
 Review: this replaces the function-only branch with one type-independent rule.
 No resolver framework, cache, schema or permission change is needed. The label
 and URI must agree for decorated results; exact-name behavior stays unchanged.
-BTP has no classic function modules; the reproduced failure is specific to 7.50.
+The reproduced decoration is specific to 7.50; no BTP live coverage is claimed.
 
 ## Validation
 

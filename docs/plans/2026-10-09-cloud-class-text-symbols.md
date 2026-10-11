@@ -45,3 +45,15 @@ Final review found no further change needed. This is direct public-dispatch/nati
 qualification, not an HTTP/PP or recording-transport test. FEAT-83 existed only in
 the local audit; no completed roadmap entry is added. Generic Cloud TEXT_ELEMENTS
 reads remain outside this narrow feature; the class read alias is already public.
+
+## 1.6 refresh (2026-10-11)
+
+Merged released main `2bf00bf1`; independent review retains the small schema exposure
+and shared pool implementation. All 8,179 unit tests and repository gates, including
+strict docs, pass. Fresh compiled-dispatcher tests on 758 SP02 and 816 SP01 write two
+symbols, replace them with one and explicitly clear the pool; active and pending
+class source remain byte-identical after each pool activation. Both fixtures were
+deleted with confirmed metadata 404. 750 discovery again lacks the class-text service.
+These fresh native runs use the on-prem dispatcher; the Cloud-schema unit controls
+pass, and the earlier dated BTP native evidence above remains separate. No new BTP
+live run is claimed. Roadmap checked: no additional impact.

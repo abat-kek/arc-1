@@ -22,13 +22,9 @@ The reproduced decoration is specific to 7.50; no BTP live coverage is claimed.
 
 ## Validation
 
-Initial function regressions failed before the first change. Independent review
-then reproduced missing T000, SAPMSSY0 and CL_ABAP_TYPEDESCR on 750, including
-class usages without a type. The revised tests cover those object families,
-namespaces, malformed escapes, misleading labels and ambiguous identities.
-The completed COMPAT-09 entry is removed from the roadmap.
-
-Review follow-up validation: 8,363 tests, typecheck, lint, policy, build,
-file/schema budgets and strict MkDocs pass. Public tadir_lookup for T000,
-SAPMSSY0 and CL_ABAP_TYPEDESCR, plus type-free class usages, now succeeds on
-750 SP02, 758 SP02 and 816 SP01 through local handleToolCall over HTTPS Basic.
+The old rule missed T000, SAPMSSY0, CL_ABAP_TYPEDESCR and BAPI_USER_GET_DETAIL
+on 750 SP02, including type-free class usages. Tests cover functions, classes,
+tables, programs, namespaces, misleading labels, malformed URIs and ambiguity.
+Public tadir_lookup and type-free usages pass on 750 SP02, 758 SP02 and 816 SP01
+(local handleToolCall, HTTPS Basic, read-only). All local gates pass. The completed
+COMPAT-09 entry is removed from the roadmap.

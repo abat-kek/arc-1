@@ -14,7 +14,7 @@ describe('canonical object lookup (COMPAT-09)', () => {
   it.each([
     ['BAPI_USER_GET_DETAIL', 'bapi_user_get_detail', 'SU_USER'],
     ['/UI2/CATALOG_PFCG_CHANGE', '%2fui2%2fcatalog_pfcg_change', '%2fui2%2fcatalog_pfcg'],
-  ])('uses the function URI identity for decorated names: %s', async (name, encodedName, group) => {
+  ])('accepts a decorated function only when its URI confirms the name: %s', async (name, encodedName, group) => {
     mockFetch.mockReset();
     const uri = `/sap/bc/adt/functions/groups/${group}/fmodules/${encodedName}`;
     mockFetch.mockResolvedValue(

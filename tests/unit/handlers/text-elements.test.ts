@@ -620,6 +620,7 @@ describe('text-part removal reports', () => {
 
   it.each([
     ['symbols', '@MaxLength:20\n001=First\n\n@MaxLength:20\n002=', '', '001, 002'],
+    ['symbols', '@MaxLength:20\n001=First', '@MaxLength:20\n001=', '001'], // SAP retains the emptied key.
     [
       'headings',
       'listHeader=Header\ncolumnHeader_1=First\ncolumnHeader_2=',

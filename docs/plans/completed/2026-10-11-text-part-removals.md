@@ -19,13 +19,14 @@ is also incorrect: SAP rejects supplied labels over 30 characters on 758/816.
 Use the existing pool lock and session for GET → PUT → GET. Compare only native
 bodies, then unlock and request activation as before. A small parser records keys,
 maintained-text presence and dictionary annotations; it does not validate outgoing
-syntax. Report removed texts and references independently, without claiming a
+syntax. Report emptied text values and removed symbol definitions (including empty
+definitions), as well as lost dictionary references independently, without claiming a
 removed dictionary entry became fixed text. Restore instructions refer to the
 previous complete body, because reading after replacement cannot recover it.
 
 SAP remains the authority for syntax/length validation. Reimplementing its parser
 would add a second compatibility contract; the companion transport fix removes
-redundant retries of known validation failures. No merge mode, flag or schema
+redundant retries of application validation failures. No merge mode, flag or schema
 change is needed. Each write costs two extra GETs inside its existing lock.
 
 ## Failure states and verification
@@ -36,11 +37,13 @@ and do not request activation. If activation fails, preserve the verified remova
 report alongside the existing saved-state hint, including in minimal-error mode.
 The existing cache invalidation and package/scope/safety gates stay in place.
 
-Validation on runtime `7e89e578`: 8,372 unit tests and all repository gates pass;
-seven lifecycle cases pass on both 758/816 (including PROG/FUGR), and BTP class
-symbol reports match native read-back. Follow-up `f63066fa` preserves the legacy
-wrapper's return type and adds a native lowercase-key/DDIC regression, passing
-on both 758/816. Comparing input instead of native read-back makes its unit
-regression fail. Disposable owners were deleted and verified 404. 750 correctly
-reports service absence; no 7.40, PP or BTP classic-object coverage is claimed.
+Unit regressions cover native normalization, omitted and emptied symbols,
+selection placeholders, dictionary references, lock ordering and saved-state hints.
+Live verification uses 758 SP02 / 816 SP01 over HTTPS Basic and BTP ABAP 920 SP05
+class symbols over named-user OAuth. The lifecycle suite includes PROG/FUGR,
+activation/recovery, lowercase keys, dictionary labels and explicit clears.
+All disposable owners are deleted and verified 404. Final-revision results belong
+in the PR's validation record; 750 lacks the service, and no 7.40, PP or BTP
+classic-object coverage is claimed.
+
 No roadmap impact; FEAT-34 addresses translation beyond these existing surfaces.

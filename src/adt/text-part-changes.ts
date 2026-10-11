@@ -11,7 +11,7 @@ function entries(part: TextElementPart, body: string): Map<string, { maintained:
     if (equals < 0) continue;
     const value = line.slice(equals + 1).trim();
     result.set(line.slice(0, equals).trim(), {
-      maintained: part === 'symbols' || (value !== '' && (part !== 'selections' || value !== '?...')),
+      maintained: value !== '' && (part !== 'selections' || value !== '?...'),
       ddic,
     });
     ddic = false;
@@ -26,7 +26,7 @@ export function textPartChanges(part: TextElementPart, before: string, after: st
   const references: string[] = [];
   for (const [key, old] of entries(part, before)) {
     const current = next.get(key);
-    if (old.maintained && !current?.maintained) removed.push(key);
+    if ((old.maintained && !current?.maintained) || (part === 'symbols' && !current)) removed.push(key);
     if (old.ddic && !current?.ddic) references.push(key);
   }
   const lines: string[] = [];

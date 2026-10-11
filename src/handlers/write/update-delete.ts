@@ -286,7 +286,7 @@ export async function writeActionDelete(ctx: SapWriteContext): Promise<ToolResul
  *  `textPart` selects it: symbols (`@MaxLength:NN` then `NNN=text`), selections (a report's
  *  selection texts, `P_PARAM=Label` per line), headings (`listHeader=`, `columnHeader_N=`).
  *  ARC-1 supports only symbols for classes. The client writes and requests text-pool activation.
- *  The client locks, PUTs, unlocks, then activates; the package gate here checks
+ *  The client locks, reads, PUTs, reads back, unlocks, then activates; the package gate here checks
  *  the owning object's real package (ctx.objectUrl). Not an ABAP-source write → no lint. */
 export async function writeActionEditTextSymbols(ctx: SapWriteContext): Promise<ToolResult> {
   const {

@@ -211,6 +211,12 @@ describe('text elements via SAPRead/SAPWrite', () => {
       expect(malformed.isError).toBe(true);
       expect(malformed.content[0]?.text).toMatch(/406|inconsisten|text elements contain errors/i);
       expect(await read('symbols')).toBe(symbols);
+      // Clearing a value is also a loss even when SAP retains the symbol definition.
+      expect(await write('symbols', '@MaxLength:20\n001=Hello\n\n@MaxLength:20\n002=')).toContain(
+        'Removed texts: 002.',
+      );
+      expect(await read('symbols')).toMatch(/002=\s*$/);
+      await write('symbols', '@MaxLength:20\n001=Hello\n\n@MaxLength:20\n002=Second');
       expect(await write('symbols', '@MaxLength:20\n001=Replacement\n')).toContain('Removed texts: 002.');
       expect(await read('symbols')).toContain('001=Replacement');
       expect(await read('symbols')).not.toContain('002=');

@@ -230,6 +230,51 @@ describe('text elements via SAPRead/SAPWrite', () => {
     }, 60_000);
   }
 
+  it('reports native selection removals after lowercase keys and dictionary labels are normalized', async (ctx) => {
+    requireOrSkip(
+      ctx,
+      client.http.discoveryAcceptFor('/sap/bc/adt/textelements/programs'),
+      `${SkipReason.BACKEND_UNSUPPORTED}: ADT textelements/programs collection absent`,
+    );
+    const name = generateUniqueName('ZARC1_IT');
+    const objectUrl = `/sap/bc/adt/programs/programs/${name.toLowerCase()}`;
+    await call('SAPWrite', {
+      action: 'create',
+      type: 'PROG',
+      name,
+      package: '$TMP',
+      source: `REPORT ${name.toLowerCase()}.\nPARAMETERS p_user TYPE syuname.\nPARAMETERS p_test TYPE c LENGTH 10.`,
+    });
+    registry.register(objectUrl, 'PROG', name);
+    ctx.onTestFinished(async () => {
+      await call('SAPActivate', { type: 'PROG', name });
+      await call('SAPWrite', { action: 'delete', type: 'PROG', name });
+      registry.remove(name);
+      await expect(client.http.get(objectUrl)).rejects.toMatchObject({ statusCode: 404 });
+    });
+    await call('SAPActivate', { type: 'PROG', name });
+    const write = (source: string) =>
+      call('SAPWrite', {
+        action: 'edit_text_symbols',
+        type: 'PROG',
+        name,
+        textPart: 'selections',
+        source,
+      });
+    await write('@DDICReference\nP_USER=User name\nP_TEST=Original label');
+    const complete = await client.getTextElementPart('PROG', name, 'selections');
+    expect(complete).toContain('@DDICReference');
+    const message = await write('p_user=Fixed name');
+    expect(message).toContain('Removed texts: P_TEST.');
+    expect(message).toContain('Removed dictionary references: P_USER.');
+    const saved = await client.getTextElementPart('PROG', name, 'selections');
+    expect(saved).toMatch(/P_USER\s*=Fixed name/);
+    expect(saved).toMatch(/P_TEST\s*=\?\.\.\./);
+    expect(saved).not.toContain('@DDICReference');
+    expect(await write(complete)).not.toContain('Removed');
+    expect(await client.getTextElementPart('PROG', name, 'selections')).toBe(complete);
+  }, 60_000);
+
   // #940: a pool saved without activation (ARC-1 <= 1.5.1, SE38) must not outlive its deleted program.
   for (const activated of [true, false]) {
     it(`preserves ${activated ? 'an active' : 'a never-activated'} program and its pool draft until explicit activation`, async (ctx) => {

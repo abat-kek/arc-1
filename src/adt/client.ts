@@ -1567,8 +1567,8 @@ WHERE d~TABNAME = '${table}' AND d~AS4LOCAL = 'A'`;
   }
 
   /** Write a global class's text symbols. */
-  async writeClassTextSymbols(name: string, source: string, transport?: string): Promise<string> {
-    return writeTextElementPart(this.http, this.safety, 'CLAS', name, 'symbols', source, transport);
+  async writeClassTextSymbols(name: string, source: string, transport?: string): Promise<void> {
+    await writeTextElementPart(this.http, this.safety, 'CLAS', name, 'symbols', source, transport);
   }
 
   /** Get program variants */

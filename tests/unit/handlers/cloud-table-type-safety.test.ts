@@ -19,7 +19,11 @@ describe('Cloud TTYP uses the existing write boundaries', () => {
     resetCachedFeatures();
     vi.resetAllMocks();
     mockFetch.mockResolvedValue(
-      mockResponse(200, '<object><packageRef name="ZOTHER"/></object>', { 'x-csrf-token': 'T' }),
+      mockResponse(
+        200,
+        '<object xmlns:adtcore="http://www.sap.com/adt/core"><adtcore:packageRef adtcore:name="ZOTHER"/></object>',
+        { 'x-csrf-token': 'T' },
+      ),
     );
   });
   it.each([single, batch])('requires write scope before HTTP for $action', async (args) => {
@@ -29,11 +33,13 @@ describe('Cloud TTYP uses the existing write boundaries', () => {
       scopes: ['read'],
     });
     expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain("Insufficient scope: 'write' required");
     expect(mockFetch).not.toHaveBeenCalled();
   });
   it.each([single, batch])('honors action denial before HTTP for $action', async (args) => {
     const result = await handleToolCall(createClient(), { ...config, denyActions: ['SAPWrite.*'] }, 'SAPWrite', args);
     expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain('denied by server policy');
     expect(mockFetch).not.toHaveBeenCalled();
   });
   it.each([single, batch])('honors the write ceiling for $action', async (args) => {
@@ -45,6 +51,7 @@ describe('Cloud TTYP uses the existing write boundaries', () => {
       args,
     );
     expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain('allowWrites=false');
     expect(mutations()).toHaveLength(0);
   });
   it.each([single, batch, { action: 'update', type: 'TTYP', name: 'ZROWS', package: '$TMP', rowTypeLength: 33 }])(
@@ -58,6 +65,7 @@ describe('Cloud TTYP uses the existing write boundaries', () => {
         args,
       );
       expect(result.isError).toBe(true);
+      expect(result.content[0]?.text).toContain(`package '${args.action === 'update' ? 'ZOTHER' : '$TMP'}'`);
       expect(mutations()).toHaveLength(0);
     },
   );
@@ -70,6 +78,7 @@ describe('Cloud TTYP uses the existing write boundaries', () => {
     });
     const result = await handleToolCall(client, config, 'SAPWrite', args);
     expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain('Table type (TTYP) writes are not available');
     expect(mutations()).toHaveLength(0);
   });
 });

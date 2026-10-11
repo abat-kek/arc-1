@@ -1056,17 +1056,16 @@ export class AdtClient {
       const seen = new Set<string>();
       const matches = rawMatches
         .flatMap((r) => {
-          if (r.objectType !== 'FUGR/FF') return [r];
-          // 7.50 decorates function display names; the metadata URI retains the exact identity.
-          const match = /^\/sap\/bc\/adt\/functions\/groups\/[^/]+\/fmodules\/([^/?#]+)$/i.exec(r.uri);
-          if (!match) return [];
+          if (r.objectName.toUpperCase() === name) return [r];
+          // 7.50 decorates display names across types; require the URI to confirm the identity.
+          if (!r.objectName.toUpperCase().startsWith(`${name} (`)) return [];
+          const segment = /^\/sap\/bc\/adt\/(?:[^/?#]+\/)*([^/?#]+)$/i.exec(r.uri)?.[1];
           try {
-            return [{ ...r, objectName: decodeURIComponent(match[1]!).toUpperCase() }];
+            return segment && decodeURIComponent(segment).toUpperCase() === name ? [{ ...r, objectName: name }] : [];
           } catch {
             return [];
           }
         })
-        .filter((r) => r.objectName.toUpperCase() === name)
         .filter((r) => {
           const key = `${r.objectType}\u0000${r.objectName}\u0000${r.packageName}\u0000${r.uri}`;
           if (seen.has(key)) return false;

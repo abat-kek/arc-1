@@ -46,18 +46,29 @@ describe('Cloud class text symbols', () => {
     expect(result.isError).toBe(true);
     expect(mockFetch).not.toHaveBeenCalled();
   });
-  it.each(['write ceiling', 'deny action', 'package', 'discovery'] as const)('preserves the %s gate', async (gate) => {
+  it.each([
+    ['write ceiling', 'allowWrites=false'],
+    ['deny action', 'denied by server policy'],
+    ['package', "package 'ZOTHER'"],
+    ['discovery', 'require the ADT textelements service'],
+  ] as const)('preserves the %s gate', async (gate, expectedError) => {
     const client = createClient();
     const cfg = { ...config };
     if (gate === 'write ceiling') client.safety.allowWrites = false;
     if (gate === 'deny action') cfg.denyActions = ['SAPWrite.edit_text_symbols'];
     if (gate === 'package') {
       client.safety.allowedPackages = ['ZALLOWED'];
-      mockFetch.mockResolvedValue(mockResponse(200, '<object><packageRef name="ZOTHER"/></object>'));
+      mockFetch.mockResolvedValue(
+        mockResponse(
+          200,
+          '<object xmlns:adtcore="http://www.sap.com/adt/core"><adtcore:packageRef adtcore:name="ZOTHER"/></object>',
+        ),
+      );
     }
     if (gate === 'discovery') client.http.setDiscoveryMap(new Map([['/sap/bc/adt/oo/classes', ['application/xml']]]));
     const result = await handleToolCall(client, cfg, 'SAPWrite', input);
     expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain(expectedError);
     expect(mutations()).toHaveLength(0);
   });
   it('retains the saved-but-unconfirmed hint after failed pool activation', async () => {
@@ -89,6 +100,7 @@ describe('Cloud class text symbols', () => {
       scopes: ['read'],
     });
     expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain("Insufficient scope: 'write' required");
     expect(mockFetch).not.toHaveBeenCalled();
   });
 });

@@ -11,6 +11,7 @@ describe('406 Accept fallback', () => {
     ['SEDX_ADT', '110'],
     ['SEDX_ADT', '107'],
     ['DS', '512'],
+    ['DS', '549'],
     ['SEDX_ADT', '106'],
     ['SEDX_ADT', '102'],
     ['SEDX_ADT', '101'],
@@ -41,6 +42,9 @@ describe('406 Accept fallback', () => {
   });
 
   it('preserves framework negotiation and errors without an application message class', () => {
+    expect(
+      acceptFallback(`${exception('SADT_RESOURCE', '044')} Accepted: ${media}`, 'application/xml', 'PUT', path),
+    ).toBe(media);
     for (const body of [exception('SADT_RESOURCE', '044'), exception('', ''), 'Not acceptable']) {
       expect(acceptFallback(body, media, 'PUT', path)).toBe('application/xml');
     }

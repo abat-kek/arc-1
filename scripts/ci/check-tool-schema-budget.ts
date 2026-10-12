@@ -125,7 +125,7 @@ const FULL_ACCESS_CONFIG: ServerConfig = {
 // failing build. Maintainer-approved 72,000 → 74,000 for combined #769 relations + #772 ATC
 // batches: 72,561 measured bytes, preserving evaluated guidance with 1,439 bytes of headroom.
 // TABL/DTT and TABL/DTI add separate settings/index write guidance.
-// Retain existing model guidance; allow 23,550 for the full on-prem tool set (23,514 measured combined). Other wire ceilings stay unchanged.
+// Retain existing model guidance; allow 23,550 for the full on-prem tool set (23,517 measured combined). Other wire ceilings stay unchanged.
 const WRITE_WIRE_WALL = 74_000;
 const READ_WIRE_WALL = 50_000;
 const PER_TOOL_WIRE_WALL = 23_000;

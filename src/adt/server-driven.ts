@@ -507,6 +507,7 @@ export async function updateServerDrivenObjectSource(
         source,
         serverDrivenSourceContentType(code),
         undefined,
+        // Keep an uncertain index save as one attempt; report its state instead of replaying it.
         code === 'TABL/DTI' ? { retryTransientErrors: false } : undefined,
       );
       opts.onSourceWrite?.('confirmed');

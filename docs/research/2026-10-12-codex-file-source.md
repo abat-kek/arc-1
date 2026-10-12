@@ -24,12 +24,22 @@ filesystem access, activation behavior or HTTP limit changes.
   not support that procedural action. One 750 cleanup attempt lacked loaded discovery
   and hit the absent text-pool endpoint; after loading native discovery, public deletion
   passed and the owned program was confirmed absent. This was test setup, not a helper
-  or source-transfer failure. No test objects remain.
-- Unit CLI tests cover exact Unicode/BOM/newline preservation, transfer truncation that
+  or source-transfer failure. These original test objects were confirmed absent.
+- Unit CLI tests cover exact Unicode/newline preservation and BOM refusal, transfer truncation that
   remains valid JSON, same-length corruption, wrong counts, lone surrogates, strict UTF-8,
   NUL/empty/missing/non-file input, byte caps, encoded-envelope expansion and bad arguments.
   Verification emits metadata only. The packed npm tarball includes the executable and
   its read→verify pipeline passed outside the source checkout.
+
+## Final review follow-up
+
+A leading UTF-8 BOM reached SAP despite passing pre-write lint. Class source PUT
+returned HTTP 400 (unexpected CLASS token) on 750, 758 and 816. The helper now
+refuses a leading BOM in both read and verify, before any SAP call; it never silently
+changes the selected source. Save such files as UTF-8 without BOM. Controls without
+a BOM and filenames containing quotes/shell metacharacters passed on those systems.
+BTP stopped before the follow-up create request (503 during CSRF acquisition), so its
+repeat and the attempted fixture-name absence checks remain pending availability.
 
 ## Boundaries
 
@@ -37,7 +47,8 @@ The source cap is 200,000 bytes; the encoded envelope cap is 300,000 bytes, incl
 its trailing newline. Both reads allocate bounded buffers. This is a local authorized
 file read, not a shared-server sandbox. Normal local symlinks may resolve to a regular
 file. The POSIX heredoc recipe was tested on macOS only; lower host output/argv limits
-fail closed. Windows shell handling is unqualified.
+fail closed. Linux limits a single shell argument to roughly 128 KiB, so the heredoc
+recipe needs a smaller source part there. Windows shell handling is unqualified.
 
 Existing authenticated loopback-MCP research separately established default 100 KiB
 HTTP rejection and an explicit 256 KiB opt-in admitting the large request on all four

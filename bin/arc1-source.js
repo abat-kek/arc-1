@@ -25,6 +25,8 @@ function decode(bytes) {
 function inspect(source) {
   if (typeof source !== 'string' || !source || source.includes('\0'))
     throw new Error('Source must be non-empty UTF-8 text without NUL characters.');
+  if (source.startsWith('\ufeff'))
+    throw new Error('Source starts with a UTF-8 BOM; save the file as UTF-8 without BOM.');
   const bytes = Buffer.from(source, 'utf8');
   // JSON can contain lone surrogates; never silently replace them during verification.
   if (decode(bytes) !== source) throw new Error('Source contains invalid Unicode.');

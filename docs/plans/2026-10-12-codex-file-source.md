@@ -44,3 +44,8 @@ bounded; encoded output includes its newline in the cap. Meaningful CLI tests an
 host/public-dispatch roundtrips pass. The recipe explicitly fails on incomplete local
 commands or failed integrity checks before invoking any write. Docs separate transferred
 bytes from native SAP newline normalization and retain the untested CF/Windows boundaries.
+
+Final review: reject a leading BOM before SAP (native 400 reproduced on 750/758/816);
+keep exact-byte transfer for accepted files. Quote selected paths with a POSIX quoting
+helper and document Linux's single-argument limit. Length alone is not a replacement
+for SHA-256 verification because same-length transfer corruption must still fail.

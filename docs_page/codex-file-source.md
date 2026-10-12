@@ -11,7 +11,8 @@ The `arc1-source` helper needs no SAP credentials or configuration. It has two c
 
 - `arc1-source read FILE`: emit a JSON envelope containing exact UTF-8 source, byte
   count and SHA-256. It accepts a regular, non-empty file up to 200,000 bytes and
-  preserves BOM/newlines. Invalid UTF-8 and NUL characters are refused.
+  preserves newlines. Invalid UTF-8, NUL characters and a leading BOM are refused
+  before any SAP call; save BOM files as UTF-8 without BOM.
 - `arc1-source verify`: read the received envelope from stdin and verify its contents.
   A mismatch exits nonzero. Verification prints only the digest/count, never source.
 
@@ -25,8 +26,9 @@ instead of the installed command. A host without local execution plus programmat
 MCP tool invocation cannot use this recipe.
 
 ```javascript
+const quote = (value) => "'" + value.replaceAll("'", "'\\''") + "'";
 const read = await tools.exec_command({
-  cmd: "arc1-source read '/work/zcl_example.clas.abap'",
+  cmd: 'arc1-source read ' + quote('/work/zcl_example.clas.abap'),
   max_output_tokens: 100000,
 });
 if (read.exit_code !== 0 || read.session_id) throw new Error('File read incomplete');
@@ -65,8 +67,10 @@ Propagation continuity has not been qualified by this helper's tests.
 
 The helper caps its encoded envelope at 300,000 bytes. Codex output and local shell
 command limits may be lower; parsing/verification must fail closed, never continue with
-a partial source. The POSIX heredoc recipe was tested on macOS; Windows shells need
-equivalent literal stdin handling and are not qualified by that test.
+a partial source. Linux limits a single shell argument to roughly 128 KiB, including
+the encoded heredoc: use a smaller method/unit file there. Large-file composition was
+qualified on macOS. Windows shells need equivalent literal stdin handling and are
+not qualified by that test.
 
 Remote ARC-1's default HTTP request limit is 100 KiB for the **whole JSON request**,
 including escaping and other arguments. This helper does not raise it. For larger writes,

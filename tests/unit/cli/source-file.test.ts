@@ -17,8 +17,8 @@ function read(content: string | Buffer) {
   writeFileSync(path, content);
   return run(['read', path]);
 }
-it('preserves Unicode, entities, BOM, CRLF and final-newline differences through both commands', () => {
-  const source = '\ufeffREPORT ztest.\r\n* < > -> & &amp; " quotes ü 日本語\r\nWRITE `$(ignored)`.';
+it('preserves Unicode, entities, CRLF and final-newline differences through both commands', () => {
+  const source = 'REPORT ztest.\r\n* < > -> & &amp; " quotes ü 日本語\r\nWRITE `$(ignored)`.';
   const result = read(source);
   expect(result.status, result.stderr).toBe(0);
   const envelope = JSON.parse(result.stdout);
@@ -55,8 +55,8 @@ it('bounds source bytes and encoded envelope bytes independently', () => {
   expect(read('\t'.repeat(160_000)).status).toBe(1);
   expect(run(['verify'], ' '.repeat(300_001)).status).toBe(1);
 });
-it('rejects empty, NUL, malformed UTF-8 and non-file inputs', () => {
-  for (const content of ['', 'a\0b', Buffer.from([0xc3, 0x28])]) {
+it('rejects empty, BOM, NUL, malformed UTF-8 and non-file inputs', () => {
+  for (const content of ['', '\ufeffREPORT ztest.', 'a\0b', Buffer.from([0xc3, 0x28])]) {
     const result = read(content);
     expect(result.status).toBe(1);
     expect(result.stdout).toBe('');
@@ -67,4 +67,18 @@ it('rejects empty, NUL, malformed UTF-8 and non-file inputs', () => {
 it('refuses malformed envelopes and ambiguous command arguments', () => {
   for (const input of ['{', 'null', '[]', '{}', '{"source":"text"}']) expect(run(['verify'], input).status).toBe(1);
   for (const args of [[], ['read'], ['verify', 'file'], ['read', 'file', 'extra']]) expect(run(args).status).toBe(1);
+});
+it('refuses a valid envelope containing a leading BOM', () => {
+  const source = '\ufeffREPORT ztest.';
+  const result = run(
+    ['verify'],
+    JSON.stringify({
+      source,
+      sourceBytes: Buffer.byteLength(source),
+      sourceSha256: createHash('sha256').update(source).digest('hex'),
+    }),
+  );
+  expect(result.status).toBe(1);
+  expect(result.stderr).toContain('UTF-8 without BOM');
+  expect(result.stdout).toBe('');
 });

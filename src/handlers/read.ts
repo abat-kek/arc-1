@@ -21,6 +21,7 @@ import {
   serverDrivenUnavailableMessage,
 } from '../adt/server-driven.js';
 import { listTableIndexes } from '../adt/table-index.js';
+import { getTableSettings } from '../adt/table-settings.js';
 import type { FunctionModuleProperties, InactiveObject } from '../adt/types.js';
 import { getAppInfo } from '../adt/ui5-repository.js';
 import { getVersionDiff } from '../adt/version-diff.js';
@@ -236,6 +237,12 @@ export async function handleSAPRead(
       }
       throw err;
     }
+  }
+
+  if (type === 'TABL/DTT') {
+    if (!name) return errorResult('"name" is required for TABL/DTT.');
+    const version = args.version === 'active' || args.version === 'inactive' ? args.version : undefined;
+    return textResult(toolJson(await getTableSettings(client.http, client.safety, name, version)));
   }
 
   if (type === 'TABL' && String(args.include ?? '').toLowerCase() === 'indexes') {

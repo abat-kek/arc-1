@@ -86,3 +86,8 @@ Roadmap FEAT-72 now distinguishes this implemented classic-index contract from t
 remaining CDS/XINX research. The model guidance is preserved; the per-tool byte ceiling
 increases 23,000→23,300 for full on-prem schemas and the BTP token estimate 17,350→17,450 for the new instructions.
 The total writable-tool wire ceiling remains 74,000 bytes.
+
+Final review probe: a newly created, never-activated transparent table returned an
+empty native index tree and public `[]` on 758 and 816. The suspected empty-body
+case was not reproduced; keep rejecting malformed/empty responses rather than
+silently claiming no indexes. The BTP repeat was blocked by the stopped system.

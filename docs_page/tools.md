@@ -537,7 +537,7 @@ description on create; the tested source PUT ignores `header.description` change
 constraints. Index creation can fail on duplicate data, and changing an existing index
 can require database conversion. ARC-1 does not perform that conversion. Activation
 warnings mean database state is **unverified**, even if metadata says active; inspect
-ADT before retrying. A warning without an object URI applies to every index in the batch. A timeout likewise does not prove that activation failed.
+ADT before retrying. ARC-1 treats a warning without an object URI as applying to every index in the batch. A timeout likewise does not prove that activation failed.
 
 Verified for classic transparent tables on SAP_BASIS 758, 816 and BTP ABAP 920; the
 collection is absent on tested 750. Listing needs read scope, not SQL/data-preview

@@ -11,7 +11,11 @@ normalization still applies; the echo is not a request-body capture.
 
 Cell values remain strings. Preserve all native whitespace, including numeric
 padding (`"7 "`), rather than guessing which spaces have semantic meaning. Numeric
-metrics already trim explicitly before conversion. No new tool input or release rule.
+metrics trim explicitly before conversion. The authorization-trace decoder also
+trims numeric FIRSTCALL and ABAPLINE before interpreting them; a live constant
+projection on 758/816 reproduced an empty timestamp without this adjustment.
+Authorization values and raw query cells retain their whitespace.
+No new tool input or release rule.
 
 Initial read-only constants probe, direct HTTPS Basic:
 

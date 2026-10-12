@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { decodeAuthTraceRows } from '../../../src/adt/authorization-trace.js';
 import {
   parseDataPreviewMeta,
   parseDataPreviewResult,
@@ -44,5 +45,20 @@ describe('data-preview whitespace (#982)', () => {
 
   it('keeps ordinary ADT metadata trimming unchanged', () => {
     expect(parseXml('<root><name>  ZTEST  </name></root>')).toEqual({ root: { name: 'ZTEST' } });
+  });
+});
+
+it('normalizes numeric trace metadata while retaining significant authorization values', () => {
+  const values = { FIRSTCALL: '20261012083000 ', ABAPLINE: '7 ', RC: '0 ', ABAPPROG: 'ZARC_TEST', FIELD1: '  X  ' };
+  const xml = `<tableData>${Object.entries(values)
+    .map(([name, value]) => `<columns><metadata name="${name}"/><dataSet><data>${value}</data></dataSet></columns>`)
+    .join('')}</tableData>`;
+  const { rows } = parseDataPreviewResult(xml);
+  expect(rows[0]?.FIRSTCALL).toBe('20261012083000 ');
+  expect(decodeAuthTraceRows(rows, {}, { maxResults: 1 })[0]).toMatchObject({
+    firstSeen: '2026-10-12T08:30:00.000Z',
+    codeLocation: 'ZARC_TEST:7',
+    rc: 0,
+    fields: { FIELD1: '  X  ' },
   });
 });

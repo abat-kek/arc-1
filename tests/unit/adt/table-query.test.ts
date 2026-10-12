@@ -14,7 +14,7 @@ describe('fitFreestyleSqlLines', () => {
     const sql =
       "SELECT tabname, fieldname, position FROM dd03l WHERE tabname = 'T000' AND as4local = 'A' AND as4vers\n= '0000' AND fieldname <> 'Z01' AND fieldname <> 'Z02' AND fieldname <> 'Q' AND fieldname = 'MANDT'";
     expect(sql).toHaveLength(200);
-    expect(fitFreestyleSqlLines(sql)).toBe(sql.replace('\n', '\r\n'));
+    expect(fitFreestyleSqlLines(sql)).toBe(sql.replaceAll('\n', '\r\n'));
     const long = `SELECT mandt FROM t000 WHERE ${Array(30).fill("mandt <> '999'").join(' AND ')}\r\n`;
     const fitted = fitFreestyleSqlLines(long);
     expect(fitted).not.toMatch(/(?<!\r)\n/);

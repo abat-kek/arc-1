@@ -182,6 +182,8 @@ export function patchTableSettingsXml(xml: string, name: string, patch: TableSet
       return block;
     });
   }
+  // A legal '>' inside an attribute can defeat lexical replacement; never PUT malformed XML.
+  if (XMLValidator.validate(xml) !== true) throw new AdtError('Cannot safely edit this technical settings XML.');
   return xml;
 }
 
@@ -214,6 +216,7 @@ export async function updateTableSettings(
           body,
           TABLE_SETTINGS_CONTENT_TYPE,
           { Accept: TABLE_SETTINGS_CONTENT_TYPE },
+          // Do not replay an uncertain save; the failure hint asks the caller to inspect the draft.
           { retryTransientErrors: false },
         );
         saved = true;

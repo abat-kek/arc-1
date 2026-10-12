@@ -76,3 +76,8 @@ describe('technical settings partial edits', () => {
     expect(() => patchTableSettingsXml(xml, 'ZTEST', { sizeCategory: 1 })).toThrow();
   });
 });
+
+it('refuses a lexical edit that would break a quoted attribute', () => {
+  const input = fixture.replace('<ts:sizeCategory>', '<ts:sizeCategory note=">">');
+  expect(() => patchTableSettingsXml(input, 'ZTEST', { sizeCategory: 3 })).toThrow('Cannot safely edit');
+});

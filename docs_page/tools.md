@@ -1078,8 +1078,6 @@ Moves a method's METHODS clause from its current visibility section to a target 
 
 Verified live on a4h (S/4HANA 2023, kernel 7.58) end-to-end. The underlying `/objectstructure` endpoint also works on NW 7.50 SP02 (reads verified); on that release methods are split across `CLAS/OO` (def) + `CLAS/OM` (impl) elements and merged by name in the parser. Writes on the un-patched NW 7.50 dev edition can trip [SAP Note 2727890](https://launchpad.support.sap.com/#/notes/2727890) "ADT: fix unstable adt lock handle" — a system-level bug affecting every ADT write, not specific to this feature; ARC-1 detects the 423 status and emits a hint.
 
-<a id="class-text-symbols"></a>
-
 ### Technical table settings
 
 `TABL/DTT` reads and updates the separately locked settings of a transparent table.
@@ -1115,6 +1113,8 @@ version returned by SAP; omit `version` to prefer any pending draft, including a
 with active settings as the native fallback.
 
 Storage type, load unit and logging remain read-only. No SQL or legacy fallback.
+
+<a id="class-text-symbols"></a>
 
 ### Text elements
 

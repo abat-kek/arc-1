@@ -14,6 +14,7 @@ import {
 import { AdtSafetyError } from '../adt/errors.js';
 import {
   ensureServerDrivenSupport,
+  getServerDrivenObject,
   isServerDrivenObjectType,
   serverDrivenMetadataContentType,
   serverDrivenUnavailableMessage,
@@ -311,6 +312,7 @@ export async function handleSAPActivate(
         : [];
 
     const result = await activateBatch(client.http, client.safety, objects, activateOpts);
+    await verifyIndexActivation(client, objects, result);
     const names = objects.map((o) => o.name).join(', ');
     const batchStatuses = buildBatchActivationStatuses(objects, result);
     const statusDetails = formatBatchActivationStatuses(batchStatuses);
@@ -412,6 +414,7 @@ export async function handleSAPActivate(
   const draft = cachingLayer && !multiIdentity ? await captureDraftForPromotion(client, type, objectUrl) : undefined;
 
   const result = await activate(client.http, client.safety, objectUrl, { ...activateOpts, name });
+  await verifyIndexActivation(client, [{ type, name, url: objectUrl }], result);
 
   if (result.success) {
     applyActivationToCache(cachingLayer, type, name, draft, multiIdentity);
@@ -520,4 +523,32 @@ export function formatBatchActivationStatuses(statuses: BatchActivationObjectSta
   return `\n${lines.join('\n')}`;
 }
 
-// ─── SAPDiagnose Handler ─────────────────────────────────────────────
+// 758 can return only a warning when unique-index creation fails in the database.
+async function verifyIndexActivation(
+  client: AdtClient,
+  objects: Array<{ type: string; name: string; url: string }>,
+  result: ActivationResult,
+): Promise<void> {
+  for (const object of objects.filter((item) => item.type === 'TABL/DTI')) {
+    const relevant = result.details.filter(
+      (detail) => !detail.uri || activationDetailMatchesObject(detail.uri, object.url),
+    );
+    if (relevant.some((detail) => detail.severity === 'error')) continue;
+    let message: string;
+    if (relevant.some((detail) => detail.severity === 'warning')) {
+      message =
+        'Index activation returned warnings; database state is unverified. The index may already be active. Inspect it in ADT before retrying.';
+    } else {
+      try {
+        const metadata = await getServerDrivenObject(client.http, client.safety, 'TABL/DTI', object.name);
+        if (metadata.version === 'active') continue;
+        message = `Index still reports ${metadata.version || 'unknown state'} after activation.`;
+      } catch {
+        message =
+          'Index state could not be verified after activation. Read it before retrying; the index may already be active.';
+      }
+    }
+    result.success = false;
+    result.details.push({ severity: 'error', text: message, uri: object.url });
+  }
+}

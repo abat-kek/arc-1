@@ -76,6 +76,7 @@ sequence.
 | [COMPAT-16](#compat-16) | API-release directory cleanup | P2 | S | Needs research | Compatibility |
 | [COMPAT-10](#compat-10) | CDS set-operation lineage | P2 | M | Needs research | Compatibility |
 | [COMPAT-12](#compat-12) | Deletion with another user's text draft | P3 | S | Needs research | Compatibility |
+| [COMPAT-15](#compat-15) | Empty inactive text-pool recovery | P2 | M | Needs research | Compatibility |
 | [SEC-14](#sec-14) | DNS rebinding and Host-header hardening | P3 | M | Revisit on trigger | Security |
 | [SEC-17](#sec-17) | Match echoed abapGit credentials by value | P2 | M | Needs research | Security |
 | [SEC-18](#sec-18) | Implicit CDS conversion dependencies | P3 | M | Revisit on trigger | Security |
@@ -92,7 +93,7 @@ sequence.
 | [FEAT-22](#feat-22) | Safe gCTS mutation workflows | P3 | L | Needs research | Integration |
 | [FEAT-34](#feat-34) | Translation workflows beyond text symbols | P3 | L | Needs research | Localization |
 | [FEAT-62](#feat-62) | Transaction source and write support | P3 | M | Blocked | Object coverage |
-| [FEAT-70](#feat-70) | Table technical settings | P2 | M | Needs research | Object coverage |
+| [FEAT-70](#feat-70) | Additional table technical settings | P3 | S | Needs research | Object coverage |
 | [FEAT-72](#feat-72) | CDS index objects | P3 | M | Blocked | Object coverage |
 | [FEAT-73](#feat-73) | Additional server-driven object types | P3 | S | Needs research | Object coverage |
 | [FEAT-78](#feat-78) | Table type access type and keys | P2 | M | Needs research | Object coverage |
@@ -310,23 +311,37 @@ automatic revocation to deletion. Pre-existing BTP SUSH entries are separate evi
 - **Priority / effort / status:** P3 / S / Needs research
 - **Category:** Compatibility
 
-**Remaining gap.** Program and function-group deletion activate a matching PROG/PX
-text-pool entry from the caller's inactive feed before deleting the owner
-([#952](https://github.com/arc-mcp/arc-1/pull/952),
-[#959](https://github.com/arc-mcp/arc-1/pull/959)). The feed can include another
-user's drafts in the caller's transport requests, and omit drafts outside those
-requests. It does not prove exclusive ownership. Whether SAP permits cross-user
-pool activation or deletion that leaves an orphan has not been verified. The
-same-user case is fixed; [#949](https://github.com/arc-mcp/arc-1/pull/949) adds
-explicit pool activation. Feed and cleanup evidence is recorded in
-[the deletion plan](https://github.com/arc-mcp/arc-1/blob/main/docs/plans/completed/2026-10-09-function-group-delete-text-pool.md).
+**Remaining gap.** Program and function-group deletion now holds owner and pool
+locks and refuses explicit inactive pool metadata; it never activates a draft
+automatically. The caller's inactive feed is not an ownership or absence check.
+The remaining qualification is two users, recording transports and principal
+propagation, including drafts outside a shared request and competing locks. See the
+[cross-user deletion evidence](https://github.com/arc-mcp/arc-1/blob/main/docs/plans/2026-10-09-cross-user-text-delete.md).
 
 **Resume with.** Two authorized SAP test identities: save a draft as one user and
 attempt PROG/FUGR deletion as the other, both inside and outside a shared transport
 request, including lock races and principal propagation. Establish feed visibility,
-SAP's activation/delete authorization and draft ownership before adding a guard;
+SAP's activation/delete authorization and the existing guard's behavior;
 preserve per-user identity, package checks and native authorizations. Avoid silently
 activating or discarding another user's draft.
+
+<a id="compat-15"></a>
+### COMPAT-15 — Empty inactive text-pool recovery
+
+- **Priority / effort / status:** P2 / M / Needs research
+- **Category:** Compatibility
+
+**Remaining gap.** Empty CLAS/FUGR pools can remain inactive despite successful
+activation responses and an empty inactive-object feed (758/816; CLAS also BTP).
+Writes report explicit pool state and skip a proven active, already-empty symbols
+save. They do not repair existing drafts. Clearing a never-activated nonempty draft
+can still produce this state; symbols alone cannot establish whole-pool emptiness.
+
+**Resume with.** A supported native repair, or a qualified whole-pool precondition
+for refusing the hazardous clear across active/working versions and all parts.
+Preserve drafts and per-user authorization; do not add placeholder texts or write
+catalog rows automatically. See the
+[state plan](https://github.com/arc-mcp/arc-1/blob/main/docs/plans/2026-10-12-text-pool-state.md).
 
 <a id="sec-14"></a>
 ### SEC-14 — DNS rebinding and Host-header hardening
@@ -602,23 +617,21 @@ fallback behavior, then validate the read/write APIs on two releases.
 contract can be captured.
 
 <a id="feat-70"></a>
-### FEAT-70 — Table technical settings
+### FEAT-70 — Additional table technical settings
 
-- **Priority / effort / status:** P2 / M / Needs research
+- **Priority / effort / status:** P3 / S / Needs research
 - **Category:** Object coverage
 
-**Idea.** Read and safely edit a database table's technical settings, including data class, size
-category, buffering, and storage type where supported.
+**Idea.** Extend `TABL/DTT` updates to storage type, load unit or logging only where
+SAP advertises an editable, verified contract. Data class, size category and buffering
+already have separate read/update/activation support; table DDL annotations are outside this gap.
 
-**Why it remains.** TABL source writes already accept annotations such as delivery class, but
-technical table settings are a separate development object. Their lifecycle is not implemented by
-passing table DDL through `SAPWrite`; ARC-1 has no dedicated technical-settings read/write contract.
-SAP describes the distinction in its
-[database-table guide](https://learning.sap.com/courses/building-data-models-with-the-abap-dictionary-and-abap-core-data-services/creating-database-tables_ebc1477d-96ed-414b-82d4-4171da43f4a6).
+**Why it remains.** The additional fields vary by release and can be read-only. Current
+reads expose native values but deliberately do not enable their mutation.
 
-**Resume with.** Capture the live ADT contract, identify release-specific fields and defaults,
-preserve unchanged settings during partial edits, and verify package/transport gates, activation,
-and read-back. Keep already-supported DDL annotations outside this gap.
+**Resume with.** A concrete use case and native editable-field evidence on the target
+releases; qualify activation, recording transports and preservation of other pending settings.
+See [the implemented contract](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-12-table-technical-settings.md).
 
 <a id="feat-72"></a>
 ### FEAT-72 — CDS index objects
@@ -628,11 +641,14 @@ and read-back. Keep already-supported DDL annotations outside this gap.
 
 **Idea.** Add read/create/update coverage for CDS index objects advertised by ADT discovery.
 
-**Why it remains.** Discovery markers exist, but ARC-1 has no verified object instances, source
-shape, lifecycle, or cross-release tests.
+**Why it remains.** Classic transparent-table indexes (`TABL/DTI`) now have native listing,
+JSON CRUD and separate activation, verified on 758/816/BTP; they do not establish the
+contract for CDS table-entity index variants or XINX extension indexes. See the
+[classic-index evidence](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-12-table-indexes.md).
 
-**Unblock when.** A test system has a seed object or a reproducible creation path. Record the live
-media types and activation behavior before adding schemas.
+**Unblock when.** A test system has a CDS table-entity index or XINX seed object and a
+reproducible creation path. Record native identity, media types, package/transport ownership
+and database activation/conversion behavior before extending classic-index support.
 
 <a id="feat-73"></a>
 ### FEAT-73 — Additional server-driven object types

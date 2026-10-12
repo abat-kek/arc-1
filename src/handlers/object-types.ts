@@ -5,7 +5,7 @@
  * LLM arg-stripping, and class-include helpers.
  */
 
-import { SDO_REGISTRY } from '../adt/server-driven.js';
+import { SDO_REGISTRY, serverDrivenObjectUrl } from '../adt/server-driven.js';
 
 // ─── Object URL Mapping ──────────────────────────────────────────────
 
@@ -128,6 +128,7 @@ export const KNOWN_BASE_TYPES = new Set([
   'SRVB',
   'DDLX',
   'TABL',
+  'TABL/DTT',
   'DOMA',
   'DTEL',
   'MSAG',
@@ -472,6 +473,8 @@ export function objectBasePath(type: string): string {
       // Bare TABL defaults to transparent table. For reads, callers should use
       // AdtClient.resolveTablObjectUrl(name) which falls back to /structures/ on 404.
       return '/sap/bc/adt/ddic/tables/';
+    case 'TABL/DTT':
+      return '/sap/bc/adt/ddic/db/settings/';
     case 'TABL/DS':
       // DDIC structures only route through this collection; see follow-up to #285.
       return '/sap/bc/adt/ddic/structures/';
@@ -544,6 +547,7 @@ export function objectBasePath(type: string): string {
 
 /** Map object type + name to the ADT object URL used by CRUD/DevTools/etc. Name is URI-encoded. */
 export function objectUrlForType(type: string, name: string): string {
+  if (type === 'TABL/DTI') return serverDrivenObjectUrl(type, name);
   // KTD and SMBC use lowercase names in their verified ADT paths.
   const effectiveName = type === 'SKTD' || type === 'SMBC' ? name.toLowerCase() : name;
   return `${objectBasePath(type)}${encodeURIComponent(effectiveName)}`;

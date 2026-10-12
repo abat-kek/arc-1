@@ -1116,8 +1116,9 @@ SAPWrite(action="edit_text_symbols", type="PROG", name="ZHU_CREATE", textPart="s
   has never been activated, finish with `SAPActivate(type="PROG", name="...")` to activate its texts.
   If pool activation fails, the write returns an error; the saved pool may remain inactive.
   After an activation response, ARC-1 reads the pool metadata and reports active, still inactive,
-  or unverified state. HTTP success alone does not prove activation. Review an inactive or
-  unverified pool before another write. An exactly empty symbols write to an already-empty,
+  or unverified state. Inactive CLAS/FUGR pools and unverified state return an error while
+  retaining the known save. Check the pool in ADT or involve the user before another write;
+  part-body reads cannot establish the pool state. An exactly empty symbols write to an already-empty,
   explicitly active CLAS/FUGR pool is skipped under its lock: SAP can otherwise leave an empty
   inactive pool. Existing inactive drafts are never skipped. Defining the referenced symbols clears
   the ATC finding *"Text symbol NNN not defined"* that a bare `'Text'(001)` literal otherwise leaves

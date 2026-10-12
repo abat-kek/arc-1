@@ -165,7 +165,7 @@ describe('text elements routing and safety', () => {
       name: 'ZTEST',
       source: '',
     });
-    expect(result.isError).toBeUndefined();
+    expect(result.isError).toBe(type === 'PROG' ? undefined : true);
     if (type === 'PROG') {
       expect(result.content[0]?.text).not.toContain('Updated and activated');
       expect(result.content[0]?.text).toContain('never been activated');
@@ -562,7 +562,9 @@ describe('text-part removal reports', () => {
       const method = init?.method ?? 'GET';
       if (path.includes('_action=LOCK')) return Promise.resolve(mockResponse(200, LOCK));
       let fail = false;
-      let body = '';
+      let body = path.includes('?version=inactive')
+        ? '<rept:textElement xmlns:rept="http://www.sap.com/adt/textelements" xmlns:adtcore="http://www.sap.com/adt/core" adtcore:name="ZTEST" adtcore:type="PROG/PX" adtcore:version="active"/>'
+        : '';
       if (path.includes('/source/') && method === 'GET') {
         reads++;
         body = reads === 1 ? old : next;

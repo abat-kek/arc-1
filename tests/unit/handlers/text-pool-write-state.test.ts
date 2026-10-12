@@ -61,7 +61,7 @@ describe('text-pool writes report observed native state', () => {
   it.each(['CLAS', 'FUGR'] as const)('never treats an empty inactive %s draft as a no-op', async (type) => {
     sap(metadata(type === 'CLAS' ? 'CLAS/OCX' : 'FUGR/PX', 'inactive'));
     const result = await write(type, '');
-    expect(result.isError).toBeUndefined();
+    expect(result.isError).toBe(true);
     expect(changed()).toHaveLength(2);
     expect(result.content[0]?.text).toContain('SAP still reports the text pool inactive');
     expect(result.content[0]?.text).not.toMatch(/No changes|Updated and activated/);
@@ -101,6 +101,7 @@ describe('text-pool writes report observed native state', () => {
         );
       });
       const result = await write('CLAS', '@MaxLength:20\n001=Keep');
+      expect(result.isError).toBe(state === 'inactive' ? true : undefined);
       expect(result.content[0]?.text).toContain(
         state === 'active' ? 'SAP reports the text pool active' : 'SAP still reports the text pool inactive',
       );
@@ -126,12 +127,19 @@ describe('text-pool writes report observed native state', () => {
     expect(calls().some(([url]) => String(url).includes('_action=UNLOCK'))).toBe(true);
   });
 
-  it.each([200, 404, 500])(
-    'reports a known save but unverified state after a failed final read (%i)',
-    async (status) => {
+  it.each([
+    ['CLAS', 200],
+    ['CLAS', 404],
+    ['CLAS', 500],
+    ['FUGR', 500],
+    ['PROG', 500],
+  ] as const)(
+    'returns an error while preserving the known %s save when final state is unverified (%i)',
+    async (type, status) => {
       sap('', '', status);
-      const result = await write('CLAS', '@MaxLength:20\n001=Text');
-      expect(result.isError).toBeUndefined();
+      const result = await write(type, '@MaxLength:20\n001=Text');
+      expect(result.isError).toBe(true);
+      expect(result.content[0]?.text).toContain('Check the pool in ADT or involve the user');
       expect(result.content[0]?.text).toContain('Updated symbols');
       expect(result.content[0]?.text).toContain('final text-pool state could not be verified');
       expect(result.content[0]?.text).not.toContain('Updated and activated');

@@ -315,7 +315,8 @@ automatic revocation to deletion. Pre-existing BTP SUSH entries are separate evi
 locks and refuses explicit inactive pool metadata; it never activates a draft
 automatically. The caller's inactive feed is not an ownership or absence check.
 The remaining qualification is two users, recording transports and principal
-propagation, including drafts outside a shared request and competing locks.
+propagation, including drafts outside a shared request and competing locks. See the
+[cross-user deletion evidence](https://github.com/arc-mcp/arc-1/blob/main/docs/plans/2026-10-09-cross-user-text-delete.md).
 
 **Resume with.** Two authorized SAP test identities: save a draft as one user and
 attempt PROG/FUGR deletion as the other, both inside and outside a shared transport

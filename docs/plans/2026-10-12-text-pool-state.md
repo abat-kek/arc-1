@@ -22,8 +22,12 @@ the native return codes were not traced. No supported ADT discard was establishe
 2. After a real activation, read explicit inactive-version metadata once in the
    same session. Return observed active/inactive/unknown state and removal details.
    The handler must not infer activation from HTTP success or the inactive feed.
-   A failed final read preserves the known save and reports unverified state.
-3. Keep the first-owner-activation hint for PROG. Remove the unverified instruction
+   A failed final read preserves the known save and reports unverified state as an error.
+   Inactive CLAS/FUGR state is also an error; expected inactive PROG state retains
+   the first-owner-activation hint. Recovery advice must involve ADT or the user,
+   since part-body reads cannot establish the whole pool state.
+3. Keep the first-owner-activation hint for PROG. The empty no-op excludes PROG:
+   that failure was not reproduced there and its first-activation path differs. Remove the unverified instruction
    to resolve an empty FUGR draft in ADT. Never add automatic placeholder texts,
    catalog writes, discard, or activation retries.
 4. Test ordering, exact metadata, no-op scope, inactive/unknown outcomes, read/lock
@@ -57,3 +61,11 @@ public-tool create → empty no-op → write → clear → delete checks pass fo
 on 758/816 and CLAS on BTP 920; all five owners are absent afterward. On-prem fixture
 REPOTEXT queries return no rows. 750 retains its discovery refusal. These are
 named-user/local-package tests, not recording-transport or principal-propagation proof.
+
+Final review: inactive CLAS/FUGR and unknown final states now return errors while
+preserving the known save. Forced legacy empty drafts reproduced the new error,
+then explicit fixture-only recovery/clear/delete passed on 758 and 816. BTP's
+follow-up stopped at CSRF acquisition (503); its earlier lifecycle passed, but the
+new result-classification repeat remains pending system availability. Unit coverage
+includes unknown state for CLAS, FUGR and PROG; known inactive PROG keeps its hint.
+COMPAT-12 restores the evidence link lost in release commit 2bf00bf1.

@@ -331,15 +331,18 @@ export async function writeActionEditTextSymbols(ctx: SapWriteContext): Promise<
     result.state === 'active'
       ? 'SAP reports the text pool active.'
       : result.state === 'inactive'
-        ? 'SAP still reports the text pool inactive. Review the pool before another write.'
-        : 'The final text-pool state could not be verified. Read the pool before another write.';
+        ? 'SAP still reports the text pool inactive.'
+        : 'The final text-pool state could not be verified.';
   const ownerHint =
-    type === 'PROG' && result.state !== 'active'
+    type === 'PROG' && result.state === 'inactive'
       ? `\nIf ${name} has never been activated, use SAPActivate(type="PROG", name="${name}") to activate these texts.`
       : '';
-  return textResult(
-    `Updated ${part} of ${type} ${name}; text-pool activation requested. ${state}${result.changes}${ownerHint}`,
-  );
+  const incomplete = result.state === 'unknown' || (type !== 'PROG' && result.state === 'inactive');
+  const recovery = incomplete
+    ? '\nNo verified automatic repair is available. Check the pool in ADT or involve the user before another write.'
+    : '';
+  const message = `Updated ${part} of ${type} ${name}; text-pool activation requested. ${state}${result.changes}${ownerHint}${recovery}`;
+  return incomplete ? errorResult(message) : textResult(message);
 }
 
 /** One-line body example per subobject, used in the missing-source error so the caller can retry

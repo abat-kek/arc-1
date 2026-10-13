@@ -7,6 +7,10 @@ The [September 17 Claude-review disposition](2026-09-17-pr677-claude-review-disp
 records subsequent runtime, deployment, harness and rollout fixes. Its local checks do not replace
 the final-build live acceptance below; the older test counts and deployed SHA remain historical.
 
+Latest continuation: [October 13 final-build acceptance](2026-10-13-pr677-final-build-acceptance.md)
+records the latest-main merge, fresh deployment, new bounded backend/cross-app test fixtures and
+the no-grants live replay. Its remaining gates are still open; this is not merge sign-off.
+
 ## Baseline and scope
 
 - PR: <https://github.com/arc-mcp/arc-1/pull/677>

@@ -1146,7 +1146,7 @@ ${units.join('\n')}
 }
 
 function parseFixProposals(xml: string): FixProposal[] {
-  const parsed = parseXml(xml);
+  const parsed = parseXml(xml, true);
   const results = findDeepNodes(parsed, 'evaluationResult');
   if (results.length === 0) return [];
 
@@ -1234,7 +1234,7 @@ function parseFixDeltaNode(node: Record<string, unknown>): FixDelta {
 }
 
 function parseFixDeltas(xml: string): FixDelta[] {
-  const parsed = parseXml(xml);
+  const parsed = parseXml(xml, true);
   const unitNodes = findDeepNodes(parsed, 'deltas').flatMap((deltas) => nodeRecords(deltas.unit));
   if (unitNodes.length > 0) return unitNodes.map(parseFixDeltaNode);
 

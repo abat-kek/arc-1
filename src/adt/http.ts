@@ -503,7 +503,14 @@ export class AdtHttpClient {
       headers['SAP-Connectivity-Authentication'] = this.config.sapConnectivityAuth;
     }
 
-    const url = this.buildUrl(path);
+    // SAP's quick-fix provider looks up the complete request URI, including its query (#993).
+    // Keep the proposal URI exact, selecting the same SAP context through headers instead.
+    const proposalRequest = method === 'POST' && path.startsWith('/sap/bc/adt/quickfixes/proposals/');
+    if (proposalRequest) {
+      if (this.config.client) headers['sap-client'] = this.config.client;
+      if (this.config.language) headers['sap-language'] = this.config.language;
+    }
+    const url = this.buildUrl(path, proposalRequest);
     const httpStart = Date.now();
 
     // Per-request guards to prevent infinite retry loops
@@ -1281,18 +1288,18 @@ export class AdtHttpClient {
   }
 
   /** Build full URL with sap-client and sap-language query params */
-  private buildUrl(path: string): string {
+  private buildUrl(path: string, sapContextInHeaders = false): string {
     const base = this.config.baseUrl.replace(/\/$/, '');
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;
     const url = new URL(base + normalizedPath);
 
-    if (this.config.client) {
+    if (this.config.client && !sapContextInHeaders) {
       url.searchParams.set('sap-client', this.config.client);
     }
-    if (this.config.language) {
+    if (this.config.language && !sapContextInHeaders) {
       url.searchParams.set('sap-language', this.config.language);
     }
-    if (this.config.disableSaml) {
+    if (this.config.disableSaml && !sapContextInHeaders) {
       url.searchParams.set('saml2', 'disabled');
     }
 

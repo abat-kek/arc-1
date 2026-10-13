@@ -70,13 +70,18 @@ describe('v1-only service-binding metadata (#991)', () => {
     expect(mockFetch.mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(1);
   });
 
-  it.each(['Z_DENIED', ''])('refuses publication with package evidence %j', async (pkg) => {
+  it.each([
+    ['Z_DENIED', "Operations on package 'Z_DENIED' are blocked"],
+    ['', "could not determine the object's package"],
+  ])('refuses publication with package evidence %j', async (pkg, reason) => {
     packageName = pkg;
     const result = await handleToolCall(client(), DEFAULT_CONFIG, 'SAPActivate', {
       action: 'publish_srvb',
       name: 'ZSB_TEST',
     });
     expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain(reason);
+    expect(mockFetch.mock.calls.at(-1)?.[1]?.headers).toMatchObject({ Accept: v1 });
     expect(mockFetch.mock.calls.some(([, options]) => options?.method === 'POST')).toBe(false);
   });
 
@@ -87,7 +92,9 @@ describe('v1-only service-binding metadata (#991)', () => {
       name: 'ZSB_TEST',
     });
     expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain('403');
     expect(mockFetch.mock.calls).toHaveLength(2);
+    expect(mockFetch.mock.calls.at(-1)?.[1]?.headers).toMatchObject({ Accept: v1 });
     expect(mockFetch.mock.calls.some(([, options]) => options?.method === 'POST')).toBe(false);
   });
 

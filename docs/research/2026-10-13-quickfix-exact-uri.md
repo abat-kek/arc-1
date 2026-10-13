@@ -42,7 +42,7 @@ CF/API-key or principal-propagation route was used; proxy forwarding is unit-tes
 The issue's later missing-object report is a separate evaluation failure. Missing
 classes and interfaces reproduce a NULL-reference dump on 816:
 `CL_ART_CONTRIB_SCAN_RESULT` dereferences an unbound OO scan result. Metadata GET
-returns 404 instead. Evaluation now checks that OO owner before posting, keeping
+returns 404 instead. Evaluation and application check that OO owner before posting, keeping
 the 404 and adding a hint that also appears with minimal errors enabled.
 
 Follow-up validation on all four systems: absent class/interface owners sent no
@@ -52,3 +52,10 @@ GET returned 404, so checking source existence would incorrectly block it. Owner
 metadata returned 200 before activation. Saved main source stayed unchanged and
 all disposable classes were deleted. HEAD was unsuitable (400 on 816). An absent
 program still returned a proposal on 816, so the check is limited to OO owners.
+
+Applying a recorded declaration proposal after deleting its owner also reproduced
+the NULL-reference dump on 816. Both actions now share the metadata check; existing
+write and proposal-URI gates run first. A concurrent deletion after a successful
+check remains possible; the check is not an object lock.
+The final shared guard was rechecked on all four systems: application returned a
+delta while the class existed, then a 404 without a proposal POST after deletion.

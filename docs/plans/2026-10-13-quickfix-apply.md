@@ -31,7 +31,7 @@ Follow-up: evaluation of a nonexistent class or interface also dumps on 8.16.
 An absent program can return proposals, so a generic existence requirement would
 break that supported case.
 
-1. Before class/interface evaluation, GET the owning object's metadata using the
+1. Before class/interface evaluation or application, GET the owning object's metadata using the
    actual source URI, including for class-local includes. Validate the path before
    the GET. Leave unsaved source and inactive owners eligible; do not use HEAD,
    which returns 400 on this system even for existing sources.
@@ -41,7 +41,9 @@ break that supported case.
    and minimal errors. Live-check missing, inactive and optional-include cases on
    750, 758, 816 and BTP, with disposable objects and cleanup.
 
-Plan review: one metadata read for OO evaluation, using existing path validation
+Plan review: one metadata read per OO quick-fix request, using existing path validation
 and error hints. No cache, new setting, active-version requirement, source save,
-or additional guard on proposal application. The metadata check cannot prevent a
-concurrent deletion after it succeeds.
+or retry. The metadata check cannot prevent a concurrent deletion after it succeeds.
+Final review exposed the same dump when applying a proposal after its owner was
+deleted; independently reproduced on 816. Share the check between evaluation and
+application, retaining the write/proposal-URI gates before the metadata read.

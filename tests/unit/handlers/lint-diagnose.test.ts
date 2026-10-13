@@ -631,7 +631,7 @@ ENDCLASS.`;
         line: 1,
       });
       expect(result.isError).toBe(true);
-      expect(result.content[0]?.text).toContain('Quick-fix evaluation was not sent');
+      expect(result.content[0]?.text).toContain('Quick-fix request was not sent');
       expect(result.content[0]?.text).not.toContain('Private SAP error detail');
       expect(mockFetch).toHaveBeenCalledOnce();
       expect(String(mockFetch.mock.calls[0]![0])).toContain('/sap/bc/adt/oo/classes/zcl_missing?');

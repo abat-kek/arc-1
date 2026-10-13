@@ -1,15 +1,23 @@
 import { expect, it, vi } from 'vitest';
-import { getFixProposals } from '../../../src/adt/devtools.js';
+import { applyFixProposal, getFixProposals } from '../../../src/adt/devtools.js';
 import { AdtApiError, AdtSafetyError } from '../../../src/adt/errors.js';
 import type { AdtHttpClient } from '../../../src/adt/http.js';
-import { defaultSafetyConfig } from '../../../src/adt/safety.js';
+import { defaultSafetyConfig, unrestrictedSafetyConfig } from '../../../src/adt/safety.js';
+
+const proposal = {
+  uri: '/sap/bc/adt/quickfixes/proposals/providers/refactoring/quickfixes/declare_local_variable',
+  type: 'quickfix/proposal',
+  name: 'Declare variable',
+  description: 'Declare variable',
+  userContent: '',
+};
 
 function setup() {
   const get = vi.fn().mockResolvedValue({ body: '<metadata/>' });
   const post = vi.fn().mockResolvedValue({ body: '<evaluationResults/>' });
   const http = { get, post } as unknown as AdtHttpClient;
   const evaluate = (uri: string) => getFixProposals(http, defaultSafetyConfig(), uri, 'unsaved source', 2, 4);
-  return { get, post, evaluate };
+  return { get, post, http, evaluate };
 }
 
 it.each(['classes/zcl_missing', 'interfaces/zif_missing'])(
@@ -20,11 +28,46 @@ it.each(['classes/zcl_missing', 'interfaces/zif_missing'])(
     const error = new AdtApiError('Resource does not exist', 404, owner);
     get.mockRejectedValue(error);
     await expect(evaluate(`${owner}/source/main`)).rejects.toBe(error);
-    expect(error.extraHint).toContain('Quick-fix evaluation was not sent');
+    expect(error.extraHint).toContain('Quick-fix request was not sent');
     expect(get).toHaveBeenCalledExactlyOnceWith(owner);
     expect(post).not.toHaveBeenCalled();
   },
 );
+
+it('refuses a stale proposal when its class was deleted after evaluation', async () => {
+  const { get, post, http } = setup();
+  const owner = '/sap/bc/adt/oo/classes/zcl_deleted';
+  const error = new AdtApiError('Resource does not exist', 404, owner);
+  get.mockRejectedValue(error);
+  await expect(
+    applyFixProposal(http, unrestrictedSafetyConfig(), proposal, `${owner}/source/main`, 'source', 2, 4),
+  ).rejects.toBe(error);
+  expect(error.extraHint).toContain('Quick-fix request was not sent');
+  expect(get).toHaveBeenCalledExactlyOnceWith(owner);
+  expect(post).not.toHaveBeenCalled();
+});
+
+it('checks an existing owner before applying an unchanged proposal', async () => {
+  const { get, post, http } = setup();
+  const owner = '/sap/bc/adt/oo/classes/zcl_test';
+  await applyFixProposal(http, unrestrictedSafetyConfig(), proposal, `${owner}/source/main`, 'source', 2, 4);
+  expect(get).toHaveBeenCalledExactlyOnceWith(owner);
+  expect(get.mock.invocationCallOrder[0]).toBeLessThan(post.mock.invocationCallOrder[0]!);
+  expect(post.mock.calls[0]![0]).toBe(proposal.uri);
+});
+
+it('applies write and proposal-URI gates before reading metadata', async () => {
+  const { get, post, http } = setup();
+  const uri = '/sap/bc/adt/oo/classes/zcl_test/source/main';
+  await expect(applyFixProposal(http, defaultSafetyConfig(), proposal, uri, 'source', 2, 4)).rejects.toThrow(
+    'blocked by safety configuration',
+  );
+  await expect(
+    applyFixProposal(http, unrestrictedSafetyConfig(), { ...proposal, uri: '/unrelated' }, uri, 'source', 2, 4),
+  ).rejects.toThrow('non-quickfix proposal URI');
+  expect(get).not.toHaveBeenCalled();
+  expect(post).not.toHaveBeenCalled();
+});
 
 it.each([
   ['classes/zcl_inactive', 'source/main'],

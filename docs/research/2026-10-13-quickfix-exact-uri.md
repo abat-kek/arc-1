@@ -32,8 +32,9 @@ that `/providers/refactoring/` proposals require a separate protocol. Some propo
 can require interactive input; declaration-delta success does not qualify every
 rename, extract, RAP-generation, or multi-object refactoring.
 
-Validation: direct HTTPS Basic authentication on 816; the same current-handler
-flow is exercised on 758 and 750. Disposable classes are deleted after each run.
-BTP initially returned HTTP 503, “ABAP Environment - System is stopped”; it is not
-counted as live coverage. No deployed CF/API-key or principal-propagation route was
-used for this test; transport proxy behavior remains unit-tested.
+Validation on 2026-10-13: direct HTTPS Basic on 750, 758 SP02 and 816, plus named-user
+OAuth on BTP ABAP 920 SP05 after startup. Candidate code: `72dfd5bf` (subsequent
+`778fb679` changes one documentation link). All four current-handler flows returned
+deltas, passed the literal-assignment syntax check, and left saved source unchanged.
+Disposable classes were deleted; BTP used package `ZARC1_PRSP_260916`. No deployed
+CF/API-key or principal-propagation route was used; proxy forwarding is unit-tested.

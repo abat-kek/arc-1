@@ -118,24 +118,27 @@ or alter another app's XSUAA service as an implicit setup step.
 
 ## Minimal static role setup
 
-Keep the first pilot simple: **one static cohort role, one collection, one test user**. No IAS
-change, HANA store, extra runtime service, new OAuth scope, or SAP login sweep is needed. An approved
-operator handles the separate Admin diagnostic checks; do not give the test user Admin. Use the
-fictional `QAS/001` and `QAS/100` destinations from `examples/btp/multi-pp/` only as templates;
-replace them with reviewed public IDs from your own deployment.
+Keep the first pilot simple: **one static cohort role, one collection, one test user**. Use two
+approved active targets: grant `QAS/001` and leave `QAS/100` ungranted so the same user tests both
+success and denial. No IAS change, HANA store, extra runtime service, new OAuth scope, or SAP login
+sweep is needed. An approved operator handles the separate Admin checks; do not give the test user
+Admin. These QAS IDs are fictional examples from `examples/btp/multi-pp/`; replace them with your
+reviewed public IDs. If a second active test target is unavailable, record the denial test as
+unverified—an unknown ID alone does not prove rejection of an existing ungranted target.
 
 ### 1. Prepare the app and descriptor
 
-**New isolated app:** have the deployment owner include the setting from step 3 in its first
-deployment through the Cloud Foundry runbook, leaving end-user/group assignments empty. Then return
-here to check the templates and create the cohort. This avoids deploying standard access just to switch
-it immediately. **Existing app:** prepare the descriptor and unassigned roles below, then
-apply the mode change in step 3. Both paths require step 3's checks before step 4's assignment.
+**New isolated app:** first complete [Cloud Foundry runbook steps 1–9](btp-cloud-foundry-deployment.md).
+Its multi-PP profile section shows the property to enable filtering from the first deployment;
+leave restricted users unassigned. Return here after the destinations exist and the app has
+restarted. **Arrived from runbook step 9?** Those prerequisites are already done; continue with
+the checks below, not another deployment. **Existing app:** prepare the descriptor and unassigned
+roles, then apply the mode change in step 3 under the agreed cutover procedure.
 
-The service owner uses the [XSUAA lifecycle procedure](xsuaa-setup.md#step-1-identify-the-xsuaa-lifecycle-owner)
-to install the additive descriptor while preserving the application identity, existing functional
-roles and assignments. For a first pilot, use an isolated app/XSUAA identity. Do not create
-a second service for an existing app merely because a different guide contains a create command.
+If the templates below are missing, the service owner uses the
+[XSUAA lifecycle procedure](xsuaa-setup.md#step-1-identify-the-xsuaa-lifecycle-owner) to install the
+additive descriptor while preserving the application identity, functional roles and assignments.
+Do not create a second service for an existing app merely because another guide contains a create command.
 
 **Check:** the intended application's `MCPTargetReadAccess` template exists with required
 `arc1_targets`, and `MCPAllTargetReadAccess` has the explicit `*` default. Descriptor installation
@@ -149,24 +152,27 @@ In the intended BTP subaccount:
 
 1. Open **Security → Roles**, select the intended application's `MCPTargetReadAccess` template
    and create a role named `QASReaders`.
-2. For `arc1_targets`, choose **Static**. Enter `QAS/001` and `QAS/100` as **two separate values**,
-   confirming each entry with Enter—not one comma-separated value. Use your real public target IDs,
-   not destination names, SAP usernames or role names. See SAP's
-   [role attribute instructions](https://help.sap.com/docs/authorization-and-trust-management-service/authorization-and-trust-management/specify-attributes-in-role)
+2. For `arc1_targets`, choose **Static**. Enter only `QAS/001` for this pilot and confirm with Enter;
+   leave `QAS/100` ungranted. For a later multi-target cohort, enter each ID separately—not one
+   comma-separated value. Use public target IDs, not destination names, SAP usernames or role names.
+   See SAP's
+   [new-role attribute instructions](https://help.sap.com/docs/authorization-and-trust-management-service/authorization-and-trust-management/specify-attributes-in-new-role)
    if the attribute editor is unfamiliar.
 3. In **Security → Role Collections**, create `ARC-1 QAS Readers (<space>)` and add that application's
    `QASReaders` role. Save it **without users or group mappings** yet. Replace `<space>` with your
    actual CF space, for example `dev`; these are example names, not pre-created exact-target roles.
 
-**Check:** the collection contains the intended application's role and both exact values. Review
+**Check:** the collection contains the intended application's role and only the allowed exact ID. Review
 other apps bound to that XSUAA identity: an unrestricted endpoint in another app is not protected
-by this app's setting. Neither `arc1_targets` nor `user_attributes` is an OAuth scope; do not add
-either to the client's scope request.
+by this app's setting. `arc1_targets` is an attribute, not an OAuth scope. Do not add it or
+`user_attributes` to ARC-1's scope request; the latter is a separate UAA scope, not required for
+these XSUAA role attributes. See the [scope distinction](xsuaa-setup.md#target-attributes-and-oauth-scopes).
 
 ### 3. Enable enforcement through the deployment owner
 
-Select the [multi-PP profile](btp-cloud-foundry-deployment.md#multi-target-pp-only-profile) for a new
-pilot, or adapt the existing landscape extension without overwriting it. Keep the app multi-only:
+For a new app deployed with filtering in runbook step 4, skip to **Check before assigning restricted
+users** below; the property is already applied. For an existing app, adapt its landscape extension
+without overwriting it. Keep the app multi-only:
 remove independent single-target connection settings, including `SAP_BTP_DESTINATION` and
 `SAP_BTP_PP_DESTINATION`, through their owning configuration. Check existing CF environment values
 too; deleting a line from an extension does not remove a deployed value. If single-target access
@@ -179,15 +185,14 @@ settings or introduce a second `modules` key:
 ARC1_MULTI_TARGET_AUTHORIZATION: xsuaa-attribute
 ```
 
-The same-checkout `examples/btp/multi-pp/target-authorization.mtaext` is an optional overlay **after**
-the multi-PP profile, not a standalone profile. Adding its one property to your existing extension
-is the simpler path. On CF, `.env` is not deployed. Follow the
-[runbook's validation and deployment steps](btp-cloud-foundry-deployment.md#4-create-the-landscape-extension)
-for the actual extension; do not restart a second deployment workflow here.
+On CF, `.env` is not deployed. Have the deployment owner apply the reviewed extension using the
+[existing-app change procedure](btp-administration.md#change-and-restart-matrix), with the
+[runbook's build/deploy checks](btp-cloud-foundry-deployment.md#5-validate-build-and-inspect-the-mtar).
+Do not repeat greenfield service creation or overwrite an existing extension.
 
 **Check before assigning restricted users:** inspect the effective CF setting and each serving process's
-startup log. The message starts `Multi-target authorization enforced;` with
-`mode: "xsuaa-attribute"`. A healthy process alone is not evidence of enforcement or usable targets.
+startup log. The message starts `Multi-target authorization enforced;`; its JSON field is
+`"mode":"xsuaa-attribute"`. A healthy process alone is not evidence of enforcement or usable targets.
 After those startup checks pass, use a separate approved operator with the ordinary Admin collection
 (no target grant needed). In that Admin MCP session, `SAPTargets` must report
 `admin.authorization.mode="xsuaa-attribute"` and the intended targets as active. This summary is
@@ -205,34 +210,41 @@ When switching test identities, use a private browser session and confirm the in
 For stale access, use the [role-change workflow](multi-target-administration.md#target-authorization-lifecycle);
 do not assume refreshing a token recomputes IAM membership or clear every browser cookie.
 
-**Check:** the two-target pilot gets `SAPTargets` with exactly `QAS/001` and `QAS/100`. Test a safe
-read and verify [backend identity](principal-propagation-setup.md#verify-the-backend-identity)
-separately. Listing a target, a green configuration screen or `SYSTEM.user` is not proof of the
-propagated SAP user. Then complete the positive and negative checks below before widening the pilot.
+**Check:** the pilot's SAP tools offer only `QAS/001`; `SAPTargets` is absent for a one-target
+reader. A safe read on 001 must succeed, while the same read on the active but ungranted 100 must
+be denied through **both aggregate and pinned routes**, as detailed below. Verify
+[backend identity](principal-propagation-setup.md#verify-the-backend-identity) separately: a listed
+target, green screen or `SYSTEM.user` is not proof of the propagated SAP user.
 
 ## Worked example and acceptance checks
 
-Assume both QAS targets are active and no deny-action removes the catalog. These are separate
-test identities, using roles from `MCPTargetReadAccess` with the listed static values. Give the
-no-grant reader the ordinary Viewer collection and the operator only the Admin collection.
-Do not accumulate test collections on one user without accounting for their union.
+Assume both QAS targets are active and no deny-action removes the catalog. The minimal pilot above
+creates the first reader case; the approved operator uses Admin without target grants. No other
+test users or roles are assumed to exist.
 
 | Identity and grant | Expected aggregate tools and catalog | Execution check |
 |---|---|---|
-| Alice: `QAS/001` | SAP tools require the explicit `QAS/001` target; no `SAPTargets` | Safe read on 001 can proceed to SAP; 100 must be denied before SAP |
-| Bob: `QAS/001`, `QAS/100` | `SAPTargets` lists exactly both IDs | Each target can proceed to its own PP/SAP check |
-| Reader with `read`, no grants | `tools: []` and a caller-only no-target explanation | Neither target is executable |
+| Pilot reader: `QAS/001` | SAP tools require the explicit `QAS/001` target; no `SAPTargets` | Safe read on 001 succeeds; 100 must be denied before SAP |
 | Operator with Admin, no grants | `SAPTargets` shows full safe inventory with `granted:false` | Admin must not execute on either target |
 
 For each identity, check both `/multi/mcp` and the relevant pinned `/<SYSTEM>/<CLIENT>/mcp` route.
-In particular, Alice must not reach `QAS/100` through either route. Pair the denial with the
+In particular, the pilot reader must not reach `QAS/100` through either route. Pair the denial with the
 operator's [audit evidence](multi-target-administration.md#user-access-failures-and-retries) that it
 stopped at ARC-1, before a SAP request; a client error alone does not prove that. Use only known,
 approved test IDs. Unknown and ungranted IDs deliberately have the same public denial.
 
-Also repeat with a disjoint reader granted only `QAS/100`; a one-target catalog change must not
-leak Alice's projection. Calling hidden `SAPTargets` directly must return `UNKNOWN_TOOL` for
-readers with zero/one granted active targets. Existing deny-actions still apply to Admin.
+Before widening the rollout, agree the following additional fixtures with IAM. Tests may reuse the
+pilot account sequentially after verified new sign-in, except the two-user isolation case. Do not
+accumulate collections without accounting for their union; restore temporary assignments afterward.
+
+| Additional case | Setup change and expected result |
+|---|---|
+| Two granted targets | Temporarily add `QAS/100` as a second Static value to the pilot role. After new sign-in, `SAPTargets` lists exactly both IDs; both can proceed to PP/SAP checks. |
+| Reader with `read`, no grants | Assign ordinary Viewer and remove all target-role assignments from the test user. After the [role-change procedure](multi-target-administration.md#role-changes-and-revocation), expect `tools: []` and neither target executable. Separately record any old-token access. |
+| Concurrent disjoint readers | Create another cohort/collection using the same steps but granting only `QAS/100`, assigned to a second approved identity; restore the first user's exact `QAS/001` grant. Interleave calls: neither user may inherit the other's target projection. If no second identity is available, mark unverified. |
+
+Calling hidden `SAPTargets` directly must return `UNKNOWN_TOOL` for readers with zero/one granted
+active targets. Existing deny-actions still apply to Admin.
 
 Record each check as **pass, fail or unverified**, with source revision, identity/IdP reference,
 request ID and nonsecret evidence. Reconnect after changing identity or grants. These checks are
@@ -245,6 +257,11 @@ contributes literal `*`, including future configured targets, and `read`; deploy
 nobody. Combine it with Data, SQL or Admin collections only when needed. Do not use `QAS/*`, regular
 expressions, or XSUAA **Unrestricted**. Existing functional collections do not acquire target grants;
 Admin sees operator diagnostics but cannot execute on an ungranted target.
+
+A literal `*` supplied by **any assigned role** gives all-target access if the complete grant set
+is valid; it is not tied to the All Targets collection's name. One malformed value still invalidates
+the whole set. XSUAA **Unrestricted** omits the attribute for that role: by itself it supplies no
+target grant and execution is denied, though other assigned roles may still supply valid grants.
 
 **Capabilities are global over the grant union.** SQL capability plus a grant for `QAS/001`,
 combined with another role granting `QAS/100`, makes SQL eligible on **both** where

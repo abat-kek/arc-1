@@ -89,9 +89,7 @@ Use one ARC-1 instance and a separate MCP connection per target when you need:
 Multi-target v1 reduces application sprawl; it does not create independent security or capacity
 domains inside one process.
 
-### Target authorization lifecycle
-
-#### SQL and client isolation
+### SQL and client isolation
 
 Target grants select an authorized destination and SAP logon client; they are **not a SQL
 row/client-isolation policy**. Freestyle ABAP SQL can override implicit client handling where the
@@ -103,6 +101,8 @@ Keep freestyle SQL off if the customer requires every returned row to belong to 
 Use a separately reviewed backend service with explicit data authorization for that requirement;
 do not treat a target grant, PP identity, or a keyword blacklist as proof of row isolation. This
 limitation predates target grants. The feature does not introduce a SQL parser/row-security engine.
+
+### Target authorization lifecycle
 
 #### Activation and rollback
 
@@ -116,8 +116,8 @@ extension, not only a temporary `cf set-env` override.
 
 | Change | Operator action |
 |---|---|
-| Assign/remove a target role or collection | Obtain a fresh application token and reconnect/reload MCP tools. No destination restart is required. |
-| Role was assigned but login/catalog still reflects old access | Use [Refresh access](authorization.md#role-assigned-but-login-still-fails), then start sign-in from the MCP client again. If testing another identity, use a private browser window and confirm its email and IdP origin. |
+| Assign/remove a target role or collection | Follow [role changes and revocation](#role-changes-and-revocation): new application sign-in, verify the resulting access, then reload MCP tools. Refresh alone can retain removed grants. No destination restart is required. |
+| Login/catalog still reflects old access | Use the [session-recovery procedure](#role-changes-and-revocation). The **Refresh access** link is only on eligible `invalid_scope` pages; successful login with stale target grants may show no such link. |
 | Rename a public target alias/client ID | Coordinate the destination change, exact role values, all-process restart and fresh client login. Old IDs do not become aliases automatically. |
 | Repoint a destination under the same public ID | Existing grants still match. Require the IAM/data owner's review before routing those grants to a different backend. |
 | Activate enforcement | Deploy the reviewed multi-only extension, verify the effective mode on every process and run positive/negative user acceptance. |
@@ -134,15 +134,36 @@ refresh/SSO sessions. Do not reopen based only on an IAM assignment diff or an e
 verify the effective access under the customer's revocation procedure. Prefer fixing forward
 with enforcement enabled rather than widening access to restore service.
 
+#### Role changes and revocation
+
+1. Have IAM verify the intended application's assignments and IdP origin, including all collections
+   contributing targets/capabilities. Use a dedicated test cohort when changing values for a pilot.
+2. Start the MCP client's **sign-out/re-authentication** flow, not only reconnect or token refresh.
+   A refresh can issue a new token with old permissions.
+3. If ARC-1 displays an eligible `invalid_scope` failure page, use **Role assigned? Refresh access**
+   and then start sign-in again. If login succeeds but access is stale, there may be no such link:
+   try a fresh private browser window, or ask the deployment owner for the application's configured
+   XSUAA logout link. See [session recovery](xsuaa-setup.md#refresh-access-after-a-verified-assignment).
+   Confirm the email and IdP origin. Opening ARC-1's `/oauth/logged-out` directly only displays a
+   confirmation page; it does not clear the XSUAA session.
+4. Verify the new session's actual permitted/denied calls and caller-specific grant summary, then
+   reload the client's tools. Do not infer updated grants merely from a new token expiry or login form.
+   Keep old-token/refresh observations separate from the newly authenticated session's result.
+
 An already-issued token retains its old grants until expiry; changing a role, signing out, or
-restarting ARC-1 does not revoke every outstanding token. Do not promise that refresh acquires new
-scopes or recalculates IAS membership. The shipped descriptor's access-token validity is one hour,
-but **this is not a one-hour revocation guarantee**: live testing showed refresh and reused SSO
-issuing new tokens with the removed grant and a new expiry. A fresh private login obtained the
-updated empty grant, and its subsequent refresh preserved the denial. Verify the customer's normal
-sign-out/new-sign-in workflow, inspect the resulting application's verified grant status, and agree
-an acceptable revocation window. Immediate revocation is not provided by this feature.
-Missing/invalid grants fail closed while enforcement stays enabled.
+restarting ARC-1 does not revoke every outstanding token. Live tests also showed refresh and reused
+SSO issuing new tokens with removed grants. **Immediate revocation is not provided by this feature.**
+Missing/invalid grants fail closed, but stale valid grants remain valid until the relevant access ends.
+
+The shipped `mta.yaml` and `xs-security.json` set `token-validity: 3600` (**1 hour**) and
+`refresh-token-validity: 2592000` (**30 days**). The latter is longer than SAP's documented default
+of 604800 seconds (7 days); see [XSUAA descriptor configuration](https://help.sap.com/docs/authorization-and-trust-management-service/authorization-and-trust-management/application-security-descriptor-configuration-syntax).
+These are configured token lifetimes, **not a one-hour or 30-day revocation guarantee**. The IAM
+and deployment owners must review their effective settings, refresh/SSO behavior and acceptable
+revocation window; shortening settings is a separate reviewed change, not a retroactive revocation.
+For urgent containment, use the security owner's incident procedure (for example closing the ARC-1
+route). Basis can restrict the mapped SAP user/authorizations for PP targets, but must verify the
+effect on active SAP sessions; that does not remove ARC-1 inventory grants or apply to shared Basic users.
 
 Instructions, `tools/list`, and catalogs are caller-specific. ARC-1 emits `Cache-Control: private,
 no-store` for enforced MCP responses, including streaming output. Do not add shared proxy caching;
@@ -599,8 +620,9 @@ For empty reader tool lists, inspect `target_resolution_failed` audit events wit
 The safe `errorCode` distinguishes missing, malformed and over-limit grants without logging raw
 attribute values. An unrelated valid grant naming an inactive/unknown target is not malformed.
 One invalid value rejects the **whole** grant set, even alongside `*`; a trailing non-breaking
-space is invalid, not silently trimmed. Re-enter exact ASCII IDs in IAM, obtain a fresh token and
-retry. Admin catalog summaries describe the calling Admin's grants, not another user's token.
+space is invalid, not silently trimmed. Re-enter exact ASCII IDs in IAM and follow the
+[role-change procedure](#role-changes-and-revocation) before retrying. Admin catalog summaries
+describe the calling Admin's grants, not another user's token.
 
 PP setup success is not proof of SAP login. PP/per-user access failures are deliberately not
 cached: after Basis fixes mapping or authorization, the user can say “try again now” in the same

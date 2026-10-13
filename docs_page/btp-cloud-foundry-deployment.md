@@ -184,14 +184,24 @@ startup/request pairing. Its least-privileged startup user is not a PP fallback.
 
 The profile below keeps **standard access** (`legacy`): every reader may see/try all targets;
 SAP still decides whether the call is authorized. This is a legitimate setup when everyone may
-see the shared inventory. For different per-team target lists, especially in larger landscapes,
-choose the optional [target-filtering setup](multi-target-authorization.md) before deploying.
-It uses IAM assignments, not automatic SAP-account discovery. If choosing it, prepare the setting
-before deploying and do not assign restricted users until enforcement is verified on every process.
+see the shared inventory. For different per-team target lists, consider optional
+[target filtering](multi-target-authorization.md#when-to-use-it). It uses IAM assignments, not
+automatic SAP-account discovery.
 
 ```bash
 cp -n examples/btp/multi-pp/profile.mtaext mta-overrides.mtaext
 ```
+
+**If opting into filtering**, add this one property to the copied extension's existing
+`arc1-mcp-server` module under `properties:`; keep its other settings:
+
+```yaml
+ARC1_MULTI_TARGET_AUTHORIZATION: xsuaa-attribute
+```
+
+Then continue through steps 5–9 on this page. Leave restricted users unassigned until the app is
+deployed, destinations are active, and enforcement is verified. Step 9 hands off to the target-role
+procedure; do not start that procedure or another deployment in parallel with this runbook.
 
 Prepare private copies of the two `examples/btp/multi-pp/*.destination.json` files under
 `.arc1/btp/`. Replace the fictional QAS targets with your system/client values; add one file per
@@ -486,9 +496,9 @@ As User and Role Administrator:
 3. Open each collection and confirm its **Roles** tab contains the expected current
    `arc1-mcp-<space>!t...` application role.
 4. **Single target or standard multi-target access:** assign `ARC-1 Viewer (<space>)` to the initial
-   test user before their first login. **Target-filtered multi-target access:** follow the
-   [opt-in setup order](multi-target-authorization.md#minimal-static-role-setup) instead; verify
-   enforcement before assigning the restricted user's target role collection.
+   test user before their first login. **Target-filtered multi-target access:** leave the restricted
+   user unassigned here and continue to step 9. That step hands off to role setup after destinations
+   are ready; verify enforcement before assigning the restricted user's target role collection.
 
 Leave `ARC-1 All Targets (<space>)` unassigned unless explicitly approved: it grants `read` and
 literal `*`, including future targets. It is not a harmless catalog-viewer role.
@@ -534,6 +544,12 @@ For a discovered multi-target Basic destination only, `User`/`Password` rotation
 needs no restart. A single-target `SAP_BTP_DESTINATION` is resolved at startup, so credential changes
 require restarting every app instance. Every non-secret multi-target field belongs to the immutable
 startup registry.
+
+**Target-filtered deployments:** now complete the
+[minimal static role setup](multi-target-authorization.md#minimal-static-role-setup), then return
+to step 10 below. The app/descriptor and destinations are already prepared: do not redeploy from
+the start. The guide checks them, creates the unassigned cohort, verifies enforcement and active
+targets, and only then assigns the pilot user. Standard-access deployments continue directly below.
 
 ## 10. Verify the service in layers
 
@@ -674,7 +690,7 @@ unassigned All Targets collection).
 | Multi-target is ready with zero active targets | Call Admin `SAPTargets`; health is not SAP readiness |
 | Role collection missing/empty | Perform full MTA deploy, inspect roles, remove/recreate orphaned collection if needed, then reassign |
 | OAuth `invalid_client` after deploy | Restore the intended DCR signing key or re-register clients; do not invent a new key on every deploy |
-| OAuth `invalid_scope` after a grant | On the failure page choose **Role assigned? Refresh access**, then reconnect the MCP client; verify the user's IdP origin if it persists |
+| OAuth `invalid_scope` after a grant | First check the [scope/assignment decision table](xsuaa-setup.md#insufficient-scope-invalid_scope). If the eligible failure page offers **Role assigned? Refresh access**, use it, then start a new MCP sign-in; reconnect alone can reuse stale grants. |
 | SAP `401` through PP | Check generated user certificate, STRUST, trusted proxy, ICF logon, CERTRULE, and SU01; for Basic startup + PP, check the Cloud Connector system-certificate logon setting |
 | SAP `502` `not mutually authenticated` through PP | Check that the effective HTTPS port requests a client certificate (`VCLIENT=1`) and its active SSL Server PSE trusts the system certificate's direct issuer; see [Certificate trust (STRUST)](principal-propagation-setup.md#certificate-trust-strust) |
 | Crash loop `Permission denied`, exit 126 | The launcher was replaced by a direct script call; check the executable bit in the archive and invoke scripts through `sh` as the base `exec sh ./bin/start-cf.sh` does |

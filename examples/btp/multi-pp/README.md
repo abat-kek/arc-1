@@ -29,17 +29,19 @@ The unchanged `profile.mtaext` keeps **standard access** (`legacy`): readers may
 targets, and SAP still checks their access. This is supported, not deprecated. Optional filtering
 is most useful when different teams need different subsets of a larger landscape; it follows IAM
 assignments rather than automatically discovering SAP accounts. Static roles need no IAS change.
-For opt-in filtering, use the target-authorization overlay **after** that profile, or add its one
+For opt-in filtering, the canonical runbook adds the one
 `ARC1_MULTI_TARGET_AUTHORIZATION: xsuaa-attribute` property to the customer's existing multi-only
-extension. Its `extends` references that profile's ID, not the base MTA ID. `npm run btp:validate`
+extension. The optional overlay is for advanced extension chains **after** the example profile;
+its `extends` references that profile's ID, not the base MTA ID. `npm run btp:validate`
 also generates and checks the effective merged descriptor; schema validation alone is insufficient.
 It is not a complete profile by itself and does not assign users or modify destinations.
 Follow [Restrict access to systems and clients](../../../docs_page/multi-target-authorization.md)
 for readiness, activation and acceptance, and its linked administration procedure for rollback;
 removing enforcement restores broader standard access, not a security-neutral fallback.
 
-Start with a static `MCPTargetReadAccess` role containing exact `arc1_targets` values such as
-`QAS/001` and `QAS/100`. The separately generated `ARC-1 All Targets (<space>)` collection supplies
+Start with a static `MCPTargetReadAccess` role granting only `QAS/001`; leave active `QAS/100`
+ungranted for the pilot's negative test. Later cohorts can contain several exact values. The
+separately generated `ARC-1 All Targets (<space>)` collection supplies
 explicit `*` for every current and future target; assign it only deliberately. Existing functional
 collections are unchanged, and Admin diagnostics do not bypass target grants for SAP calls.
 

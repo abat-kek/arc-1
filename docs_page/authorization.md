@@ -627,13 +627,14 @@ and token lifetime rather than assuming a reconnect refreshes either.
 After a verified role change:
 
 1. Verify the required role collection contains current application roles and is assigned under the IdP used for login. An unknown scope name needs configuration repair, not another role.
-2. On ARC-1's failure page, select **Role assigned? Refresh access**. ARC-1 sends the browser through XSUAA's logout endpoint with its bound client ID and a fixed, allowlisted return URL.
-3. After **Access refreshed** appears, use the MCP client's re-authentication flow and refresh its tool catalog. Reconnecting alone may reuse a token. A new identity-provider login may be required.
-4. If the deployment predates this recovery action, retry in a private browser window or clear the XSUAA-domain cookies manually. See [XSUAA Setup → invalid_scope](xsuaa-setup.md#insufficient-scope-invalid_scope).
+2. If the eligible `invalid_scope` failure page offers **Role assigned? Refresh access**, select it. ARC-1 sends the browser through XSUAA logout with its bound client ID and a fixed, allowlisted return URL.
+3. After **Access refreshed**, use the MCP client's sign-out/new-sign-in flow and reload its catalog. Reconnect or token refresh alone can retain old grants; a new identity-provider login may be required.
+4. If there is no action (including successful login with stale grants), use a fresh private browser window or the owner-provided application logout link. Follow [XSUAA session recovery](xsuaa-setup.md#refresh-access-after-a-verified-assignment), not an invented logout endpoint or blanket cookie deletion.
 
-A fresh token should reflect the current grant. If claim inspection is needed, inspect it locally;
-do not paste bearer tokens into websites, tickets or chat. Decoding claims alone does not validate
-the token or prove SAP access.
+Verify the resulting grant and actual allowed/denied calls; a new token expiry does not prove the
+permissions changed. For target filtering, follow the [revocation procedure](multi-target-administration.md#role-changes-and-revocation).
+Inspect claims only locally; do not paste bearer tokens into websites, tickets or chat. Decoding
+claims alone does not validate the token or prove SAP access.
 
 The recovery action does not revoke access tokens already issued to other sessions. Do not construct a logout URL from request parameters or use an arbitrary redirect: XSUAA application logout requires an allowlisted redirect to prevent open redirects.
 

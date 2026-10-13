@@ -85,8 +85,9 @@ Before handing the endpoint to users:
 
 - [ ] The deployed version and customer `.mtaext` are recorded and reproducible.
 - [ ] Every expected XSUAA role collection exists, contains roles from the current XSUAA instance,
-      and has been tested with a fresh token.
-- [ ] A Viewer can complete a safe read and cannot call data, SQL, or mutation actions.
+      and has been tested after new application sign-in, including expected denials.
+- [ ] A read-only pilot user can complete a safe read and cannot call data, SQL, or mutation actions:
+      ordinary Viewer for standard access; an exact-target collection for filtered access.
 - [ ] Principal Propagation identifies the real SAP user; shared Basic identifies only the approved
       technical user and remains an explicitly accepted exception.
 - [ ] Multi-target Admin diagnostics explain every accepted and excluded destination without

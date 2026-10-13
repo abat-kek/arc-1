@@ -1117,9 +1117,10 @@ The 2026-08-04 live spike created a target-aware role, collection, and IAS group
 in the ARC-1 test subaccount. The final token callback timed out before claim inspection. The
 2026-09-05 isolated probe additionally verified broker create/update and static/IdP role creation,
 not user-token claims. At that point all token, runtime, scale, and MCP-client gates remained open.
-The September 15 implementation runs subsequently measured several of them; the
-[current validation record](../research/2026-09-15-pr677-target-authorization-implementation.md)
-distinguishes completed evidence from remaining final-build acceptance. A previous
+The [September 15 implementation record](../research/2026-09-15-pr677-target-authorization-implementation.md)
+subsequently measured several of them. The [October 13 final-build follow-up](../research/2026-10-13-pr677-final-build-acceptance.md)
+adds the live static-role matrix, measured revocation behavior, grant-size boundaries and
+one-direction foreign-human rejection; it explicitly lists the acceptance gates still open. A previous
 attempt proved that requesting `user_attributes` as a scope is incorrect for this design because
 XSUAA rejected it as an invalid application scope.
 

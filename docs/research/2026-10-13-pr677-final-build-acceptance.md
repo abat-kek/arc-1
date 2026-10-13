@@ -1,6 +1,6 @@
 # PR #677 — refreshed acceptance tests and October 13 live baseline
 
-Status: **test implementation complete; authenticated acceptance is still partial, not merge sign-off.**
+Status: **core static-role and initial real-client acceptance recorded; customer-ready gates remain open.**
 This supplements the [September validation record](2026-09-15-pr677-target-authorization-implementation.md)
 without relabeling those older results as final-build evidence. An external tester reported that it
 worked, but supplied no build, client, configuration or negative-case notes; that is encouraging
@@ -238,6 +238,71 @@ No trace, audit configuration, user authorization or SAP object was changed. Cli
 successful calls still must not be described as independent proof of the mapped SAP username;
 that requires an agreed Basis-owned evidence source.
 
+## Real MCP Inspector acceptance (October 13, approximately 18:12–18:29 UTC)
+
+These checks used the actual **MCP Inspector 2.10.1** browser UI, not the custom acceptance
+harness. Inspector connected to the isolated app's aggregate `/multi/mcp` endpoint using OAuth,
+Streamable HTTP and protocol `2025-11-25`. It ran on loopback with API authentication enabled,
+an isolated catalog, in-memory secret storage and token persistence disabled. The sample servers
+shipped with Inspector were not connected. The CF app stayed on the same production source and
+droplet; no redeployment or restart was needed.
+
+Temporary changes were limited to the previously approved isolated collections and the two test
+users. Primary authentication used the normal browser; every secondary authentication used
+incognito. Results below were observed in Inspector's rendered tool schemas, protocol responses
+and tool results. Token-claim verification belongs to the separate harness evidence above.
+
+| Scenario | Observed result |
+|---|---|
+| Viewer + exact `A4H/100` | Seven operational tools; no `SAPQuery` or reader `SAPTargets`. The target selector contained only `A4H/100`. `SAPRead(SYSTEM)` succeeded. |
+| Ungranted target supplied manually in the JSON editor | `SAPRead(SYSTEM)` for `A4H/001` returned structured `TARGET_NOT_AVAILABLE`; editing the arguments did not bypass the restricted selector. |
+| Data + SQL + exact target, fresh secondary login | Eight operational tools, including `SAPQuery`; a fixed SQL marker query returned exactly client `100` and marker value `100`. |
+| Data Viewer only, after SQL removal and fresh authentication | Seven operational tools; `SAPQuery` disappeared. `SAPRead(TABLE_QUERY)` returned the same client-100 marker. |
+| Admin + Viewer, no target grant | Only `SAPTargets` was exposed. Its four active targets all had `granted: false`, with `grantMode: none` and `TARGET_GRANT_MISSING`; no operational tool was exposed. The known Basic-disabled candidate still made the diagnostic registry state degraded. |
+| Restored baseline Viewer, no target grant or Admin | `initialize` and `tools/list` succeeded with an empty tool catalog. This was a valid authenticated no-access state, not a login failure. |
+
+The SQL query was fixed to
+`SELECT MANDT, NAME, LOW FROM TVARVC WHERE NAME = 'ZARC1_CLIENT_MARKER'`, capped at two rows.
+The data-preview call selected those same three columns and exact marker, also capped at two.
+Both returned exactly one row; no SAP object or data was created or changed. `SYSTEM`'s displayed
+user identity is not an independent SAP-side username observation, so it does not close the
+Basis evidence gap above.
+
+### Session recovery and limits of this client check
+
+- Adding Data Viewer and clearing Inspector's stored OAuth state alone did not update the reused
+  primary SSO session: the marker call still returned `INSUFFICIENT_SCOPE` for `data`. This was
+  a fail-closed stale-session observation, not a successful Data Viewer test or an ARC-1 defect.
+- The bound XSUAA logout reached ARC-1's access-refreshed page. Fresh primary authentication then
+  needed credentials; the saved primary credential was rejected once and was not retried. The
+  remaining matrix used the already authorized secondary account, whose saved credential worked.
+- Subsequent capability changes used both Inspector's OAuth-state reset and bound XSUAA logout,
+  followed by a fresh secondary password login. The visible catalog reflected the removed SQL,
+  added Admin and finally removed Admin/target grants. This verifies reconnect-time refresh,
+  not automatic invalidation of an already-issued token or a live client's cached schema.
+- On some callbacks Inspector returned to a disconnected server card. Selecting Connect again
+  completed initialization and tool listing; no ARC-1 runtime change was required.
+- This is aggregate-route Inspector coverage only. It does not replace the full named-client
+  matrix, unchanged legacy-mode checks, pinned-route client UX or an LLM-driven Copilot run.
+  VS Code 1.140.0 was opened with an isolated, credential-free MCP configuration, but execution
+  stopped at its workspace-trust prompt. Without confirmation to trust that folder, the prompt
+  was cancelled and only the temporary window was closed; VS Code is not counted as passed.
+
+### Restoration and verification
+
+All six isolated role collections again matched their saved role references, assignments and
+mappings, including the secondary user's original Viewer assignment. No temporary Data/SQL,
+Admin or exact-target assignment remains. XSUAA descriptors, IAS configuration, destinations,
+shared bindings and SAP authorizations were unchanged in this round. The CF app remained healthy
+on the same droplet. Inspector was disconnected and stopped, its incognito window and temporary
+login tabs were closed, and the user's existing VS Code workspace was preserved. In-memory token
+storage and process shutdown are not token revocation.
+
+All 36 harness self-tests and 15 focused documentation/session-recovery tests passed again.
+The strict documentation build and `git diff --check` also passed after recording these results.
+Before this evidence-only update, all 16 GitHub checks on `9a7c38da` were successful and the branch
+contained latest fetched `origin/main` `e0c33892`. No production code fix was needed in this round.
+
 ## Exact next input and remaining gates
 
 The saved IAS test credential worked, so another secondary-user password entry is not currently
@@ -248,9 +313,11 @@ all closed**. In particular:
 1. **Backend identity:** the provided SAP login worked, but existing narrowly selected SM20/STAD
    records did not supply the needed evidence. A Basis owner must agree an alternative; do not
    enable broad tracing, create helpers or grant SAP_ALL. No further login alone closes this gap.
-2. **Installed clients:** run the Viewer/Data/SQL/Admin, schema-refresh and unchanged-legacy cases
-   in the named real MCP clients. The harness is not Inspector/Cursor/VS Code coverage; the
-   external tester's unversioned success report cannot replace these cases.
+2. **Installed clients:** Inspector now has the aggregate Viewer/Data/SQL/Admin, denied-target,
+   no-grant and fresh-login catalog checks recorded above. Complete the remaining named-client
+   and unchanged-legacy cases; VS Code still needs workspace-trust confirmation. The harness is
+   not Cursor/VS Code coverage, and the external tester's unversioned success report cannot
+   replace these cases.
 3. **Application/origin isolation:** reciprocal application acceptance and the same email under
    distinct IdP origins remain untested. A second approved origin/identity fixture is needed.
 4. **Optional IAS recipe:** September evidence remains historical. Replay group-fed, static-plus-IAS,
@@ -259,6 +326,15 @@ all closed**. In particular:
 5. **Operational limits:** real enterprise-group token/header size, large active inventories and
    durable BTP Audit Log delivery remain unmeasured. The 256-value parser boundary is not a fleet
    sizing guarantee. The documented revocation window still needs operator acceptance.
+
+### Merge recommendation versus customer sign-off
+
+No new code-level blocker was found by this follow-up. The accumulated automated checks, live
+static-role matrix, future-target test and initial real-client results support merging the
+feature **as the reviewed default-off opt-in**, subject to the final commit's required CI checks.
+This is not a claim that every acceptance gate has passed: keep the remaining gates visible and
+complete the relevant customer/IAS/client qualification before calling those deployments ready.
+Do not weaken the contract or enable enforcement in existing deployments merely to close this PR.
 
 Roadmap checked: **no new roadmap impact**. This closes test-harness gaps in existing PR #677,
 not the independent Basis-handbook review (DOC-02) or multi-tenant embedding work (FEAT-59).

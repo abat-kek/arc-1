@@ -31,9 +31,9 @@ the inputs and authority boundaries. Leave unknown values explicitly **unverifie
 |---|---|
 | Feature availability | Source revision, [readiness](multi-target-authorization.md#availability-and-readiness), isolated pilot or approved rollout |
 | Existing desired state | Owning `.mtaext`, CF app/space, XSUAA application identity and lifecycle owner; preserve existing settings |
-| Target access | Current and intended `legacy` / `xsuaa-attribute` mode; static cohorts first, IAS only if its separate gates are met |
+| Target access | Why filtering is needed, or why shared inventory is acceptable; current/intended standard access (`legacy`) or target-filtered access (`xsuaa-attribute`). Static cohorts first; IAS is optional. |
 | Exact identifiers | Public system-or-alias/client IDs and corresponding destination names; keep these distinct |
-| IAM test matrix | Identity/IdP references, collections, expected allowed and denied targets, expected SAP users; include no-grant and Admin-without-grants cases |
+| IAM test matrix | Identity/IdP references, collections, expected allowed and denied targets, expected SAP users; include no-grant and Admin-without-grants cases. Name who keeps target grants aligned with SAP-account access. |
 | Cutover | All existing readers, other apps sharing XSUAA, serving processes/routes, approved maintenance window and rollback owner |
 | Permitted actions | What the agent may inspect/change and which CF, IAM, Connector or Basis actions need owner approval |
 
@@ -42,7 +42,7 @@ Use this evidence checklist alongside the guide, not as an additional deployment
 | Checkpoint | Evidence to retain | Stop if |
 |---|---|---|
 | Prepare configuration and roles | Reviewed extension diff, correct app's templates/role values, unassigned cohort | Ownership is unclear, a file would be overwritten, or an unrelated app/service would change |
-| Enable enforcement | Effective mode and startup evidence for every serving process; Admin registry summary | Mixed single-target topology, legacy replicas still serving, or unavailable registry |
+| Enable enforcement | Effective mode and startup evidence for every serving process; Admin registry summary | Mixed single-target topology, standard-access replicas still serving, or unavailable registry |
 | Assign and sign in | Correct application identity/IdP, expected caller-specific tools and grants | Wrong identity or broader permissions than the agreed matrix |
 | Test permitted and denied calls | Request IDs, pre-SAP denial evidence, safe-read results and separate backend identity verification | Unexpected target visibility/execution, or missing evidence to distinguish ARC-1 denial from SAP denial |
 | Remove test access or diagnose stale access | IAM change evidence and old-token/refresh/fresh-login observations under the owner's procedure | Access is assumed revoked from assignment removal, restart or elapsed time alone |

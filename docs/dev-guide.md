@@ -17,6 +17,10 @@ owns target-access readiness and the static-role procedure; the old setup anchor
 `docs_page/llms.txt` is only a short entry/task map, copied unchanged by MkDocs; there is no manifest
 or custom build hook. The optional worksheet owns handoff inputs, expected evidence and stop conditions.
 
+In operator prose, call `legacy` **standard access** and `xsuaa-attribute` **target-filtered access**.
+Both remain supported choices; preserve the exact configuration values in examples. Filtering is
+optional IAM-assigned target access, not automatic discovery of SAP accounts or a mandatory IAS setup.
+
 When changing setup guidance, check the relevant runtime/descriptor and existing examples together.
 Run the focused documentation/profile tests and strict MkDocs build, then follow the affected task
 from Start Here. Verify one next step, no overwritten settings and distinct evidence for safe reads

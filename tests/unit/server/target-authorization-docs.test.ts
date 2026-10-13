@@ -65,6 +65,27 @@ describe('target authorization operator documentation', () => {
     expect(read('docs_page/configuration-reference.md')).toContain('--multi-target-authorization');
   });
 
+  it('explains the optional supported modes without implying automatic SAP-account discovery', () => {
+    expect(targetAccess).toContain('## When to use it');
+    expect(
+      hasParagraph(
+        targetAccess,
+        '**Standard access** is named `legacy` in the configuration. That value means “no additional target filtering”, **not deprecated or unsupported**. **Target-filtered access** uses `xsuaa-attribute`. Keep these exact values in configuration files; the plain-language names are not additional values.',
+      ),
+    ).toBe(true);
+    expect(
+      hasParagraph(
+        targetAccess,
+        "**This is not automatic SAP-account discovery.** Your identity/access administrator assigns the target list; ARC-1 does not check every SAP system at login to find the user's accounts. Keep those assignments aligned with SAP access through your organization's access process. A listed target can still reject a call if the SAP user, permissions or connection are missing.",
+      ),
+    ).toBe(true);
+    expect(targetAccess).toContain('No new IAS configuration is required');
+    expect(targetAccess).toContain('## How the parts fit together');
+    expect(targetAccess).toContain('**not an SAP PFCG role**');
+    expect(read('docs_page/llms.txt')).toContain('Do not invent a standard value');
+    expect(read('AGENTS.md')).toContain('supported standard access, not deprecated');
+  });
+
   it('separates grants, capability union, diagnostics and actual SAP access', () => {
     expect(auth).toContain('global functional scopes × union of granted targets');
     expect(auth).toContain('not execution on an ungranted target');
@@ -111,7 +132,7 @@ describe('target authorization operator documentation', () => {
     expect(targetAccess).toContain('same source revision');
     expect(targetAccess).toContain('examples/btp/multi-pp/target-authorization.mtaext');
     expect(read('docs_page/btp-overview.md')).toContain(
-      'Legacy mode only; opt-in target enforcement rejects this topology',
+      'Standard access (`legacy`) only; opt-in target enforcement rejects this topology',
     );
   });
 
@@ -121,6 +142,10 @@ describe('target authorization operator documentation', () => {
     expect(enable).toBeGreaterThan(0);
     expect(assign).toBeGreaterThan(enable);
     expect(targetAccess).toContain('Only after step 3 passes, assign');
+    const runbook = read('docs_page/btp-cloud-foundry-deployment.md');
+    expect(runbook).toContain('**Target-filtered multi-target access:** follow the');
+    expect(runbook).toContain("enforcement before assigning the restricted user's target role collection");
+    expect(runbook).toContain('**granted active targets**, not the whole registry');
     expect(targetAccess).toContain('Multi-target authorization enforced;');
     expect(targetAccess).toContain('admin.authorization.mode="xsuaa-attribute"');
     expect(targetAccess).toContain('One invalid value rejects the whole grant set');

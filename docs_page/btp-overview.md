@@ -17,9 +17,11 @@ its artifact; ask the deployment owner if that revision is unknown. Proposed set
     Follow [BTP Cloud Foundry Deployment](btp-cloud-foundry-deployment.md). Step 4 selects a
     single-PP or multi-PP example from the same checkout; keep following that runbook through acceptance.
 
-    If users must see only assigned system/client targets, first check
-    [target authorization readiness and setup](multi-target-authorization.md). The multi-PP profile
-    alone retains legacy all-reader visibility; choose the opt-in path before assigning users.
+    **Optional, not a prerequisite:** if teams need different target lists, especially in a larger
+    landscape, use [target filtering](multi-target-authorization.md#when-to-use-it). It follows IAM
+    assignments, not automatic discovery of SAP accounts. The multi-PP profile alone keeps standard
+    access: every reader may see/try all targets, and SAP still checks the user's access.
+    Choose the filtered path before assigning restricted users; no IAS change is needed to start.
 
     If a shared SAP identity is acceptable for one target, use the
     [single-Basic profile](btp-cloud-foundry-deployment.md#single-target-read-only-shared-basic-profile)
@@ -33,7 +35,7 @@ its artifact; ask the deployment owner if that revision is unknown. Proposed set
 |--------------------|-------------|--------------|---------------|
 | One on-premise SAP system/client | One `/mcp` endpoint | Principal Propagation recommended; shared Basic supported | Cloud Foundry Deployment — [single-PP](btp-cloud-foundry-deployment.md#single-target-read-only-pp-profile) or [single-Basic](btp-cloud-foundry-deployment.md#single-target-read-only-shared-basic-profile) |
 | Several on-premise systems or clients, mutation-free access | Pinned `/<SYSTEM>/<CLIENT>/mcp` routes plus `/multi/mcp` | Principal Propagation recommended; shared Basic is an explicit exception | [Cloud Foundry Deployment](btp-cloud-foundry-deployment.md) — multi-PP profile |
-| One general `/mcp` endpoint beside mutation-free multi-target routes | Legacy mode only; opt-in target enforcement rejects this topology | Configure each path independently | Read the [side-by-side risks](multi-target-administration.md#optional-single-target-mcp) before deployment |
+| One general `/mcp` endpoint beside mutation-free multi-target routes | Standard access (`legacy`) only; opt-in target enforcement rejects this topology | Configure each path independently | Read the [side-by-side risks](multi-target-administration.md#optional-single-target-mcp) before deployment |
 | BTP ABAP Environment | One `/mcp` endpoint | `OAuth2UserTokenExchange` | [BTP ABAP Environment](btp-abap-environment.md) |
 | S/4HANA Public Cloud developer extensibility | One `/mcp` endpoint | Per-user SAML/OAuth exchange | [S/4HANA Public Cloud](s4hana-public-cloud.md) |
 | Writable access to several SAP systems with stronger isolation | One ARC-1 instance and MCP connection per target | Identity and safety policy per instance | [Separate instances](multi-target-administration.md#when-separate-instances-are-safer) |
@@ -42,7 +44,7 @@ its artifact; ask the deployment owner if that revision is unknown. Proposed set
 
     The discovered multi-target routes do not expose object writes, activation, transport mutation,
     Git mutation, plugins, or controlled execution. A writable single-target `/mcp` may coexist
-    only in legacy mode, as an independent configuration. Do not widen multi-target access by copying
+    only with standard access (`legacy`), as an independent configuration. Do not widen multi-target access by copying
     single-target write settings into destinations.
 
 ## Follow the setup in this order
@@ -69,7 +71,7 @@ different activation rules; the linked administration guides own those details.
 | Repository `mta.yaml` | Product defaults, service topology, bindings, role templates and collections | Customer destinations or secrets |
 | Customer `.mtaext` | Durable route, instance count, selected topology, target-authorization mode, and application safety ceilings | Destination credentials or per-user target assignments |
 | BTP subaccount destination | SAP URL/client, authentication mode, Cloud Connector location, and supported target-local multi-target policy | Global ARC-1 authorization or write policy |
-| XSUAA roles and role collections | Human ARC-1 scopes; with opt-in enforcement, roles also carry `arc1_targets` grants | SAP users/passwords; target attributes do not restrict legacy mode |
+| XSUAA roles and role collections | Human ARC-1 scopes; with opt-in enforcement, roles also carry `arc1_targets` grants | SAP users/passwords; target attributes do not restrict standard (`legacy`) access |
 | Cloud Connector and SAP | Network resources, trust, certificate mapping, SAP roles | MCP OAuth roles |
 | MCP client | ARC-1 endpoint URL and OAuth registration state | Destination or SAP credentials |
 

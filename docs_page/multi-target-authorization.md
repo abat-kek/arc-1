@@ -1,18 +1,39 @@
 # Restrict access to systems and clients
 
-Use opt-in target authorization when each ARC-1 user should see and call only the SAP system/client
-targets assigned by your identity administrator. Start with **static XSUAA role values**; IAS
-changes are optional. This guide owns the target-access setup. The
-[Cloud Foundry runbook](btp-cloud-foundry-deployment.md) still owns service creation and deployment.
+**Optional: show each user only their assigned systems and clients, and reject calls to the others.**
+This adds per-user target filtering to ARC-1's read-only multi-system mode. For example, a shared
+gateway can contain many systems while a project team sees only its two assigned targets in
+`SAPTargets` and the tool selectors. The same restriction applies if someone supplies another
+target manually or uses its pinned URL.
+
+**This is not automatic SAP-account discovery.** Your identity/access administrator assigns the
+target list; ARC-1 does not check every SAP system at login to find the user's accounts. Keep those
+assignments aligned with SAP access through your organization's access process. A listed target
+can still reject a call if the SAP user, permissions or connection are missing.
+
+Start with **static XSUAA role values**: maintain a reusable list of targets for a team in BTP.
+No new IAS configuration is required. This guide owns that access setup; the
+[Cloud Foundry runbook](btp-cloud-foundry-deployment.md) owns building and deploying the application.
+
+## When to use it
+
+| Your situation | Recommendation |
+|---|---|
+| Many systems, with different teams allowed to see/use different subsets | Enable target filtering. This is where it usually brings the most benefit: less irrelevant inventory for people and agents, plus an ARC-1 access check before SAP. |
+| Only a few targets, but their existence must be hidden from other readers | Enable it too; confidentiality, not a minimum system count, is the deciding factor. Trusted Admins still see diagnostic inventory. |
+| A small/shared landscape where every ARC-1 reader may see and attempt all targets | Keep **standard access**. SAP still checks each propagated user's access; target filtering would add IAM maintenance without the same benefit. |
+| One SAP target, or several targets requiring writes/hard isolation | Use [single-target or separate instances](multi-target-administration.md#when-separate-instances-are-safer). This feature is not required for single-target access and does not add multi-target writes. |
+
+Both access modes are supported choices. Upgrading alone does not require any target-role or IAS change.
 
 ## Availability and readiness
 
 !!! info "Version availability"
 
-    Target authorization is planned for ARC-1 **1.6**. Confirm that your selected release includes
+    Target authorization is planned for ARC-1 **1.6.0**. Confirm that your selected release includes
     this feature before using the setting; older installations do not enforce it. The required
     companion API is provided by `@arc-mcp/xsuaa-auth` 1.1.0 and included in ARC-1's dependencies.
-    Upgrading does not enable enforcement: existing deployments remain in `legacy` mode until you opt in.
+    Upgrading does not enable enforcement: existing deployments keep standard access until you opt in.
 
 Use this guide, the deployment runbook and examples from the **same source revision** as the artifact.
 Complete the acceptance checks below in your own landscape before a wider rollout. Optional IAS
@@ -20,12 +41,32 @@ provisioning has additional validation requirements described later in this guid
 find the design and release-validation requirements in `docs/plans/xsuaa-target-authorization.md`
 and `docs/adr/0008-opt-in-xsuaa-target-authorization.md` in that checkout.
 
+## How the parts fit together
+
+You do not need to configure all of BTP again to add this feature:
+
+| Part | Its job in this setup | Learn more if needed |
+|---|---|---|
+| SAP BTP / Cloud Foundry (CF) | Hosts ARC-1 and its bound services. A space holds the deployed app; its `.mtaext` file holds durable deployment settings. | [BTP Start Here](btp-overview.md) |
+| BTP destination | Connection configuration for one SAP system/client; its public **target ID** is what the user selects. It is not a user assignment. | [Destination fields](multi-target-setup.md#destination-configuration) |
+| XSUAA | SAP Authorization and Trust Management service. After sign-in, it issues the app's signed access token containing permissions and assigned target values. | [XSUAA setup](xsuaa-setup.md) |
+| Identity provider (IdP), optionally IAS | Authenticates the person. IAS is SAP Cloud Identity Services' Identity Authentication service; keep your existing application login for the static setup. | [Application users and IdP origin](xsuaa-setup.md#step-3-assign-role-collections) |
+| Principal Propagation (PP) and SAP | Carry the person to their SAP user; SAP makes the final operation-level authorization check. Target roles do not replace these controls. | [Principal Propagation](principal-propagation-setup.md) |
+
+The flow is: sign in → XSUAA token with assigned targets → ARC-1 target check → PP/SAP authorization.
+SAP calls still need the existing capability permissions and server/destination settings. A target
+grant does not create an SAP user, prove backend access, or allow multi-target writes.
+
 ## What changes when you opt in
+
+**Standard access** is named `legacy` in the configuration. That value means “no additional target
+filtering”, **not deprecated or unsupported**. **Target-filtered access** uses `xsuaa-attribute`.
+Keep these exact values in configuration files; the plain-language names are not additional values.
 
 | Deployment setting | Target access |
 |---|---|
-| Unset or `ARC1_MULTI_TARGET_AUTHORIZATION=legacy` | Existing behavior: global readers can discover and try every active target. SAP and the other policy layers still decide whether a call succeeds. Target attributes are not enforced. |
-| `ARC1_MULTI_TARGET_AUTHORIZATION=xsuaa-attribute` | Only supported verified XSUAA user tokens enter these routes. Exact target grants restrict reader discovery and every aggregate/pinned SAP call. Missing or invalid grants never fall back to legacy. |
+| Unset or `ARC1_MULTI_TARGET_AUTHORIZATION=legacy` | **Standard access:** readers can discover and try every active target. SAP and the other policy layers still decide whether a call succeeds. Target attributes are not enforced. |
+| `ARC1_MULTI_TARGET_AUTHORIZATION=xsuaa-attribute` | **Target-filtered access:** only supported verified XSUAA user tokens enter these routes. Assigned targets restrict reader discovery and every aggregate/pinned SAP call. Missing or invalid grants deny access; they never turn filtering off. |
 
 Unset or explicit `legacy` leaves existing authorization, paging and tool visibility unchanged.
 Display-label sanitization applies in both modes; see the [compatibility note](multi-target-administration.md#enforced-catalog-differences).
@@ -34,22 +75,30 @@ Enforcement is **multi-only**: an independently configured single-target `/mcp` 
 the same app. Single-target deployments remain unchanged. A separate app with a distinct XSUAA
 identity is needed if you also require independent single-target access.
 
-### Four terms you need
+### Roles and target values
 
 - **Target ID:** the public system-or-alias/client identifier, such as `QAS/001`. It is not the
   destination name. Use the public alias when configured and retain the three-digit client.
 - **Role template:** the application's `MCPTargetReadAccess` defines `read` plus the required
   `arc1_targets` attribute. It has no default grant.
 - **Role:** an instance of that template with exact attribute values, for example a role granting
-  both `QAS/001` and `QAS/100`. One role can represent a team with several targets.
+  both `QAS/001` and `QAS/100`. This reusable target set is called a **cohort** below; create it once
+  for the team, not once per user.
 - **Role collection:** the assignable container for that role. Assign it to users under the
-  application's IdP origin; later, IAM can map an existing corporate group to the collection.
+  application's **IdP origin** (the identifier of the provider used for application sign-in, not
+  necessarily your cockpit login). Later, IAM can map an existing corporate group to the collection.
 
-The flow is: IAM assignment → verified XSUAA token → ARC-1 target check → PP/SAP authorization.
-ARC-1 does not scan SAP accounts at login, store a grant database, or infer grants from successful
-SAP logins. A grant does not create an SAP user, prove backend access, or allow multi-target writes.
+For example: Alice → `ARC-1 QAS Readers (<space>)` collection → `QASReaders` role →
+`arc1_targets` values `QAS/001` and `QAS/100`. This is an ARC-1/XSUAA role, **not an SAP PFCG role**.
+See SAP's [instance-based authorization explanation](https://help.sap.com/docs/authorization-and-trust-management-service/authorization-and-trust-management/setting-up-instance-based-authorizations)
+for the underlying role/attribute model.
 
 ## Before you change anything
+
+**New to BTP?** Start at [BTP Start Here](btp-overview.md), choose the multi-PP topology and identify
+the owners. Existing connectivity, PP trust and SAP users are prerequisites, not created by these
+target roles. If multi-system access already works, keep those connections and follow this guide
+to add filtering; do not repeat the entire infrastructure setup.
 
 Agree on the source revision, CF org/space/app, XSUAA lifecycle owner and application identity,
 public target IDs, test users/IdP origin, and expected SAP users. Record these in the
@@ -57,14 +106,14 @@ public target IDs, test users/IdP origin, and expected SAP users. Record these i
 CLI or cockpit login does not prove that the MCP application's user has the right roles.
 
 **Ordering matters:** target roles also supply global `read`. Assigning them while a reachable
-instance is still `legacy` grants that user access to **all** its configured targets, not just the
+instance still uses standard access (`legacy`) lets that user see/try **all** its configured targets, not just the
 role's cohort. Prepare roles unassigned; activate and verify enforcement before assigning restricted
-users. An isolated pilot needs its own app/XSUAA identity, not a second route to a legacy instance.
+users. An isolated pilot needs its own app/XSUAA identity, not a second route to a standard-access instance.
 
 For an existing deployment, plan the impact on **every existing reader**: functional roles alone
 will not grant SAP execution after enforcement. Prepare the intended cohorts first and agree a
-cutover window. Keep the route unavailable to users during the switch; quiesce legacy replicas so
-legacy and enforced processes never serve the same route together. Do not remove existing roles
+cutover window. Keep the route unavailable to users during the switch; stop/drain standard-access
+replicas so standard and enforced processes never serve the same route together. Do not remove existing roles
 or alter another app's XSUAA service as an implicit setup step.
 
 ## Minimal static role setup
@@ -79,7 +128,7 @@ replace them with reviewed public IDs from your own deployment.
 
 **New isolated app:** have the deployment owner include the setting from step 3 in its first
 deployment through the Cloud Foundry runbook, leaving end-user/group assignments empty. Then return
-here to check the templates and create the cohort. This avoids deploying legacy mode just to switch
+here to check the templates and create the cohort. This avoids deploying standard access just to switch
 it immediately. **Existing app:** prepare the descriptor and unassigned roles below, then
 apply the mode change in step 3. Both paths require step 3's checks before step 4's assignment.
 
@@ -96,10 +145,18 @@ assignment for the target-role order below.
 
 ### 2. Create an unassigned cohort
 
-In BTP Cockpit **Security → Roles**, select that application's `MCPTargetReadAccess` template.
-Create a role named `QASReaders`, set `arc1_targets` to **Static**, and add `QAS/001` and `QAS/100`
-as **two separate values**, not one comma-separated value. Add this role to a deliberately named
-collection, for example `ARC-1 QAS Readers (<space>)`, without assigning users or group mappings yet.
+In the intended BTP subaccount:
+
+1. Open **Security → Roles**, select the intended application's `MCPTargetReadAccess` template
+   and create a role named `QASReaders`.
+2. For `arc1_targets`, choose **Static**. Enter `QAS/001` and `QAS/100` as **two separate values**,
+   confirming each entry with Enter—not one comma-separated value. Use your real public target IDs,
+   not destination names, SAP usernames or role names. See SAP's
+   [role attribute instructions](https://help.sap.com/docs/authorization-and-trust-management-service/authorization-and-trust-management/specify-attributes-in-role)
+   if the attribute editor is unfamiliar.
+3. In **Security → Role Collections**, create `ARC-1 QAS Readers (<space>)` and add that application's
+   `QASReaders` role. Save it **without users or group mappings** yet. Replace `<space>` with your
+   actual CF space, for example `dev`; these are example names, not pre-created exact-target roles.
 
 **Check:** the collection contains the intended application's role and both exact values. Review
 other apps bound to that XSUAA identity: an unrestricted endpoint in another app is not protected
@@ -134,7 +191,7 @@ startup log. The message starts `Multi-target authorization enforced;` with
 After those startup checks pass, use a separate approved operator with the ordinary Admin collection
 (no target grant needed). In that Admin MCP session, `SAPTargets` must report
 `admin.authorization.mode="xsuaa-attribute"` and the intended targets as active. This summary is
-about that Admin's grants, not another user's. Stop if any process is legacy or the registry is
+about that Admin's grants, not another user's. Stop if any process still uses standard access or the registry is
 unavailable. Keep full environment/binding dumps and tokens out of chat and tickets.
 
 ### 4. Assign the pilot user and sign in again
@@ -204,9 +261,20 @@ full result. Parser limits do not guarantee a customer's token fits every proxy/
 ## Optional IAS provisioning
 
 **IAS-fed values are optional and not yet a verified operator recipe.** They supply the same
-verified XSUAA `arc1_targets` attribute as static roles, not another ARC-1 mode. First prove static
-cohorts. Mapping an existing corporate group to a static role collection is different from using
-an IAS attribute to provide the target values dynamically.
+verified XSUAA `arc1_targets` attribute as static roles, not another ARC-1 mode. Choose the simplest
+administration option that fits your organization:
+
+| Option | Where target IDs are maintained | What the administrator does |
+|---|---|---|
+| **Start here: static roles, direct user assignments** | BTP role's Static values | Create each team's target set once; assign its collection to team members. No IAS change. |
+| Static roles, existing corporate group assignments | Still in the BTP role | Map a trusted group to the collection. Existing group membership controls who receives it; no dynamic target attribute is needed. |
+| Advanced: IAS-fed target values | Dedicated administrator-controlled IdP attribute | Select Identity Provider as the role attribute source and validate the exact emitted values and lifecycle with IAM. |
+
+The group option can reduce manual assignments without changing the runtime model. It requires the
+application's existing trust/group configuration; follow SAP's
+[group-to-role-collection mapping guide](https://help.sap.com/docs/authorization-and-trust-management-service/authorization-and-trust-management/map-role-collections-to-user-groups)
+with the IAM owner. Mapping a group to a static collection is **not** the same as feeding target IDs
+from IAS. Neither option discovers or provisions SAP accounts.
 
 Before adopting dynamic values, IAM must prove a dedicated administrator-controlled attribute
 emits exact multi-valued IDs, excludes unrelated groups, and combines with static grants correctly
@@ -215,6 +283,10 @@ discovers SAP accounts. Retain the static path until the optional live acceptanc
 
 ## Changes and troubleshooting
 
+- **`SAPTargets` is missing:** on `/multi/mcp`, a reader gets it only with **more than one granted
+  active target**. With one, the other tools name that target; with zero, the tool list is empty.
+  Pinned routes never expose `SAPTargets`. Admin is the deliberate diagnostic exception and sees
+  safe inventory even without execution grants. Do not add Admin just to make the tool appear.
 - **Login fails:** distinguish an invalid requested scope from missing roles or stale state with
   the [XSUAA decision table](xsuaa-setup.md#insufficient-scope-invalid_scope). Do not add scopes
   named after attributes or assign Admin to make login succeed.
@@ -233,3 +305,8 @@ discovers SAP accounts. Retain the static path until the optional live acceptanc
 Keep tokens, complete grant arrays, IAS group lists and credentials out of support records. Use
 request IDs and safe status/count summaries. Stop and ask the named owner when evidence is missing;
 do not report an unverified setup or revocation as complete.
+
+**Using an assistant to help?** Give it this guide and the same-revision
+[setup worksheet](btp-setup-worksheet.md#target-access-setup-and-agent-handoff), including the agreed
+mode, allowed/denied target matrix, owners and approved changes. Have it report each acceptance
+check as pass, fail or unverified. Credentials and full tokens stay outside prompts and commits.

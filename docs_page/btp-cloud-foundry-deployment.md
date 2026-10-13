@@ -182,10 +182,12 @@ startup/request pairing. Its least-privileged startup user is not a PP fallback.
 
 ### Multi-target PP-only profile
 
-For per-user target restrictions, first follow the
-[target-access setup order and readiness check](multi-target-authorization.md). The profile below
-alone retains legacy all-reader visibility. Prepare the enforcement setting before deploying and
-do not assign restricted users until it is verified on every serving process.
+The profile below keeps **standard access** (`legacy`): every reader may see/try all targets;
+SAP still decides whether the call is authorized. This is a legitimate setup when everyone may
+see the shared inventory. For different per-team target lists, especially in larger landscapes,
+choose the optional [target-filtering setup](multi-target-authorization.md) before deploying.
+It uses IAM assignments, not automatic SAP-account discovery. If choosing it, prepare the setting
+before deploying and do not assign restricted users until enforcement is verified on every process.
 
 ```bash
 cp -n examples/btp/multi-pp/profile.mtaext mta-overrides.mtaext
@@ -483,12 +485,13 @@ As User and Role Administrator:
    `ARC-1 Admin (dev)`. The eighth is `ARC-1 All Targets (dev)`.
 3. Open each collection and confirm its **Roles** tab contains the expected current
    `arc1-mcp-<space>!t...` application role.
-4. Assign `ARC-1 Viewer (<space>)` to the initial test user before their first login.
+4. **Single target or standard multi-target access:** assign `ARC-1 Viewer (<space>)` to the initial
+   test user before their first login. **Target-filtered multi-target access:** follow the
+   [opt-in setup order](multi-target-authorization.md#minimal-static-role-setup) instead; verify
+   enforcement before assigning the restricted user's target role collection.
 
 Leave `ARC-1 All Targets (<space>)` unassigned unless explicitly approved: it grants `read` and
-literal `*`, including future targets. It is not a harmless catalog-viewer role. For restricted
-target users, follow the [opt-in setup order](multi-target-authorization.md)
-instead of step 4: verify enforcement before assigning any role that supplies `read`.
+literal `*`, including future targets. It is not a harmless catalog-viewer role.
 
 Do not stop after seeing the role templates under **Roles**. Older/recreated XSUAA deployments can
 have missing or orphaned collections. A collection with an empty **Roles** tab grants nothing. See
@@ -555,11 +558,14 @@ Configure the client with exactly one selected endpoint:
 | Pinned target | `https://<route>/A4H/100/mcp` |
 | Aggregate multi-target | `https://<route>/multi/mcp` |
 
-Use the Viewer identity. After OAuth:
+Use the read-only pilot identity (ordinary Viewer for standard access; the exact-target collection
+for target-filtered access). After OAuth:
 
 1. confirm the expected mutation-free/read-only tool catalog;
-2. for aggregate mode with more than one active target, call `SAPTargets` and select the exact
-   target; an Admin connection can inspect `SAPTargets` with zero, one, or many targets;
+2. for aggregate mode, call `SAPTargets` when there is more than one active target visible to that
+   reader; with filtering this means **granted active targets**, not the whole registry. With one,
+   use the target in the other tools' schemas; with zero grants the tool list is empty. An Admin
+   connection can inspect `SAPTargets` with zero, one, or many grants;
 3. call `SAPRead` with `type: "SYSTEM"`;
 4. call `SAPRead` with `type: "COMPONENTS"`; and
 5. call `SAPSearch` for one known object.

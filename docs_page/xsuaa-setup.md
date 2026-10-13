@@ -148,7 +148,7 @@ roles before assigning users.
 
 Role collections are only the user-permission gate. Server flags still have to allow the capability: for example, a user in `ARC-1 Developer` still cannot create transports unless the ARC-1 instance also has `SAP_ALLOW_WRITES=true` and `SAP_ALLOW_TRANSPORT_WRITES=true`.
 
-For optional per-target visibility, follow the
+For optional per-user target filtering—most useful when a shared gateway serves different teams—follow the
 [static-cohort setup](multi-target-authorization.md), not a second XSUAA
 service-creation sequence. That guide covers version availability, setup checks and the
 `MCPTargetReadAccess` template (required `arc1_targets`, no default role) and
@@ -157,6 +157,8 @@ create the corresponding collection; MTA owns its additional `ARC-1 All Targets 
 Do not put the all-target role into an already assigned functional collection during an update.
 Neither `arc1_targets` nor `user_attributes` is an OAuth scope; keep the existing scope request set.
 IAS-fed target values remain optional and require their own live token/union/refresh validation.
+Static target roles need no IAS change. Keeping standard access (`legacy`) is supported when all
+readers may see/try every target; neither mode automatically discovers the user's SAP accounts.
 
 !!! note "Assign the least-privilege collection"
     `ARC-1 Developer` bundles `transports` + `git` — assigning it authorizes CTS mutations and the

@@ -17,15 +17,15 @@ CSRF bootstrap still selects the configured client through its original URL.
 
 The raw delta began with a newline and indentation, which the shared XML parser
 trimmed. Quick-fix responses now use its existing whitespace-preserving mode,
-including opaque evaluation state and affected source units.
+including opaque evaluation state and affected source units. A unit with absent
+or empty content stays empty; formatting between XML elements is not replacement text.
 
 A second probe, `lv_missing = 1`, returned `DATA: lv_missing TYPE i`. Inserting the
 exact delta into the unsaved buffer passed SAP syntax checking. SAP's inferred
 types are not universally usable: the APPEND probe suggested `TYPE TABLE OF
-gt_message_buffer`, and a right-hand-side-only variable suggested generic `ANY`.
-These need human/model review and syntax checking; ARC-1 returns SAP's proposal
-unchanged and does not save it. CRLF conversion did not fix those type suggestions
-and is not part of the change.
+gt_message_buffer`. Proposals need review and syntax checking; ARC-1 returns them
+unchanged and does not save them. A CRLF probe still yielded invalid types, so no
+automatic newline conversion is included.
 
 This supersedes the blanket conclusion in the [June quick-fix research](2026-06-03-atc-quickfix-surface-a4h.md)
 that `/providers/refactoring/` proposals require a separate protocol. Some proposals

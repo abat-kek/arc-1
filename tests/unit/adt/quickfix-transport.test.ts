@@ -1,4 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest';
+import { applyFixProposal } from '../../../src/adt/devtools.js';
+import { unrestrictedSafetyConfig } from '../../../src/adt/safety.js';
 import { mockResponse } from '../../helpers/mock-fetch.js';
 import { mockFetch } from '../handlers/setup-undici-mock.js';
 
@@ -9,6 +11,31 @@ const config = { baseUrl: 'https://sap.test', client: '123', language: 'DE', dis
 beforeEach(() => {
   vi.resetAllMocks();
   mockFetch.mockResolvedValue(mockResponse(200, '<result/>', { 'x-csrf-token': 'token' }));
+});
+
+it('ignores XML formatting when a unit has absent or empty replacement content', async () => {
+  mockFetch.mockResolvedValue(
+    mockResponse(
+      200,
+      `<proposalResult><deltas>
+      <unit>
+        <objectReference uri="/source#start=2,1;end=2,8"/>
+      </unit>
+      <unit><content/><objectReference uri="/source#start=3,1;end=3,8"/></unit>
+    </deltas></proposalResult>`,
+      { 'x-csrf-token': 'token' },
+    ),
+  );
+  const deltas = await applyFixProposal(
+    new AdtHttpClient(config),
+    unrestrictedSafetyConfig(),
+    { uri: proposal, type: 'quickfix/proposal', name: 'Fix', description: 'Fix', userContent: '' },
+    '/source',
+    'source',
+    2,
+    1,
+  );
+  expect(deltas.map((delta) => delta.content)).toEqual(['', '']);
 });
 
 it('keeps the proposal URI exact and selects the configured context through headers', async () => {

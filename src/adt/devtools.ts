@@ -1236,7 +1236,8 @@ function parseFixDeltaNode(node: Record<string, unknown>): FixDelta {
 function parseFixDeltas(xml: string): FixDelta[] {
   const parsed = parseXml(xml, true);
   const unitNodes = findDeepNodes(parsed, 'deltas').flatMap((deltas) => nodeRecords(deltas.unit));
-  if (unitNodes.length > 0) return unitNodes.map(parseFixDeltaNode);
+  // ADT units carry replacement text only in <content>, never between child elements.
+  if (unitNodes.length > 0) return unitNodes.map((node) => parseFixDeltaNode({ ...node, content: node.content ?? '' }));
 
   const candidateKeys = ['delta', 'edit', 'textEdit', 'replacement', 'replace'] as const;
   let nodes: Array<Record<string, unknown>> = [];

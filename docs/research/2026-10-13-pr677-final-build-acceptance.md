@@ -176,6 +176,68 @@ weakened, and these exploratory failures are not hidden by an overall zero-fail 
   tests, strict MkDocs build and `git diff --check` passed. The preceding head's complete PR checks
   were green; a documentation-only evidence commit still needs its own CI results.
 
+## Approved future-target test (October 13, 15:21–15:28 UTC)
+
+The user separately approved a temporary copy of the existing client-100 PP destination, with a
+unique test alias, and restart/removal/restoration on the isolated app. The approval explicitly
+covered subaccount visibility: another multi-target app could discover the copy on its own reload.
+Only `arc1-ta-677-test` was restarted; no other app was changed. Its source revision and droplet
+remained the same as above.
+
+Before any destination change, two fresh authorization-code logins were independently verified:
+the primary user with Admin + the default `MCPAllTargetReadAccess` role (`arc1_targets: ["*"]`),
+and the secondary incognito user with Viewer + exact `A4H/100`. The primary token contained only
+the four requested mutation-free scopes (`read`, `data`, `sql`, `admin`); the secondary had `read`.
+The same two in-memory access tokens were reused at every stage: no refresh, exchange, login or
+role change occurred between the baseline and restored-catalog checks.
+
+| Stage | Wildcard token | Exact-target token | Result |
+|---|---:|---:|---|
+| Before destination creation | 139/139 | 134/134 | Four active targets for `*`; only `A4H/100` for the exact grant; future alias denied |
+| After creation and isolated-app restart | 137/137 | 134/134 | Five-target wildcard schema/catalog, new target usable; exact grant remains unchanged and new alias denied |
+| After deletion and isolated-app restart | 139/139 | 134/134 | Four-target wildcard projection restored; removed alias denied again; exact grant unchanged |
+
+All **817 assertions passed** across these six runs; these are repeated boundary assertions, not
+817 distinct scenarios. The temporary destination was `ARC1_PR677_FUTURE_20261013_100_PP`, alias
+`PR677-FUTURE/100`, copied from `ARC1_MULTI_A4H_2023_100_PP`. Only its name, description and alias
+changed; its real SAP identity remained `A4H`, client `100`, with Principal Propagation.
+Positive `SAPRead(SYSTEM)`, data-marker and SQL-marker calls succeeded through both aggregate and
+pinned routes. The marker checks independently confirmed physical client `100`. The exact user
+could not discover or execute the new public alias, despite having access to the same backend
+through the original `A4H/100` ID. This closes the **future active target under an existing `*`
+grant** test, not a large-inventory or a newly provisioned physical-backend test.
+
+Cleanup was verified against private pre-change snapshots:
+
+- Destination Service readback matched canonical configuration hashes for all **11 original
+  destinations**; the temporary twelfth entry was absent. Post-restart MCP tests separately
+  confirmed the restored runtime registry.
+- All six isolated collections again matched their original roles, user assignments and mappings.
+  The secondary user's original Viewer assignment remained. The temporary wildcard/Admin/exact
+  assignments and the wildcard role reference in the test matrix collection were removed.
+- The existing XSUAA descriptor, bindings, IAS configuration and SAP authorizations were not changed.
+  The test app remained started on its original tested droplet; no other app was restarted.
+- The harness stopped without persisting tokens, its temporary credential file was removed, and
+  the completed secondary incognito window was closed. Stopping the harness does not revoke an
+  issued token; the measured revocation limitations above still apply.
+
+After recording this follow-up, all 36 harness self-tests, strict MkDocs build and
+`git diff --check` passed. All PR checks on preceding head `328a5507` were green, including
+Node 22/24, integration, E2E, documentation and security checks. This evidence-only commit still
+needs its own CI; no production source or deployed artifact changed in this follow-up.
+
+### Independent SAP-username evidence remains unavailable
+
+Using the user-provided MARIAN WebGUI session in client `100`, read-only SM20 searches of existing
+file and database audit sources returned no matching secondary-user entries for the morning test
+window. STAD likewise returned no records for either test SAP user in the selected morning window.
+A fresh client-100 STAD query for `SAPDOCUPD`, 15:20–15:30 in the displayed SAP clock, with statistics
+from memory included, returned no records while this afternoon's successful calls were recent.
+This is **not** evidence of wrong PP mapping, and it does not prove that logging is disabled.
+No trace, audit configuration, user authorization or SAP object was changed. Client markers and
+successful calls still must not be described as independent proof of the mapped SAP username;
+that requires an agreed Basis-owned evidence source.
+
 ## Exact next input and remaining gates
 
 The saved IAS test credential worked, so another secondary-user password entry is not currently
@@ -183,22 +245,18 @@ needed. The core static role matrix now has final-build evidence, but the
 [contract's live gates](../plans/xsuaa-target-authorization.md#live-btp-acceptance-gates) are **not
 all closed**. In particular:
 
-1. **Backend identity:** a primary-user login in the opened client-100 SM20/WebGUI tab is requested
-   to inspect existing, narrowly selected audit evidence. If suitable records do not exist, a Basis
-   owner must agree an alternative; do not enable broad tracing, create helpers or grant SAP_ALL.
-2. **Future wildcard target:** separately approve one temporary client-100 PP destination copy
-   with a unique PR677 alias and restarts of only the isolated test app, then deletion/restoration.
-   It is subaccount-visible and another multi-target app could discover it on reload; role-only
-   approval does not cover this. No such destination was created in this round.
-3. **Installed clients:** run the Viewer/Data/SQL/Admin, schema-refresh and unchanged-legacy cases
+1. **Backend identity:** the provided SAP login worked, but existing narrowly selected SM20/STAD
+   records did not supply the needed evidence. A Basis owner must agree an alternative; do not
+   enable broad tracing, create helpers or grant SAP_ALL. No further login alone closes this gap.
+2. **Installed clients:** run the Viewer/Data/SQL/Admin, schema-refresh and unchanged-legacy cases
    in the named real MCP clients. The harness is not Inspector/Cursor/VS Code coverage; the
    external tester's unversioned success report cannot replace these cases.
-4. **Application/origin isolation:** reciprocal application acceptance and the same email under
+3. **Application/origin isolation:** reciprocal application acceptance and the same email under
    distinct IdP origins remain untested. A second approved origin/identity fixture is needed.
-5. **Optional IAS recipe:** September evidence remains historical. Replay group-fed, static-plus-IAS,
+4. **Optional IAS recipe:** September evidence remains historical. Replay group-fed, static-plus-IAS,
    unrelated-group filtering and lifecycle cases on this build before recommending that recipe as
    final-build verified; do not silently mutate existing IAS mappings or group membership.
-6. **Operational limits:** real enterprise-group token/header size, large active inventories and
+5. **Operational limits:** real enterprise-group token/header size, large active inventories and
    durable BTP Audit Log delivery remain unmeasured. The 256-value parser boundary is not a fleet
    sizing guarantee. The documented revocation window still needs operator acceptance.
 

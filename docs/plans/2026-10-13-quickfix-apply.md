@@ -25,3 +25,23 @@ Plan review: keep the change in transport request construction and the existing
 quick-fix XML consumers. No new public option, action, retry loop, or auth fallback.
 The configured client remains explicit, using SAP's documented header alternative.
 FEAT-05 still covers broader rename/extract workflows; update its evidence only.
+
+Follow-up: evaluation of a nonexistent class or interface also dumps on 8.16.
+`CL_ART_CONTRIB_SCAN_RESULT` dereferences an unbound class/interface scan result.
+An absent program can return proposals, so a generic existence requirement would
+break that supported case.
+
+1. Before class/interface evaluation, GET the owning object's metadata using the
+   actual source URI, including for class-local includes. Validate the path before
+   the GET. Leave unsaved source and inactive owners eligible; do not use HEAD,
+   which returns 400 on this system even for existing sources.
+2. Propagate metadata failures; add a concise missing-owner hint to 404 errors.
+   Keep this outside the evaluation endpoint's unsupported-service fallback.
+3. Test missing owners, URI overrides/namespaces, path rejection, failure handling,
+   and minimal errors. Live-check missing, inactive and optional-include cases on
+   750, 758, 816 and BTP, with disposable objects and cleanup.
+
+Plan review: one metadata read for OO evaluation, using existing path validation
+and error hints. No cache, new setting, active-version requirement, source save,
+or additional guard on proposal application. The metadata check cannot prevent a
+concurrent deletion after it succeeds.

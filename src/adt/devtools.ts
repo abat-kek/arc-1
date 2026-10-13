@@ -801,6 +801,25 @@ export async function getFixProposals(
 ): Promise<FixProposal[]> {
   checkOperation(safety, OperationType.Read, 'GetFixProposals');
 
+  // SAP's OO scanner can dump for missing owners (#993). Check metadata, not the
+  // source: inactive objects and unsaved optional class includes are valid inputs.
+  const owner = /^(\/sap\/bc\/adt\/oo\/(?:classes|interfaces)\/[^/?#]+)\//.exec(sourceUri)?.[1];
+  if (owner) {
+    if (!canonicalHostRelativeAdtPath(sourceUri, '/sap/bc/adt/oo/', { allowRawEncodedSlash: true })) {
+      throw new AdtSafetyError('Quick-fix sourceUri must be a canonical host-relative ADT source path.');
+    }
+    try {
+      await http.get(owner);
+    } catch (err) {
+      if (err instanceof AdtApiError && err.isNotFound) {
+        err.extraHint =
+          'Quick-fix evaluation was not sent: SAP could not find the class/interface metadata. ' +
+          'Check name and sourceUri, or create the object first. It does not need to be activated.';
+      }
+      throw err;
+    }
+  }
+
   const uriWithStart = `${sourceUri}#start=${line},${column}`;
   const path = `/sap/bc/adt/quickfixes/evaluation?uri=${encodeURIComponent(uriWithStart)}`;
 

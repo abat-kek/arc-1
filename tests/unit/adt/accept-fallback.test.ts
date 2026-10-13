@@ -10,6 +10,7 @@ describe('406 Accept fallback', () => {
   it('retries v1 only for a v2 binding metadata GET', () => {
     const v2 = 'application/vnd.sap.adt.businessservices.servicebinding.v2+xml';
     const uri = '/sap/bc/adt/businessservices/bindings/%2FNS%2FSERVICE';
+    expect(acceptFallback('Expected application/x+xml', v2, 'GET', uri)).toBe('application/x+xml');
     expect(acceptFallback('Not acceptable', v2, 'GET', uri)).toBe(
       'application/vnd.sap.adt.businessservices.servicebinding.v1+xml',
     );

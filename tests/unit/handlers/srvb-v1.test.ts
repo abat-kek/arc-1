@@ -98,7 +98,7 @@ describe('v1-only service-binding metadata (#991)', () => {
     expect(mockFetch.mock.calls.some(([, options]) => options?.method === 'POST')).toBe(false);
   });
 
-  it('supports the explicit active metadata read used by publish-failure inspection', async () => {
+  it('keeps the active-version query and extra headers on the v1 retry', async () => {
     const response = await client().http.get(`${binding}?version=active`, { Accept: v2, 'Cache-Control': 'no-cache' });
     expect(response.body).toContain('srvb:serviceBinding');
     const [, options] = mockFetch.mock.calls.at(-1)!;

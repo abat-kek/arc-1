@@ -5,6 +5,7 @@ import { createServer } from 'node:http';
 import { resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 import { pathToFileURL } from 'node:url';
+import { exchangeForeignUser } from './foreign-user.mjs';
 import { guardedMcpChecks, validateScenario } from './mcp-checks.mjs';
 import { clientCredentialsToken, postToken } from './oauth-requests.mjs';
 import {
@@ -171,6 +172,7 @@ async function main() {
     }
     const result = {
       label: sessionLabel,
+      ...(session.sourceEvidence ? { sourceEvidence: session.sourceEvidence } : {}),
       evidence,
       assertions,
       passed: assertions.filter((value) => value.pass).length,
@@ -350,6 +352,7 @@ async function main() {
         const previous = sessions.get(label(action.label));
         if (!previous) throw new HarnessError('SESSION_NOT_FOUND');
         let token;
+        let sourceEvidence;
         if (action.command === 'refresh') {
           if (typeof previous.token.refresh_token !== 'string' || !previous.clientId)
             throw new HarnessError('REFRESH_NOT_AVAILABLE');
@@ -358,6 +361,17 @@ async function main() {
             client_id: previous.clientId,
             refresh_token: previous.token.refresh_token,
           });
+        } else if (action.command === 'exchange-user-to-app') {
+          await verifyUser(previous.token.access_token);
+          const storedForeign = await privateJson(action.credentialsFile);
+          ({ token, sourceEvidence } = await exchangeForeignUser({
+            assertion: previous.token.access_token,
+            primary: credentials,
+            foreign: storedForeign.credentials ?? storedForeign,
+            expected: await privateJson(action.sourceExpectation),
+            auth,
+            xssec,
+          }));
         } else if (action.command === 'exchange-user') {
           await verifyUser(previous.token.access_token);
           token = await postToken(
@@ -370,7 +384,8 @@ async function main() {
         } else throw new HarnessError('UNKNOWN_COMMAND');
         release.commit({
           token,
-          clientId: previous.clientId,
+          clientId: sourceEvidence ? undefined : previous.clientId,
+          sourceEvidence,
           scenarioPath: action.scenario ?? previous.scenarioPath,
           created: Date.now(),
         });

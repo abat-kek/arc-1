@@ -1,3 +1,4 @@
+import { runBackendChecks, validateBackendChecks } from './backend-checks.mjs';
 import { boundedFetch, HarnessError, readToolBody, safeFailure } from './safe-io.mjs';
 import { checkTargetSchemaProjection } from './schema-projection.mjs';
 
@@ -79,6 +80,9 @@ export function validateScenario(scenario) {
   const expected = scenario.expect ?? {};
   if (!expected || typeof expected !== 'object' || Array.isArray(expected))
     throw new HarnessError('INVALID_EXPECTATIONS');
+  validateBackendChecks(scenario.backendChecks);
+  if (scenario.backendChecks !== undefined && (expected.aggregateHttpStatus ?? 200) !== 200)
+    throw new HarnessError('BACKEND_CHECKS_REQUIRE_AUTHENTICATED_SCENARIO');
   if (scenario.expectedIdentity !== undefined) {
     const identity = scenario.expectedIdentity;
     if (
@@ -384,6 +388,7 @@ export async function runMcpChecks({ baseUrl, accessToken, scenario, record }) {
       missing.result?.isError === true && missing.text.includes('TARGET_REQUIRED'),
     );
   }
+  await runBackendChecks({ checks: scenario.backendChecks, aggregate, session, record });
 }
 
 export async function guardedMcpChecks(options) {

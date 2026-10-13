@@ -86,6 +86,7 @@ blocking the loopback success page is a different issue: check whether `login_re
 {"command":"login","label":"viewer100-new-login","scenario":"/private/tmp/arc1-test/after-change.json","forceLogin":true}
 {"command":"concurrent","labels":["viewer100","viewer100-new-login"]}
 {"command":"exchange-user","label":"viewer100-new-login","nextLabel":"viewer100-exchanged"}
+{"command":"exchange-user-to-app","label":"viewer100-new-login","nextLabel":"foreign-human","credentialsFile":"/private/tmp/arc1-test/other-xsuaa.json","sourceExpectation":"/private/tmp/arc1-test/other-user-expectation.json","scenario":"/private/tmp/arc1-test/wrong-application.json"}
 {"command":"client-credentials","label":"machine","scenario":"/private/tmp/arc1-test/machine.json"}
 {"command":"import-token","label":"machine","file":"/private/tmp/arc1-test/machine-token.json","scenario":"/private/tmp/arc1-test/machine.json"}
 {"command":"forget","label":"machine"}
@@ -112,6 +113,18 @@ documented grant type; a classifier failure is evidence to investigate, not perm
 `import-token` accepts a private JSON object containing `access_token` and optional `refresh_token`
 and `client_id`. Use it for operator-obtained machine or other-application tokens. The file must
 already be private and outside the repo; the harness never persists imported or exchanged tokens.
+
+`exchange-user-to-app` additionally needs an explicitly provisioned, separate XSUAA application
+in the **same tenant**, with its own `arc1_targets` role assigned to this human. It first verifies
+the primary user, performs a real JWT-bearer exchange using the other app's private credentials,
+then verifies the issued token with that app's SAP SDK and user-principal verifier. The private
+`sourceExpectation` file must contain `email`, `origin`, the exact local `scopes` array, and a
+nonempty exact `grantValues` array.
+Only after those match does it run the `wrong-application-token` rejection scenario against ARC-1.
+A failed exchange, wrong human, unsupported principal, wrong grants, or verification outage is
+**not a passing cross-app test**. Use reciprocal fixtures to check both applications; an exchange
+in one direction proves only that direction. This command neither creates roles/services nor
+changes trust. The other app's refresh token cannot be refreshed through the primary app's DCR.
 
 `client-credentials` requests a real machine token directly from the selected binding's XSUAA
 service using the already-loaded private credentials. It needs no browser or user login, stores
@@ -159,9 +172,9 @@ Admin-machine fixture. The default omits `scope` to observe the service client's
   for an authorization failure.
 - When `allowedTargets` is supplied, `SAPRead(SYSTEM)` runs through aggregate and pinned routes.
   These checks assert response success, **not** independent SAP user/client identity. Correlate
-  with backend identity evidence and a separately approved tiny client-marker query before
-  claiming routing/PP identity acceptance. No application data, SQL, ATC, unit tests, writes or
-  transports are run by this harness.
+  with backend identity evidence and the opt-in client-marker checks below before claiming
+  routing/PP identity acceptance. By default no data or SQL query is run. The harness never runs
+  ATC, ABAP unit tests, writes or transports.
 - Hidden existing and nonexistent targets are directly called: generic aggregate errors and
   pinned 404 bodies are compared. These tests demonstrate observable behavior; proving that a
   denied call made **zero outbound SAP/destination calls** additionally requires server-side
@@ -170,6 +183,33 @@ Admin-machine fixture. The default omits `scope` to observe the service client's
   message and all other fields remain part of the comparison. Caller-target echoes still fail.
 - Unpaged catalog schema/result and rejected `offset` are tested only for `unpaged: true`.
 - Admin diagnostic inventory/granted flags are checked independently of execution rights.
+
+### Optional, bounded client-marker and capability checks
+
+After confirming the test clients contain the operator-owned `TVARVC` parameter
+`ZARC1_CLIENT_MARKER`, whose `LOW` equals that client's three-digit number, add a top-level
+`backendChecks` array to a private successful-authentication scenario:
+
+```json
+"backendChecks": [
+  {"target":"A4H/100","operation":"data","outcome":"marker"},
+  {"target":"A4H/100","operation":"sql","outcome":"INSUFFICIENT_SCOPE"}
+]
+```
+
+This example is for a Data Viewer with a granted target and enabled instance/destination data
+ceilings. `data` sends a fixed `SAPRead(TABLE_QUERY)`; `sql` sends a fixed `SAPQuery`. Both select
+only `MANDT`, `NAME`, and `LOW` for the exact marker, with `maxRows: 2`, through aggregate and
+pinned endpoints. Success requires exactly one matching row, including both the physical
+`MANDT` and marker value; an empty table, wrong client, duplicate marker or backend failure fails.
+The harness does not create or repair the marker, print row values, accept arbitrary SQL/table
+names, or infer the mapped SAP username from the marker.
+
+At most eight checks are allowed. Other exact denial outcomes are `TARGET_POLICY_DENIED`
+(instance/destination ceiling) and `TARGET_NOT_AVAILABLE` (no target grant; pinned initialize
+must return 404). Choose these from the independently configured fixture, not from an error
+observed during the run. `INSUFFICIENT_SCOPE` must be the structured policy error, not any failure.
+A principal/target denial that prevents the query is not positive backend routing evidence.
 
 For a scale run, supply 50, 100 or 256 *real issued* `grantValues` (or `grantCount` plus separate
 assignment evidence), the complete independent `schemaTargets`, and retain a known configured

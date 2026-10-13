@@ -130,7 +130,7 @@ describe('optional target-authorization deployment overlay', () => {
     expect(scripts['btp:validate']).toContain('node scripts/ci/check-target-authorization-mta.mjs');
     const guide = read('examples/btp/multi-pp/README.md');
     expect(guide).toContain('target-authorization.mtaext');
-    expect(guide).toContain('multi-target-setup.md');
+    expect(guide).toContain('multi-target-authorization.md');
     expect(guide).toContain('principal-propagation-setup.md#verify-the-backend-identity');
     expect(guide).not.toMatch(/^cp /m);
   });

@@ -128,6 +128,7 @@ const whitespacePreservingParser = new XMLParser({ ...parserOptions, trimValues:
 /**
  * Parse raw XML string to a JS object. Every attribute and text value is entity-DECODED
  * (`R&amp;D` → `R&D`): never decode a parsed value again, and `escapeXmlAttr` it on the way back.
+ * Set preserveWhitespace to retain leading/trailing text whitespace, e.g. in quick-fix deltas.
  */
 export function parseXml(xml: string, preserveWhitespace = false): Record<string, unknown> {
   return (preserveWhitespace ? whitespacePreservingParser : parser).parse(xml) as Record<string, unknown>;

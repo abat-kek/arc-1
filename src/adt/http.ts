@@ -1287,7 +1287,7 @@ export class AdtHttpClient {
     }
   }
 
-  /** Build full URL with sap-client and sap-language query params */
+  /** Add SAP context query params unless the caller sends that context in headers. */
   private buildUrl(path: string, sapContextInHeaders = false): string {
     const base = this.config.baseUrl.replace(/\/$/, '');
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;

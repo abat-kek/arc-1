@@ -159,7 +159,7 @@ SAPDiagnose(action="apply_quickfix", type="<type>", name="<object_name>", source
 
 > **Match the proposal to the finding — don't blindly apply `proposals[0]`.** `quickfix` returns *every* proposal applicable at that source position, which often includes generic **refactorings** unrelated to the finding (verified live on S/4HANA 2023: a position returned "Rename", "Convert to attribute", "Convert to importing parameter", "Extract local variable", …). Pick the proposal whose `name`/`description` actually addresses the finding; ignore the rest.
 
-> **Review quick-fix deltas before saving.** Match the proposal to the finding and pass its `userContent` unchanged (including an empty string). `/providers/refactoring/` alone does not make a proposal unsupported. `apply_quickfix` returns edits without saving; inspect affected objects and run a syntax check before `SAPWrite`. Some SAP proposals need additional input or suggest types that require correction.
+> **Review quick-fix deltas before saving.** Pass its `userContent` unchanged (including an empty string). `/providers/refactoring/` alone does not make a proposal unsupported. `apply_quickfix` returns edits without saving; inspect affected objects and run a syntax check before `SAPWrite`. Some SAP proposals need additional input or suggest types that require correction.
 
 ### Fix Options
 

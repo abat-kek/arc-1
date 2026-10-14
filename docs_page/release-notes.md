@@ -40,6 +40,7 @@ refresh your MCP client's tool list after upgrading. Final release scope is pend
 | Query results ([#983](https://github.com/arc-mcp/arc-1/pull/983), [#984](https://github.com/arc-mcp/arc-1/pull/984)) | Data-preview cells retain native whitespace; SQL uses CRLF framing. The reporter [verified the CRLF fix on 7.40 SP22](https://github.com/arc-mcp/arc-1/issues/955#issuecomment-6143358475). | Trim cells explicitly if your consumer needs trimmed values. |
 | Local source files ([#981](https://github.com/arc-mcp/arc-1/pull/981)) | Codex can send local source through its existing ARC-1 connection without model transcription. | Use the [file workflow](codex-file-source.md). |
 | Larger HTTP writes ([#972](https://github.com/arc-mcp/arc-1/pull/972)) | `ARC1_MAX_HTTP_REQUEST_BYTES` permits an optional increase from 100 KiB, up to 16 MiB. | Check [admission and memory limits](configuration-reference.md#http-request-bodies) before increasing it. |
+| Documentation and tests ([#997](https://github.com/arc-mcp/arc-1/pull/997)) | Clarifies configuration and security guidance; strengthens live workflow checks and cleanup. | `none` |
 
 Known dependency risk: the SAP SDK chain still includes `node-forge` affected by
 [GHSA-86w9-cpqp-85rv](https://github.com/advisories/GHSA-86w9-cpqp-85rv). Recheck the advisory before deployment.

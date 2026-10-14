@@ -197,13 +197,16 @@ define view entity ${objectName}
       expect(deletedText).toContain('No Knowledge Transfer Document');
     } finally {
       // A failed source PUT can leave a DDLS shell; cleanup also covers that create attempt.
-      if (ktdCreateAttempted) {
-        const remaining = expectToolSuccess(await callTool(client, 'SAPRead', { type: 'SKTD', name: objectName }));
-        if (!remaining.includes('No Knowledge Transfer Document')) {
-          expectToolSuccess(await callTool(client, 'SAPWrite', { action: 'delete', type: 'SKTD', name: objectName }));
+      try {
+        if (ktdCreateAttempted) {
+          const remaining = expectToolSuccess(await callTool(client, 'SAPRead', { type: 'SKTD', name: objectName }));
+          if (!remaining.includes('No Knowledge Transfer Document')) {
+            expectToolSuccess(await callTool(client, 'SAPWrite', { action: 'delete', type: 'SKTD', name: objectName }));
+          }
         }
+      } finally {
+        expectToolSuccess(await callTool(client, 'SAPWrite', { action: 'delete', type: 'DDLS', name: objectName }));
       }
-      expectToolSuccess(await callTool(client, 'SAPWrite', { action: 'delete', type: 'DDLS', name: objectName }));
     }
   });
 

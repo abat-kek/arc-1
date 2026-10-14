@@ -332,6 +332,10 @@ ${assignment}`,
         line: source.split('\n').findIndex((line) => line.includes('lv_missing = 1.')) + 1,
         column: 4,
       };
+      const beforeSyntax = JSON.parse(
+        expectToolSuccess(await callTool(client, 'SAPDiagnose', { action: 'syntax', ...args })),
+      );
+      expect(beforeSyntax).toMatchObject({ checked: true, hasErrors: true });
       const proposals: FixProposal[] = JSON.parse(
         expectToolSuccess(await callTool(client, 'SAPDiagnose', { action: 'quickfix', ...args })),
       );
@@ -363,7 +367,7 @@ ${assignment}`,
       const syntax = JSON.parse(
         expectToolSuccess(await callTool(client, 'SAPDiagnose', { action: 'syntax', ...args, source: edited })),
       );
-      expect(syntax.hasErrors).toBe(false);
+      expect(syntax).toMatchObject({ checked: true, hasErrors: false });
       const after = stripCachedMarker(expectToolSuccess(await callTool(client, 'SAPRead', readArgs)));
       expect(after).toBe(stored);
     });

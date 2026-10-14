@@ -2,7 +2,7 @@
 
 - **Status:** Accepted specification; implementation/live validation in PR #677
 - **Date:** 2026-08-04
-- **Last revised:** 2026-09-18 (review follow-up: rollout ordering, diagnostics and display compatibility)
+- **Last revised:** 2026-10-14 (canonical `standard` naming; pre-release input alias retained)
 - **Code baseline reviewed:** `origin/main` at `31690347` (ARC-1 1.2.0), merged by `2814b8f2`;
   PR #677 now uses published `@arc-mcp/xsuaa-auth ^1.1.0`, locked to `1.1.0` by `a25d62c6`.
   Clean-install validation passes; remaining live acceptance is tracked in the
@@ -22,14 +22,14 @@ Add **opt-in target authorization**, leaving existing deployments unchanged on u
 ARC1_MULTI_TARGET_AUTHORIZATION=xsuaa-attribute
 ```
 
-Omitting this setting, or explicitly setting `ARC1_MULTI_TARGET_AUTHORIZATION=legacy`, preserves
+Omitting this setting, or explicitly setting `ARC1_MULTI_TARGET_AUTHORIZATION=standard`, preserves
 current multi-target behavior: global readers see all accepted targets, subject to the existing
 scopes, destination/instance ceilings, and SAP authorization. It does not enforce `arc1_targets`.
 
 In `xsuaa-attribute` mode, every multi-target user needs either exact public target IDs or the
 reserved all-target value `*` in the verified XSUAA role attribute `arc1_targets`. ARC-1 filters
 `SAPTargets`, aggregate tool schemas, destination-policy unions, and aggregate/pinned requests
-before target lookup or SAP contact. Missing or invalid grants **never fall back to legacy**.
+before target lookup or SAP contact. Missing or invalid grants **never fall back to standard**.
 
 The effective mutation-free authorization **when enforcement is enabled** is:
 
@@ -43,9 +43,9 @@ existing functional scope (read, data, sql, admin)
 
 Target grants restrict where an existing functional capability may be used. They do not expand
 `data`, `sql`, or `admin`, and they must never be reused as authorization for future writes. The
-feature is additive: single-target behavior and legacy multi-target authorization remain unchanged.
+feature is additive: single-target behavior and standard multi-target authorization remain unchanged.
 Shared display-label hardening strips Unicode format controls in both modes; affected descriptions
-and snapshot fingerprints/revisions can change. No grant or routing semantics change in legacy mode.
+and snapshot fingerprints/revisions can change. No grant or routing semantics change in standard mode.
 Throughout the remaining target-grant sections, requirements apply to `xsuaa-attribute` mode unless
 explicitly stated otherwise. Existing safety controls still apply in both modes.
 
@@ -76,13 +76,13 @@ behavior. The two-template choice replaces the previous draft's unsafe default-`
 The minimum deployment uses the **existing CF app, existing XSUAA service, one exact-target role
 and one collection**. Static values need no IAS change. Prepare the descriptor and roles unassigned,
 enable and verify enforcement on every serving process, then assign the restricted pilot user and
-verify a fresh application token. Target roles supply global `read`, so pre-assignment on a legacy
+verify a fresh application token. Target roles supply global `read`, so pre-assignment on a standard
 endpoint can expose every target. An isolated pilot needs its own app/XSUAA identity. Existing
 multi-only deployments do not need a second app, database, additional service, or new OAuth scope.
 
 | First release: required | Optional adoption / deliberately excluded complexity |
 |---|---|
-| One `legacy` / `xsuaa-attribute` deployment setting | No automatic activation, shadow mode, persistent activation latch, or per-user mode |
+| One `standard` / `xsuaa-attribute` deployment setting | No automatic activation, shadow mode, persistent activation latch, or per-user mode |
 | Static exact-value roles as the quickstart | Map existing corporate groups to cohorts; later use a dedicated IAS attribute if IAM owns the values |
 | Literal `*` via a separately named role and one unassigned predefined collection | No partial wildcards, per-target capability pairs, or role-combination matrix |
 | One verified attribute parser and caller projection across every route/schema | No provider framework, AMS adapter, HANA store, or SAP-access discovery |
@@ -204,7 +204,7 @@ and over-limit claims are not accidentally reported as ordinary missing assignme
 The 256-value parser bound is separate from the deployment bound: unknown values still count toward
 the parser limit. Enforced mode also bounds the complete ARC-related destination diagnostic set to
 256, not only enabled targets, so its unpaged administrator response remains finite and complete.
-Exceeding either bound fails closed with a stable diagnostic. Legacy mode retains the existing
+Exceeding either bound fails closed with a stable diagnostic. Standard mode retains the existing
 enabled-target bound and paged diagnostics; enabling enforcement is an explicit acceptance of the
 new catalog contract and its total-candidate bound.
 
@@ -226,7 +226,7 @@ represented by one role containing multiple exact values or by IAS group members
 
 Add one required attribute and two new role templates to `xs-security.json` (merge this fragment
 with the existing descriptor; do not replace its scopes, templates, or OAuth configuration).
-Their presence does not activate ARC-1 enforcement, and legacy deployments need no assignments to
+Their presence does not activate ARC-1 enforcement, and standard deployments need no assignments to
 these new roles merely to upgrade:
 
 ```json
@@ -323,10 +323,11 @@ Multi-target protected-resource metadata continues to advertise only:
 read data sql admin
 ```
 
-Neither `arc1_targets` nor `user_attributes` is an OAuth scope. A live spike that requested
-`user_attributes` as an ARC-1 scope failed at XSUAA with `invalid_scope`; that scope belongs to the
-separate approuter User API scenario and is not required when the verified XSUAA security context
-reads an application role attribute.
+`arc1_targets` is an attribute, not an OAuth scope. The unqualified `user_attributes` exists as a
+separate UAA scope, but is not required for these XSUAA role attributes. A live spike requesting
+the undeclared application-qualified `$XSAPPNAME.user_attributes` failed with `invalid_scope`.
+Keep ARC-1's requested scope set unchanged; see the
+[operator scope distinction](../../docs_page/xsuaa-setup.md#target-attributes-and-oauth-scopes).
 
 No `target_access` marker scope is added. The new target-aware role already references `read`, which
 ensures it participates in the existing OAuth grant without introducing another client-visible
@@ -555,14 +556,16 @@ Add one setting, `ARC1_MULTI_TARGET_AUTHORIZATION`, resolved once at startup:
 
 | Configuration | Required behavior |
 |---|---|
-| Unset | `legacy`: preserve existing multi-target behavior, including verifier options, mixed routes, catalog schema and enabled-target bound |
-| `legacy` | Same as unset; do not extract or enforce target attributes |
+| Unset | `standard`: preserve existing multi-target behavior, including verifier options, mixed routes, catalog schema and enabled-target bound |
+| `standard` | Same as unset; do not extract or enforce target attributes |
+| `legacy` (pre-release environment/CLI input alias only) | Normalize to `standard`; resolved configuration, routing and logs use the canonical name |
 | `xsuaa-attribute` | Require verified user-principal target grants throughout multi-target handling; use the new unpaged catalog |
-| Empty/whitespace-only or another value | Clear startup configuration error; never silently choose legacy |
+| Empty/whitespace-only or another value | Clear startup configuration error; never silently choose standard |
 | `xsuaa-attribute` with multi-target endpoints disabled | Clear startup configuration error so a misplaced setting cannot falsely claim protection of single-target `/mcp` |
 
-Trim surrounding whitespace but accept only the two exact lowercase mode names. Single-target
-deployments with the setting absent or `legacy` are unchanged. XSUAA auth, its service binding, and
+Trim surrounding whitespace and accept only the two exact lowercase mode names plus the input alias.
+The alias does not enter runtime mode types or bypass validation. Single-target
+deployments with the setting absent or `standard` are unchanged. XSUAA auth, its service binding, and
 HTTP transport remain multi-target prerequisites; this feature adds no new auth mechanism. Do not
 infer enforcement from a claim, role assignment, descriptor version, or whether a token has grants.
 
@@ -578,7 +581,7 @@ do not mount bare `/mcp` as a fallback. On current main, PP connection overlap m
 both routes stay usable; that is not sufficient once target restrictions are enabled. Connection
 fingerprints also cannot reliably detect two virtual URLs reaching the same SAP client, so an
 overlap check alone is not the chosen boundary. Run this configuration guard **before** single-target
-startup canaries, feature probes, or any SAP authentication/contact. Legacy mixed deployments retain
+startup canaries, feature probes, or any SAP authentication/contact. Standard mixed deployments retain
 their current behavior; only customers enabling enforcement must split them.
 
 Customers needing single-target writes must run a separate application and XSUAA identity with
@@ -593,17 +596,17 @@ Do not promise that target authorization in one app changes permissions in other
 
 Only enforced mode enables the auth package's `userAttributeNames: ['arc1_targets']` and
 `requireUserToken: true`. Add a small pure ARC-1 parser that returns an immutable grant (`none`,
-`exact`, or `all`) plus its internal status. Keep the selected deployment mode separate: legacy
+`exact`, or `all`) plus its internal status. Keep the selected deployment mode separate: standard
 is **not** a fabricated `*` claim. Do not thread raw attributes through the server.
 
 Use an explicit mode branch, parser, and caller-projection function. No pluggable
 `TargetAuthorizationProvider`, adapter registry, new service, or provider selection framework is
-needed for this release. Existing legacy functions should remain reusable without duplicating
-the entire server; shared refactoring must pass the legacy regression suite.
+needed for this release. Existing standard functions should remain reusable without duplicating
+the entire server; shared refactoring must pass the standard regression suite.
 
 **Accepted compatibility tradeoff:** actually unsetting the effective runtime setting or selecting
-`legacy` restores broader access. Deleting a line from an MTA extension is not proof that CF removed
-the deployed environment value; use an explicit `ARC1_MULTI_TARGET_AUTHORIZATION: legacy` in the
+`standard` restores broader access. Deleting a line from an MTA extension is not proof that CF removed
+the deployed environment value; use an explicit `ARC1_MULTI_TARGET_AUTHORIZATION: standard` in the
 owning extension for an approved rollback and verify the actual CF environment and logged mode.
 This is not fully equivalent to Wouter's proposed mandatory enforcement. Without durable
 state, ARC-1 cannot know a previously enforced installation lost its setting. Do not add a database
@@ -721,7 +724,7 @@ filtering does not hide failures or
 change authorization status. Basic passive-health counts describe all active Basic targets, while
 an explicit query filters exception rows by their corresponding target ID/description.
 
-This is an explicit **opt-in** experimental API change. Legacy mode keeps the current inputs,
+This is an explicit **opt-in** experimental API change. Standard mode keeps the current inputs,
 paging/truncation fields and output shape. Enforced callers sending `offset` receive schema
 validation failure. Activation instructions must say to remove that argument and refresh cached
 MCP schemas. Do not introduce a second catalog-mode flag or silently return a first page.
@@ -760,7 +763,7 @@ Do not return the input entitlement list, including unknown IDs.
 
 On a healthy snapshot, retain `admin.state`, `source: "btp-subaccount"`, `loadedAt`, `revision`,
 the existing `counts` names, and `destinations`, with `countsComplete: true`. Include all safe
-destination diagnostics, not only exceptions. Omit absent optional fields. Legacy output gets no
+destination diagnostics, not only exceptions. Omit absent optional fields. Standard output gets no
 new authorization object; startup mode logging covers both modes. A deployment check that expects
 enforcement must require `admin.authorization.mode === "xsuaa-attribute"`; an absent field is
 not evidence of enforcement. This uses Admin `SAPTargets`, not a new public health endpoint.
@@ -858,27 +861,27 @@ TARGET_GRANT_LIMIT_EXCEEDED
 TARGET_NOT_GRANTED
 ```
 
-Audit/log fields may include authorization mode (`legacy` or `xsuaa-attribute`), grant mode
+Audit/log fields may include authorization mode (`standard` or `xsuaa-attribute`), grant mode
 (`none`, `exact`, or `all`, only when enforced), exact-grant count, decision
 code, registry revision, authenticated subject using the existing identity treatment, and the
 normalized requested target after syntax validation. They must not contain raw grant arrays, IAS
 groups, role names, tokens, or XSUAA attribute objects.
 
-Startup logs report the effective authorization mode. Legacy mode clearly states that per-target
+Startup logs report the effective authorization mode. Standard mode clearly states that per-target
 grants are not enforced; enforced mode states the total-candidate bound. Enforced `SAPTargets`
 Admin diagnostics report mode and caller grant parsing status/count, never raw values. Do not log
-misleading missing-grant failures for legacy requests.
+misleading missing-grant failures for standard requests.
 
 ## Security Analysis
 
-The grant controls below apply in enforced mode. Legacy is a deliberate compatibility policy,
+The grant controls below apply in enforced mode. Standard access is a supported policy choice,
 **not** a claim that target-inventory confidentiality is provided without grants.
 
 | Threat | Required control |
 |---|---|
 | Target enumeration | Authenticate and require `read`; check exact/all-target grant before registry lookup; unknown and ungranted target-execution responses are indistinguishable, including for Admin. |
 | Forged JWT attribute | Read only from the verified `@sap/xssec` security context. |
-| Missing/malformed claim | Zero grants; no fallback to legacy access. |
+| Missing/malformed claim | Zero grants; no fallback to standard access. |
 | Broad role assigned accidentally | Only literal `*` grants all targets; give its predefined collection an explicit name and map it only to an intentional administrative cohort. |
 | New destination under `*` | All-target access deliberately includes future active targets; exact grants are required where this is unacceptable. |
 | Attribute cross-product | Functional scopes apply over the full target union, including data/SQL. Document the concrete cross-product and require separate applications where per-target capability pairing is needed. |
@@ -898,7 +901,7 @@ a remembered SAP login failure.
 
 ## Compatibility and Rollout
 
-**An ordinary upgrade must not require an IAM migration.** Unset/legacy preserves single-target and
+**An ordinary upgrade must not require an IAM migration.** Unset/standard preserves single-target and
 multi-target routes, current auth behavior, role assignments, schemas, paging and diagnostic bounds.
 Adding templates or upgrading the auth dependency does not activate enforcement. Keep regression
 fixtures for the existing configurations, including mixed deployments.
@@ -915,12 +918,12 @@ Existing multi-only customers keep their app, destinations, target URLs, current
 restart-only discovery; they can retain XSUAA subject to the shared-binding review above. No
 replacement endpoint, subscription, HANA store, mandatory IAS migration, or extra runtime service
 is required. In enforced mode broad access is granted via
-the explicit `*` role, not inferred from Admin. Future mutations cannot be enabled in legacy mode
+the explicit `*` role, not inferred from Admin. Future mutations cannot be enabled in standard mode
 or authorized with these mutation-free grants; they require their separate reviewed design.
 
 Recommended rollout:
 
-1. upgrade in legacy mode and verify unchanged authorization behavior. Review the display-label
+1. upgrade in standard mode and verify unchanged authorization behavior. Review the display-label
    compatibility note above. Inventory bound consumers, existing role
    assignments, IdP origins, token lifetime, mixed routes and total ARC-related candidates;
 2. rehearse the additive descriptor update on an isolated XSUAA instance with existing assigned
@@ -931,7 +934,7 @@ Recommended rollout:
    all-target role. Reuse cohort roles for the eventual population, not one role per person/target;
 4. split mixed runtimes if needed; retain separate identities for independent single-target
    boundaries. Target roles carry global `read`: never give a newly restricted user such a role
-   while a legacy endpoint using that XSUAA identity remains reachable;
+   while a standard endpoint using that XSUAA identity remains reachable;
 5. enable `ARC1_MULTI_TARGET_AUTHORIZATION=xsuaa-attribute` explicitly in the isolated test app's
    durable deployment configuration and verify every process's mode **before assigning users**.
    The pilot uses its own app/XSUAA identity; it is a rehearsal, not a new production requirement;
@@ -939,9 +942,9 @@ Recommended rollout:
    Record only assertion outcomes and byte counts. CLI tokens do not prove application grants or
    PP. Never paste raw tokens or entitlement arrays into issues, logs, or online JWT decoders;
 7. apply that configuration to the intended route. Replace/restart **all** serving processes and
-   verify their mode; an old legacy replica must not remain reachable when enforcement is declared
+   verify their mode; an old standard replica must not remain reachable when enforcement is declared
    active. Use a controlled cutover without old-mode overlap; assign newly restricted users only
-   after verification. Existing users already approved for all legacy targets may be pre-provisioned
+   after verification. Existing users already approved for all standard targets may be pre-provisioned
    without widening their existing access. ADR-0007's one-instance/non-rolling
    constraint still applies whenever shared Basic is enabled;
 8. test Viewer, Data, SQL, Admin, exact, all-target, missing-grant, malformed-grant, and
@@ -950,17 +953,17 @@ Recommended rollout:
    the customer route, with a recorded IAM owner and accepted revocation window.
 
 A rollback to pre-feature code, actually unsetting the effective runtime setting, or selecting
-`legacy` restores **broader all-reader behavior**. It is not a security-neutral rollback. Prefer fixing forward with
+`standard` restores **broader all-reader behavior**. It is not a security-neutral rollback. Prefer fixing forward with
 enforcement still enabled. If inventory confidentiality is required, isolate/stop the route first
 and restore service only under an approved policy; do not recommend bypassing grants to fix an
-outage. For a CF mode rollback, set `ARC1_MULTI_TARGET_AUTHORIZATION: legacy` explicitly in the
+outage. For a CF mode rollback, set `ARC1_MULTI_TARGET_AUTHORIZATION: standard` explicitly in the
 owning `.mtaext`, deploy, and verify the actual CF environment and mode on every serving process;
 deleting the descriptor line may leave the old CF value retained. Keep descriptor templates, but
 review **all reader assignments**, including users newly granted `read` through a target role.
-Do not preserve a restricted-only audience while reopening a legacy route. Removing assignments
+Do not preserve a restricted-only audience while reopening a standard route. Removing assignments
 alone is insufficient: outstanding tokens and stale refresh/SSO sessions must be covered by the
 customer's verified revocation/cutover procedure. Keep the route closed until every remaining
-reader is approved for legacy all-target access. Assigning `*` is an audited IAM privilege change,
+reader is approved for standard all-target access. Assigning `*` is an audited IAM privilege change,
 not a runtime troubleshooting toggle.
 
 ### Customer administration and handover
@@ -1004,9 +1007,9 @@ independently configurable subfeatures:
    release one minor `@arc-mcp/xsuaa-auth` version after the relevant token fixtures pass.
 2. **ARC-1 opt-in PR:** compatible descriptor/templates and one collection; the single mode setting;
    auth integration and one request projection; pinned/aggregate/Copilot checks; multi-only guard;
-   mode-aware legacy/enforced catalog contracts and bounds; audit/diagnostics and full regression
+   mode-aware standard/enforced catalog contracts and bounds; audit/diagnostics and full regression
    tests. Ship these together so enabling enforcement cannot leave a route or schema unfiltered.
-   The release remains default-legacy. Add the minimal static setup/activation/rollback instructions
+   The release remains default-standard. Add the minimal static setup/activation/rollback instructions
    and explicit MTA override, not a parallel full set of deployment artifacts.
 3. **Acceptance and optional IAS recipe:** run the deployed role/target, scale, refresh and client
    matrix; record supported sizes and limitations. Test IAS-fed and combined assignments before
@@ -1025,9 +1028,9 @@ The implementation should remain concentrated in these areas:
 | Repository | Files/areas | Responsibility |
 |---|---|---|
 | `@arc-mcp/xsuaa-auth` | XSUAA verifier options/types, verifier tests, README/changelog | Allowlisted extraction/status from the verified context, user-principal classification and typed failures; no ARC-1 target policy. |
-| ARC-1 configuration/provisioning | `src/server/{config,types}.ts`, `xs-security.json`, `mta.yaml`, one opt-in example/override | One default-legacy setting; two templates, no broad exact-role default, one unassigned collection. Base MTA never implicitly enables enforcement. |
+| ARC-1 configuration/provisioning | `src/server/{config,types}.ts`, `xs-security.json`, `mta.yaml`, one opt-in example/override | One default-standard setting; two templates, no broad exact-role default, one unassigned collection. Base MTA never implicitly enables enforcement. |
 | ARC-1 HTTP/auth | `src/server/http.ts`, small target-authorization module | Request allowlisted attributes, reject machine tokens, enforce pinned/aggregate/Copilot alias before lookup. |
-| ARC-1 multi-target | `src/server/{server,multi-target-runtime,multi-target-server,multi-target-tools,multi-target-catalog,destination-discovery,destination-registry}.ts` | Enforced mode: reject mixed routes before startup contact, project caller policy before construction, preserve feature-cache independence; bound/unpage catalog. Preserve legacy behavior. |
+| ARC-1 multi-target | `src/server/{server,multi-target-runtime,multi-target-server,multi-target-tools,multi-target-catalog,destination-discovery,destination-registry}.ts` | Enforced mode: reject mixed routes before startup contact, project caller policy before construction, preserve feature-cache independence; bound/unpage catalog. Preserve standard behavior. |
 | ARC-1 tests | focused `tests/unit/server/*multi-target*` plus deployed-CF acceptance script | Role/target matrix, enumeration resistance, schema isolation, catalog completeness, redaction. |
 | ARC-1 docs | New ADR qualifying ADR-0006/0007, setup, administration, configuration reference, release notes | Minimal static setup, explicit activation, opt-in schema migration, refresh and reviewed rollback. |
 
@@ -1038,20 +1041,20 @@ and exact target grants are different dimensions, and collapsing them makes futu
 
 ### Unit and property tests
 
-- unset and explicit legacy preserve existing single/multi/mixed behavior, verifier output, scopes,
+- unset and explicit standard preserve existing single/multi/mixed behavior, verifier output, scopes,
   paging and enabled-target bound; descriptor installation/role presence never auto-activates;
-- explicit enforcement applies to every multi surface; missing/invalid grants never select legacy;
+- explicit enforcement applies to every multi surface; missing/invalid grants never select standard;
 - invalid/empty mode and enforcement with multi disabled fail clearly; opted-in mixed-runtime
   configurations fail **before** startup canaries/probes/authentication;
 - actually unsetting the effective runtime setting on a subsequent startup deliberately selects
-  legacy, is logged as such, and fails a rollout assertion expecting enforcement; no hidden previous-mode state;
+  standard, is logged as such, and fails a rollout assertion expecting enforcement; no hidden previous-mode state;
 - wrong issuer/audience/tenant and machine-Admin rejected before request-time target resolution or
   Admin diagnostics;
 - scalar/array/missing/empty/malformed/oversized claim handling and typed extraction-status mapping;
 - normalization, exact dedupe, aliases, unknown values, literal `*`, mixed exact-plus-`*`, and
   rejection of every partial/pattern wildcard;
 - in enforced mode, broad-reader behavior requires the explicit all-target role; otherwise zero
-  grants fail closed. Legacy access must not be represented as a synthetic `*` grant;
+  grants fail closed. Standard access must not be represented as a synthetic `*` grant;
 - a future destination becomes visible to `*` but not to an unrelated exact role;
 - two users with disjoint target sets, alternating/concurrent initialize/list/call requests and
   renewed tokens: no schema, initialization-instruction, capability-union or feature leakage;
@@ -1100,7 +1103,7 @@ Customer-specific transformations and optional token pruning are not core releas
    separate later spike may test `oauth2-configuration.system-attributes: []` if redundant groups/
    collections dominate token size; do not change that configuration in this feature;
 8. unrelated IAS groups do not enter the dedicated `arc1_targets` application attribute;
-9. Viewer, Data, SQL, and Admin behavior, opt-in schema refresh and unchanged legacy authorization are
+9. Viewer, Data, SQL, and Admin behavior, opt-in schema refresh and unchanged standard authorization are
    verified in MCP Inspector, VS Code/Copilot, Cursor, and one additional supported client;
 10. the exact sign-out/reconnect procedure is verified for a revoked and newly granted user;
 11. explicit `*` plus exact/static/IAS roles stays all-target, while missing, empty, malformed,
@@ -1127,7 +1130,7 @@ XSUAA rejected it as an invalid application scope.
 ## Final Spec Review and Remaining Evidence (2026-09-06)
 
 The 2026-09-06 review resolves the product choices for the minimal release: one opt-in; unchanged
-legacy deployments; static roles first; optional IAS provisioning through the same verified claim;
+standard deployments; static roles first; optional IAS provisioning through the same verified claim;
 explicit `*`; no Admin execution bypass; and one complete bounded catalog when enabled. It also
 specifies error/status propagation and pre-construction caller projection rather than leaving
 those security-sensitive contracts to implementation guesswork. The roadmap now uses the same
@@ -1171,7 +1174,7 @@ record rather than redefining the contract here. Do not claim customer readiness
 
 The administration guide added by the implementation must use this order:
 
-1. confirm the effective mode from startup logs and enforced Admin `SAPTargets`; in legacy mode
+1. confirm the effective mode from startup logs and enforced Admin `SAPTargets`; in standard mode
    target assignments are intentionally not enforced. Never infer activation from role presence;
 2. confirm the user has `read` and the expected exact or all-target role collection;
 3. inspect the role instance's `arc1_targets` source and configured source-name/value;
@@ -1195,7 +1198,7 @@ The implementation guide must also include these targeted cases:
 | Token exchange 400 or proxy 431 | Measure JWT/header bytes, dedicated claim multiplicity and redundant groups/collections; do not widen grants to reduce size. |
 | Descriptor update rejected | Compare exact new templates, immutable defaults and assigned predefined collections; do not mutate old templates or retry with Unrestricted. |
 | Mixed-runtime startup rejected after opting in | Move independent single `/mcp` to its own app/XSUAA; disabling enforcement is not a troubleshooting fix. |
-| `offset` rejected after opting in | Refresh the MCP schema and omit `offset`; enforced SAPTargets returns the complete bounded view. Legacy paging remains unchanged. |
+| `offset` rejected after opting in | Refresh the MCP schema and omit `offset`; enforced SAPTargets returns the complete bounded view. Standard paging remains unchanged. |
 | Over-limit unpaged Admin catalog | Fix total ARC-related candidates or malformed diagnostic inputs in BTP; no hidden first-page subset exists. |
 
 Do not tell operators to clear arbitrary browser cookies first. Prefer the existing ARC-1

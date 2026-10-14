@@ -37,7 +37,7 @@ MCP client ─ ARC-1/XSUAA ├─ /A4H/200/mcp ── A4H client 200
 ```
 
 A pinned URL alone is a target-selection guard, not a per-target authorization boundary. In the
-default **standard access** mode (`ARC1_MULTI_TARGET_AUTHORIZATION=legacy`), every user with global ARC-1 read scope can try every accepted pinned route
+default **standard access** mode (`ARC1_MULTI_TARGET_AUTHORIZATION=standard`), every user with global ARC-1 read scope can try every accepted pinned route
 if they know its ID. The propagated
 SAP identity and authorization decide whether the call succeeds. With BasicAuthentication, that
 identity is the same technical user for every authorized caller. Use separate ARC-1 applications
@@ -270,7 +270,7 @@ Non-secret destination changes require a restart, not another MTAR build or depl
 
 ### 6. Assign a role and connect
 
-For **standard access** (`legacy`), assign `ARC-1 Viewer (<space>)` to a test user. For opt-in enforcement,
+For **standard access** (`standard`), assign `ARC-1 Viewer (<space>)` to a test user. For opt-in enforcement,
 use the [target-role assignment order](multi-target-authorization.md#minimal-static-role-setup) instead.
 For the full configuration check in the next step,
 assign `ARC-1 Admin (<space>)` to a separate trusted operator and use a separate MCP connection; do
@@ -561,7 +561,7 @@ ARC-1 policy switches before import.
 
 ## XSUAA roles and target visibility
 
-Standard access (`legacy`, the default) uses the existing global role collections; it does not require one role per target.
+Standard access (`standard`, the default) uses the existing global role collections; it does not require one role per target.
 
 | Role collection | Effect on multi-target routes |
 |---|---|
@@ -582,7 +582,7 @@ For per-user target filtering, follow [Restrict access to systems and clients](m
 It owns the feature's readiness status, static-role setup order, worked example and acceptance
 checks. Especially useful for larger landscapes with different team access, it filters IAM-assigned
 targets rather than discovering SAP accounts. Static roles need no new IAS setup. Existing deployments
-keep standard access (`legacy`) unless the operator explicitly opts in. Do not assign restricted
+keep standard access (`standard`) unless the operator explicitly opts in. Do not assign restricted
 users while a reachable app still uses standard access.
 
 ### OAuth scopes on first sign-in
@@ -612,7 +612,7 @@ add scopes that were not granted originally.
 
 !!! danger "Side-by-side single-target `/mcp`"
 
-    This topology is supported only with standard access (`legacy`); enforced mode rejects it at startup.
+    This topology is supported only with standard access (`standard`); enforced mode rejects it at startup.
     `MCPAdmin` implies every ARC-1 scope. Multi-target routes remain mutation-free, but the same
     token may allow write, transport, or Git operations on a write-enabled single-target `/mcp`.
     Grant Admin only to trusted operators and prefer a separate ARC-1 application when a writable
@@ -663,11 +663,11 @@ multi-target fields are:
 
 `ready` includes a valid snapshot with zero active targets or individually quarantined entries.
 `error` means registry discovery or the catalog limits made the entire registry
-unavailable. During that failure, `/multi/mcp` remains reachable for admin `SAPTargets`. Legacy
+unavailable. During that failure, `/multi/mcp` remains reachable for admin `SAPTargets`. Standard
 pinned routes return HTTP 503 and other aggregate tools return a structured registry error.
 Enforced mode checks the caller's grant first: ungranted IDs retain generic pinned HTTP 404 or
 aggregate `TARGET_NOT_AVAILABLE`; granted IDs reach HTTP 503 or `MULTI_TARGET_REGISTRY_UNAVAILABLE`.
-Legacy counts enabled candidates;
+Standard counts enabled candidates;
 enforced mode bounds all ARC-related candidates and the complete result. See
 [catalog bounds](multi-target-administration.md#discovery-conflicts-and-the-256-target-ceiling).
 
@@ -734,7 +734,7 @@ unacceptable.
 | The app does not stay started | Check `cf logs arc1-mcp-server --recent`. Missing mandatory service bindings or invalid instance configuration fails startup; zero discovered targets by itself does not. |
 | Health reports `error` | Call `SAPTargets` as admin through `/multi/mcp`; check service bindings and the [mode-specific catalog bounds](multi-target-administration.md#discovery-conflicts-and-the-256-target-ceiling). |
 | Target is missing | Confirm subaccount scope, exact `arc1.enabled=true`, real SID/client and optional alias format, conflicts, then restart. |
-| `SAPTargets` is missing | It is aggregate-only. Readers need more than one active target with standard access (`legacy`) or more than one granted active target with filtering. Admins see it at zero/one/many grants. Check a fresh sign-in and that `SAP_DENY_ACTIONS` does not deny `SAPTargets`. |
+| `SAPTargets` is missing | It is aggregate-only. Readers need more than one active target with standard access (`standard`) or more than one granted active target with filtering. Admins see it at zero/one/many grants. Check a fresh sign-in and that `SAP_DENY_ACTIONS` does not deny `SAPTargets`. |
 | A Viewer sees no SAP tools | With zero active targets, or zero granted active targets in enforced mode, this is expected. An Admin can use `SAPTargets` for diagnostics; follow [target-authorization lifecycle](multi-target-administration.md#target-authorization-lifecycle) before changing grants. |
 | `BASIC_AUTH_DISABLED` | The destination is Basic but the deployment did not explicitly set `ARC1_MULTI_TARGET_ALLOW_BASIC_AUTH=true`. Enable it only after accepting the shared-identity model, redeploy, and keep one instance. |
 | `BASIC_PREEMPTIVE_DISABLED` | Remove `Preemptive=false` or set it to `true`, then restart. |

@@ -31,7 +31,7 @@ the inputs and authority boundaries. Leave unknown values explicitly **unverifie
 |---|---|
 | Feature availability | Source revision, [readiness](multi-target-authorization.md#availability-and-readiness), isolated pilot or approved rollout |
 | Existing desired state | Owning `.mtaext`, CF app/space, XSUAA application identity and lifecycle owner; preserve existing settings |
-| Target access | Why filtering is needed, or why shared inventory is acceptable; current/intended standard access (`legacy`) or target-filtered access (`xsuaa-attribute`). Static cohorts first; IAS is optional. |
+| Target access | Why filtering is needed, or why shared inventory is acceptable; current/intended standard access (`standard`) or target-filtered access (`xsuaa-attribute`). Static cohorts first; IAS is optional. |
 | Exact identifiers | Public system-or-alias/client IDs and corresponding destination names; keep these distinct |
 | IAM test matrix | Identity/IdP references, collections, expected allowed and denied targets, expected SAP users; include no-grant and Admin-without-grants cases. Name who keeps target grants aligned with SAP-account access. |
 | Cutover | All existing readers, other apps sharing XSUAA, serving processes/routes, approved maintenance window and rollback owner |
@@ -47,7 +47,7 @@ Use this evidence checklist alongside the guide, not as an additional deployment
 | Test permitted and denied calls | Request IDs, pre-SAP denial evidence, safe-read results and separate backend identity verification | Unexpected target visibility/execution, or missing evidence to distinguish ARC-1 denial from SAP denial |
 | Remove test access or diagnose stale access | IAM change evidence and old-token/refresh/fresh-login observations under the owner's procedure | Access is assumed revoked from assignment removal, restart or elapsed time alone |
 
-Do not grant Admin/All Targets, switch to legacy, enable data/SQL, or change IAS mappings merely to
+Do not grant Admin/All Targets, switch to standard, enable data/SQL, or change IAS mappings merely to
 make a failing check pass. Hand the unresolved check to its named owner. Share safe status/count
 summaries, not tokens, complete grant arrays, group lists or environment/binding dumps.
 

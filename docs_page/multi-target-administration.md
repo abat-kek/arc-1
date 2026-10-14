@@ -13,7 +13,7 @@ Common BTP configuration ownership, XSUAA collection lifecycle, DCR secrets, upg
 rollback, logging, and
 customer handover live in [BTP Administration](btp-administration.md).
 
-This page distinguishes **standard access** (configuration value `legacy`) from **target-filtered
+This page distinguishes **standard access** (configuration value `standard`) from **target-filtered
 access** (`xsuaa-attribute`, also called enforced mode). Standard access is supported, not deprecated:
 choose it when all readers may see/try the shared inventory. Filtering is optional and uses IAM
 assignments, not a scan of SAP accounts. See [when to use it](multi-target-authorization.md#when-to-use-it).
@@ -110,7 +110,7 @@ To enable target authorization, follow the [static-cohort setup](multi-target-au
 prepare roles unassigned, activate and verify `ARC1_MULTI_TARGET_AUTHORIZATION=xsuaa-attribute`,
 then assign restricted users. Target roles include global `read`, so assigning them to a reachable
 standard-access instance would expose all its targets. Existing deployments keep standard access
-when the property is absent; explicitly setting `legacy` has the same effect. Only trusted
+when the property is absent; explicitly setting `standard` has the same effect. Only trusted
 deployment operators may change this policy. Keep the chosen value in the protected landscape
 extension, not only a temporary `cf set-env` override.
 
@@ -121,9 +121,9 @@ extension, not only a temporary `cf set-env` override.
 | Rename a public target alias/client ID | Coordinate the destination change, exact role values, all-process restart and fresh client login. Old IDs do not become aliases automatically. |
 | Repoint a destination under the same public ID | Existing grants still match. Require the IAM/data owner's review before routing those grants to a different backend. |
 | Activate enforcement | Deploy the reviewed multi-only extension, verify the effective mode on every process and run positive/negative user acceptance. |
-| Disable/roll back enforcement | Obtain the security owner's approval, then set `ARC1_MULTI_TARGET_AUTHORIZATION: legacy` explicitly in the owning protected `.mtaext`, deploy, and verify the actual CF environment and logged mode on every serving process. This security downgrade restores broader all-reader access; verify that population and never use it as automatic error recovery. |
+| Disable/roll back enforcement | Obtain the security owner's approval, then set `ARC1_MULTI_TARGET_AUTHORIZATION: standard` explicitly in the owning protected `.mtaext`, deploy, and verify the actual CF environment and logged mode on every serving process. This security downgrade restores broader all-reader access; verify that population and never use it as automatic error recovery. |
 
-An actually unset runtime setting also selects `legacy`, but deleting the line from an MTA
+An actually unset runtime setting also selects `standard`, but deleting the line from an MTA
 extension does not reliably unset an already-deployed CF value. Keep the explicit rollback value
 in the owning extension; see [configuration persistence](configuration-precedence.md#restriction-lists-on-btp-mtaext-is-durable-cf-set-env-is-not).
 
@@ -207,7 +207,7 @@ then restart.
 
 ### Optional single-target `/mcp`
 
-This mixed topology requires **standard access (`legacy`)**. Enforced mode rejects independent single-target connection
+This mixed topology requires **standard access (`standard`)**. Enforced mode rejects independent single-target connection
 settings before startup destination lookups or SAP probes. Use a separate application and XSUAA
 identity with reviewed assignments when single-target access is also required. Also review other
 apps sharing the current XSUAA identity; this process cannot restrict their endpoints.
@@ -599,7 +599,7 @@ ARC-1 reports the proven failure stage without exposing raw SAP responses:
 | Error | Meaning and response |
 |---|---|
 | Generic target unavailable/denied | Enforced mode intentionally does not distinguish an unknown ID from an ungranted ID. Use a trusted Admin session and the request ID to diagnose; never probe other IDs as a workaround. |
-| `TARGET_GRANT_MISSING` / `TARGET_GRANT_MALFORMED` / `TARGET_GRANT_LIMIT_EXCEEDED` | Safe Admin/audit decision: check the correct application's role source/values, missing versus Unrestricted attribute, exact ID format and the 256 unique-grant bound. Fresh sign-in after IAM repair; no fallback to legacy. |
+| `TARGET_GRANT_MISSING` / `TARGET_GRANT_MALFORMED` / `TARGET_GRANT_LIMIT_EXCEEDED` | Safe Admin/audit decision: check the correct application's role source/values, missing versus Unrestricted attribute, exact ID format and the 256 unique-grant bound. Fresh sign-in after IAM repair; no fallback to standard. |
 | `TARGET_NOT_GRANTED` | Operator audit only: the user's valid grant set does not include the requested target. The caller still gets a generic unavailable/denied response; this code does not prove the target exists. Distinguish this ARC-1 decision from downstream PP/SAP failures. |
 | `BASIC_CREDENTIALS_MISSING` | The authoritative request-time Find result has no usable `User`/`Password`. Repair the destination and retry without restart. |
 | `BASIC_CREDENTIALS_INVALID` | The Basic username contains `:` or surrounding whitespace. Correct the destination and retry without restart. |

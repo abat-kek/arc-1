@@ -116,10 +116,10 @@ describe('optional target-authorization deployment overlay', () => {
     for (const [key, value] of Object.entries({ ...app.properties, ...profile.modules[0].properties })) {
       process.env[key] = String(value);
     }
-    const legacy = parseArgs([]);
-    expect(legacy.multiTargetAuthorization).toBe('legacy');
+    const standard = parseArgs([]);
+    expect(standard.multiTargetAuthorization).toBe('standard');
     process.env.ARC1_MULTI_TARGET_AUTHORIZATION = overlay.modules[0].properties.ARC1_MULTI_TARGET_AUTHORIZATION;
-    expect(parseArgs([])).toEqual({ ...legacy, multiTargetAuthorization: 'xsuaa-attribute' });
+    expect(parseArgs([])).toEqual({ ...standard, multiTargetAuthorization: 'xsuaa-attribute' });
   });
 
   it('validates the combined profile and keeps operator instructions on the canonical runbooks', () => {

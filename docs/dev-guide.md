@@ -17,8 +17,9 @@ owns target-access readiness and the static-role procedure; the old setup anchor
 `docs_page/llms.txt` is only a short entry/task map, copied unchanged by MkDocs; there is no manifest
 or custom build hook. The optional worksheet owns handoff inputs, expected evidence and stop conditions.
 
-In operator prose, call `legacy` **standard access** and `xsuaa-attribute` **target-filtered access**.
-Both remain supported choices; preserve the exact configuration values in examples. Filtering is
+In operator prose, call `standard` **standard access** and `xsuaa-attribute` **target-filtered access**.
+Both remain supported choices; use these canonical values in examples and runtime state. The
+pre-release `legacy` spelling is normalized only by the environment/CLI parser, not a third mode. Filtering is
 optional IAM-assigned target access, not automatic discovery of SAP accounts or a mandatory IAS setup.
 
 When changing setup guidance, check the relevant runtime/descriptor and existing examples together.
@@ -82,7 +83,7 @@ use SAP's separate **Multi-Target Application** packaging terminology.
    For opt-in target authorization, also read
    [ADR-0008](adr/0008-opt-in-xsuaa-target-authorization.md), the
    [accepted spec](plans/xsuaa-target-authorization.md) and its linked implementation/live-validation
-   record. These qualify only enforced mode; legacy behavior must remain unchanged.
+   record. These qualify only enforced mode; standard behavior must remain unchanged.
 2. At startup, `src/server/destination-discovery.ts` projects subaccount destinations into a
    secret-safe shape, `destination-registry.ts` validates them, and `server.ts`/`http.ts` create the
    pinned and aggregate HTTP factories.
@@ -90,7 +91,7 @@ use SAP's separate **Multi-Target Application** packaging terminology.
    `multi-target-server.ts` performs the early policy/scope/rate checks; `server.ts` performs the
    uncached selected-destination lookup and drift check; PP stays per-user, while Basic credentials
    are bound behind `multi-target-shared-auth-state.ts`; `dispatch.ts` runs the normal tool pipeline.
-4. `SAPTargets` is an aggregate-only MCP tool. Legacy readers get target/description/identity when multiple
+4. `SAPTargets` is an aggregate-only MCP tool. Standard readers get target/description/identity when multiple
    targets exist; admins get secret-safe registry diagnostics and passive Basic runtime health.
    Enforced readers get the tool only with more than one granted active target; zero grants expose
    no tools, and one target stays explicit in the SAP tool schemas. Admins get complete bounded
@@ -104,7 +105,7 @@ use SAP's separate **Multi-Target Application** packaging terminology.
   targets are strict per-user. Basic is a separate default-off shared identity, never fallback, and
   requires exactly one CF instance. ATC and ABAP Unit are available as workload-producing reads;
   operators can disable them with `SAP_DENY_ACTIONS`.
-- `/mcp` is never assigned a discovered destination. In legacy mode an optional single-target `/mcp` is configured
+- `/mcp` is never assigned a discovered destination. In standard mode an optional single-target `/mcp` is configured
   independently and may coexist with pinned `/<PUBLIC-SYSTEM>/<CLIENT>/mcp` and aggregate
   `/multi/mcp` routes. Enforced mode rejects that mixed configuration before startup network calls.
 - The public target is immutable `SYSTEM-OR-ALIAS/CLIENT`. Without `arc1.target_alias`, the public

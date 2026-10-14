@@ -62,12 +62,12 @@ describe('enforced multi-only startup boundary', () => {
     expect(() => assertMultiTargetAuthorizationStartup(CONFIG, {})).not.toThrow();
   });
 
-  it('leaves legacy mixed runtime configuration untouched', () => {
+  it('leaves standard mixed runtime configuration untouched', () => {
     expect(() =>
       assertMultiTargetAuthorizationStartup(
         {
           ...CONFIG,
-          multiTargetAuthorization: 'legacy',
+          multiTargetAuthorization: 'standard',
           url: 'https://sap.example.test',
           username: 'USER',
           password: 'test',

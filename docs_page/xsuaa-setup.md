@@ -157,7 +157,7 @@ create the corresponding collection; MTA owns its additional `ARC-1 All Targets 
 Do not put the all-target role into an already assigned functional collection during an update.
 For target attributes, keep the existing OAuth scope request set; see the distinction below.
 IAS-fed target values remain optional and require their own live token/union/refresh validation.
-Static target roles need no IAS change. Keeping standard access (`legacy`) is supported when all
+Static target roles need no IAS change. Keeping standard access (`standard`) is supported when all
 readers may see/try every target; neither mode automatically discovers the user's SAP accounts.
 
 !!! note "Assign the least-privilege collection"

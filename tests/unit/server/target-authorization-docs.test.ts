@@ -49,18 +49,18 @@ describe('target authorization operator documentation', () => {
   });
 
   it('documents the unchanged default and deliberate multi-only opt-in rather than automatic migration', () => {
-    expect(DEFAULT_CONFIG.multiTargetAuthorization).toBe('legacy');
+    expect(DEFAULT_CONFIG.multiTargetAuthorization).toBe('standard');
     expect(
       hasParagraph(
         targetAccess,
-        'Unset or explicit `legacy` leaves existing authorization, paging and tool visibility unchanged. Display-label sanitization applies in both modes; see the [compatibility note](multi-target-administration.md#enforced-catalog-differences).',
+        'Unset or explicit `standard` leaves existing authorization, paging and tool visibility unchanged. Display-label sanitization applies in both modes; see the [compatibility note](multi-target-administration.md#enforced-catalog-differences).',
       ),
     ).toBe(true);
     expect(targetAccess).toContain('ARC1_MULTI_TARGET_AUTHORIZATION: xsuaa-attribute');
     expect(targetAccess).toContain('SAP_BTP_PP_DESTINATION');
     expect(admin).toContain('before startup destination lookups or SAP probes');
     expect(admin).toContain('security downgrade');
-    expect(admin).toContain('ARC1_MULTI_TARGET_AUTHORIZATION: legacy');
+    expect(admin).toContain('ARC1_MULTI_TARGET_AUTHORIZATION: standard');
     expect(admin).toContain('CF environment');
     expect(read('.env.example')).toContain('# ARC1_MULTI_TARGET_AUTHORIZATION=xsuaa-attribute');
     expect(read('docs_page/configuration-reference.md')).toContain('--multi-target-authorization');
@@ -71,7 +71,7 @@ describe('target authorization operator documentation', () => {
     expect(
       hasParagraph(
         targetAccess,
-        '**Standard access** is named `legacy` in the configuration. That value means “no additional target filtering”, **not deprecated or unsupported**. **Target-filtered access** uses `xsuaa-attribute`. Keep these exact values in configuration files; the plain-language names are not additional values.',
+        '**Standard access** uses `standard` (the default): no additional target filtering. **Target-filtered access** uses `xsuaa-attribute`. Both are supported choices.',
       ),
     ).toBe(true);
     expect(
@@ -83,7 +83,9 @@ describe('target authorization operator documentation', () => {
     expect(targetAccess).toContain('No new IAS configuration is required');
     expect(targetAccess).toContain('## How the parts fit together');
     expect(targetAccess).toContain('**not an SAP PFCG role**');
-    expect(read('docs_page/llms.txt')).toContain('Do not invent a standard value');
+    expect(read('docs_page/llms.txt')).toContain('Use these canonical values in new configuration');
+    expect(targetAccess).toContain('`legacy` is accepted only as an environment/CLI input alias for `standard`');
+    expect(targetAccess).toContain('Resolved configuration and startup logs always use `standard`');
     expect(read('AGENTS.md')).toContain('supported standard access, not deprecated');
   });
 
@@ -133,7 +135,7 @@ describe('target authorization operator documentation', () => {
     expect(targetAccess).toContain('same source revision');
     expect(read('examples/btp/multi-pp/README.md')).toContain('target-authorization.mtaext');
     expect(read('docs_page/btp-overview.md')).toContain(
-      'Standard access (`legacy`) only; opt-in target enforcement rejects this topology',
+      'Standard access (`standard`) only; opt-in target enforcement rejects this topology',
     );
   });
 
@@ -159,7 +161,7 @@ describe('target authorization operator documentation', () => {
     const worksheet = read('docs_page/btp-setup-worksheet.md');
     expect(worksheet).toContain('## Target access setup and agent handoff');
     expect(worksheet).toContain('Evidence to retain | Stop if');
-    expect(worksheet).toContain('Do not grant Admin/All Targets, switch to legacy');
+    expect(worksheet).toContain('Do not grant Admin/All Targets, switch to standard');
     expect(worksheet).toContain('What the agent may inspect/change');
   });
 

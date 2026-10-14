@@ -1,5 +1,10 @@
 # PR #677 — refreshed acceptance tests and October 13 live baseline
 
+> Terminology update (2026-10-14): the current mode is `standard`. References to `legacy` below
+> record the pre-release name used in these dated tests/reviews, not a deprecated access policy.
+> It remains an environment/CLI input alias only; use the [current guide](../../docs_page/multi-target-authorization.md)
+> for setup. Recorded test results have not been relabeled as tests of the renamed build.
+
 Status: **core static-role and initial real-client acceptance recorded; customer-ready gates remain open.**
 This supplements the [September validation record](2026-09-15-pr677-target-authorization-implementation.md)
 without relabeling those older results as final-build evidence. An external tester reported that it

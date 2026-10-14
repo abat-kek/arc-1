@@ -15,7 +15,8 @@ is also available.
 Use the same revision for linked guides and examples. Research and plans are not shipped settings.
 Use docs_page/btp-setup-worksheet.md for missing inputs, owner handoffs and stop conditions.
 Ask for missing landscape inputs, not passwords, tokens, private keys or raw service bindings.
-Standard access is supported: its exact configuration value is legacy (or leave it unset).
-Target-filtered access uses xsuaa-attribute. Do not invent a standard value or enable filtering just
+Standard access is supported: its exact configuration value is standard (or leave it unset).
+Target-filtered access uses xsuaa-attribute. Use these canonical values in new configuration;
+the pre-release legacy spelling is only an input alias for standard. Do not enable filtering just
 because the installation is being upgraded. Admin diagnostics are not target execution grants;
 SAPTargets is absent for ordinary readers with zero/one granted active targets in filtered mode.

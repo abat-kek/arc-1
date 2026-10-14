@@ -136,7 +136,7 @@ export const CLI_CONFIG_OPTION_SPECS: readonly CliConfigOptionSpec[] = [
   {
     name: 'multi-target-authorization',
     valueName: 'mode',
-    description: 'Multi-target authorization: legacy (default) or xsuaa-attribute',
+    description: 'Multi-target authorization: standard (default) or xsuaa-attribute',
   },
   {
     name: 'multi-target-allow-basic-auth',
@@ -836,7 +836,7 @@ export function resolveConfig(args: string[]): { config: ServerConfig; sources: 
   );
   const targetAuthorizationFlag = getFlag('multi-target-authorization');
   if (targetAuthorizationFlag === undefined && args.includes('--multi-target-authorization')) {
-    throw new Error('--multi-target-authorization requires legacy or xsuaa-attribute.');
+    throw new Error('--multi-target-authorization requires standard or xsuaa-attribute.');
   }
   const targetAuthorizationEnv = process.env.ARC1_MULTI_TARGET_AUTHORIZATION;
   const targetAuthorizationRaw = targetAuthorizationFlag ?? targetAuthorizationEnv;
@@ -844,9 +844,12 @@ export function resolveConfig(args: string[]): { config: ServerConfig; sources: 
     // Unlike resolveStr, an explicit empty value must never disable enforcement.
     sources.multiTargetAuthorization = 'default';
   } else {
-    const mode = targetAuthorizationRaw.trim();
-    if (mode !== 'legacy' && mode !== 'xsuaa-attribute') {
-      throw new Error('ARC1_MULTI_TARGET_AUTHORIZATION must be legacy or xsuaa-attribute; empty values are invalid.');
+    const inputMode = targetAuthorizationRaw.trim();
+    // Accept the pre-release spelling only at the input boundary. Runtime state and logs
+    // use the canonical name so standard access is never presented as an obsolete mode.
+    const mode = inputMode === 'legacy' ? 'standard' : inputMode;
+    if (mode !== 'standard' && mode !== 'xsuaa-attribute') {
+      throw new Error('ARC1_MULTI_TARGET_AUTHORIZATION must be standard or xsuaa-attribute; empty values are invalid.');
     }
     config.multiTargetAuthorization = mode;
     sources.multiTargetAuthorization =
@@ -1058,8 +1061,8 @@ export function parseArgs(args: string[]): ServerConfig {
  * Fails fast at startup for invalid or dangerous config combinations.
  */
 export function validateConfig(config: ServerConfig): void {
-  if (config.multiTargetAuthorization !== 'legacy' && config.multiTargetAuthorization !== 'xsuaa-attribute') {
-    throw new Error('ARC1_MULTI_TARGET_AUTHORIZATION must be legacy or xsuaa-attribute.');
+  if (config.multiTargetAuthorization !== 'standard' && config.multiTargetAuthorization !== 'xsuaa-attribute') {
+    throw new Error('ARC1_MULTI_TARGET_AUTHORIZATION must be standard or xsuaa-attribute.');
   }
   if (config.multiTargetAuthorization === 'xsuaa-attribute' && !config.multiTargetEndpoints) {
     throw new Error('ARC1_MULTI_TARGET_AUTHORIZATION=xsuaa-attribute requires ARC1_MULTI_TARGET_ENDPOINTS=true.');

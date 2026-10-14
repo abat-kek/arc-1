@@ -59,17 +59,20 @@ grant does not create an SAP user, prove backend access, or allow multi-target w
 
 ## What changes when you opt in
 
-**Standard access** is named `legacy` in the configuration. That value means “no additional target
-filtering”, **not deprecated or unsupported**. **Target-filtered access** uses `xsuaa-attribute`.
-Keep these exact values in configuration files; the plain-language names are not additional values.
+**Standard access** uses `standard` (the default): no additional target filtering.
+**Target-filtered access** uses `xsuaa-attribute`. Both are supported choices.
 
 | Deployment setting | Target access |
 |---|---|
-| Unset or `ARC1_MULTI_TARGET_AUTHORIZATION=legacy` | **Standard access:** readers can discover and try every active target. SAP and the other policy layers still decide whether a call succeeds. Target attributes are not enforced. |
+| Unset or `ARC1_MULTI_TARGET_AUTHORIZATION=standard` | **Standard access:** readers can discover and try every active target. SAP and the other policy layers still decide whether a call succeeds. Target attributes are not enforced. |
 | `ARC1_MULTI_TARGET_AUTHORIZATION=xsuaa-attribute` | **Target-filtered access:** only supported verified XSUAA user tokens enter these routes. Assigned targets restrict reader discovery and every aggregate/pinned SAP call. Missing or invalid grants deny access; they never turn filtering off. |
 
-Unset or explicit `legacy` leaves existing authorization, paging and tool visibility unchanged.
+Unset or explicit `standard` leaves existing authorization, paging and tool visibility unchanged.
 Display-label sanitization applies in both modes; see the [compatibility note](multi-target-administration.md#enforced-catalog-differences).
+
+For existing pre-release test deployments, `legacy` is accepted only as an environment/CLI input
+alias for `standard`. Resolved configuration and startup logs always use `standard`; use that name
+in new configuration and operator automation. This is a naming change, not an access-policy change.
 
 Enforcement is **multi-only**: an independently configured single-target `/mcp` cannot coexist in
 the same app. Single-target deployments remain unchanged. A separate app with a distinct XSUAA
@@ -106,7 +109,7 @@ public target IDs, test users/IdP origin, and expected SAP users. Record these i
 CLI or cockpit login does not prove that the MCP application's user has the right roles.
 
 **Ordering matters:** target roles also supply global `read`. Assigning them while a reachable
-instance still uses standard access (`legacy`) lets that user see/try **all** its configured targets, not just the
+instance still uses standard access (`standard`) lets that user see/try **all** its configured targets, not just the
 role's cohort. Prepare roles unassigned; activate and verify enforcement before assigning restricted
 users. An isolated pilot needs its own app/XSUAA identity, not a second route to a standard-access instance.
 
@@ -314,9 +317,9 @@ discovers SAP accounts. Retain the static path until the optional live acceptanc
 - **Access persists after removal:** old tokens and refreshed/reused SSO sessions can retain grants.
   Follow the [lifecycle and revocation procedure](multi-target-administration.md#target-authorization-lifecycle).
   Restarting ARC-1 is not revocation; neither a fresh expiry nor an elapsed hour proves removal.
-- **Considering rollback:** selecting `legacy` restores broader all-reader access. Obtain security
+- **Considering rollback:** selecting `standard` restores broader all-reader access. Obtain security
   approval and follow the same lifecycle procedure, including outstanding tokens and reader review.
-  Use explicit `ARC1_MULTI_TARGET_AUTHORIZATION: legacy` in the owning extension for an approved
+  Use explicit `ARC1_MULTI_TARGET_AUTHORIZATION: standard` in the owning extension for an approved
   rollback; deleting its line is not reliable. Never disable enforcement as automatic error recovery.
 
 Keep tokens, complete grant arrays, IAS group lists and credentials out of support records. Use

@@ -147,7 +147,7 @@ Admin-machine fixture. The default omits `scope` to observe the service client's
   matching response arrives; the server need not close a long-lived stream first.
 - Every actual MCP response is checked for `Cache-Control: private, no-store`, including
   initialize, tools/list, tool calls, initialized notifications, unauthorized requests, pinned
-  denials, and the JSON-RPC `/authorize` compatibility alias. A deliberately selected legacy
+  denials, and the JSON-RPC `/authorize` compatibility alias. A deliberately selected standard
   comparison scenario can set `expect.privateResponses: false`; enforced scenarios leave it on.
 - Only counts, fixed status strings, local capability scope names, boolean shape evidence, and
   expected-identity matching leave the harness. It does not decode unverified JWTs for assertions.

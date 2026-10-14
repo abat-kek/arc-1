@@ -372,7 +372,7 @@ See [XSUAA Setup](xsuaa-setup.md) for BTP Cockpit assignment steps.
 
 **Opt-in target authorization** adds a separate target boundary
 only when the deployment owner selects `ARC1_MULTI_TARGET_AUTHORIZATION=xsuaa-attribute`.
-Unset/`legacy` means **standard access**, a supported choice where all readers may see/try the
+Unset/`standard` means **standard access**, a supported choice where all readers may see/try the
 configured inventory and SAP still checks their access. Filtering is optional, particularly useful
 for larger landscapes with different team assignments. It follows IAM grants, not automatic
 discovery of which SAP accounts exist. The

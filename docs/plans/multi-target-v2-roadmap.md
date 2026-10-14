@@ -218,7 +218,7 @@ explicit functional consent. The recommended contract is to preserve verified ra
 the exact target grant. An Admin token without that raw functional scope remains diagnostic.
 
 Target-specific mutation-free visibility is additive and explicitly enabled with
-`ARC1_MULTI_TARGET_AUTHORIZATION=xsuaa-attribute`; unset/`legacy` preserves existing deployments.
+`ARC1_MULTI_TARGET_AUTHORIZATION=xsuaa-attribute`; unset/`standard` preserves existing deployments.
 Once enabled, missing or invalid grants never fall back to broader access, and broad read access
 requires an explicit XSUAA `*` role. Removing the opt-in is a reviewed security downgrade. The design in
 [XSUAA target authorization](xsuaa-target-authorization.md) filters `SAPTargets` and every
@@ -227,11 +227,11 @@ or remembers prior successes/failures. Its generic read target list, including `
 authorize future writes, which still require exact capability-bound grants.
 
 Opting in also requires multi-only applications: a coexisting independent `/mcp` is rejected so
-it cannot bypass target grants. Normal single-target-only and legacy mixed deployments remain
+it cannot bypass target grants. Normal single-target-only and standard mixed deployments remain
 unchanged. Static cohort roles and dedicated IAS attributes feed one enforcement path; ordinary
 exact roles have no default and a separate template provides the explicit `*` role. Existing global data/SQL scopes
 apply across the target union, so this read model does not provide per-target capability pairing.
-Legacy read compatibility must never become a route to future writes: mutation support requires
+Standard read compatibility must never become a route to future writes: mutation support requires
 enforcement plus the separately reviewed exact capability-bound grants below.
 
 The authorization design must also decide what an exact grant is bound to. Renaming an alias or
@@ -636,7 +636,7 @@ destinations, enable writes, or contact SAP with a technical fallback identity.
 Each PR should start from the latest main after #579 merges and be mergeable without the next PR.
 New operational capabilities remain default-off. Read target authorization is also opt-in: its
 descriptor artifacts are additive and enforcement is explicitly activated after role provisioning.
-Legacy behavior stays unchanged on upgrade; enabled enforcement never falls back on claim errors.
+Standard behavior stays unchanged on upgrade; enabled enforcement never falls back on claim errors.
 The numeric IDs group dependencies; independent work such as V2-06 may land earlier. Avoid a
 long-lived stacked beta branch.
 
@@ -763,7 +763,7 @@ duplicate, oversized, missing, and malformed claims or entitlement responses acc
 chosen branch. Both branches prove explicit raw functional scope can be distinguished from Admin
 implication. Before writes are enabled, write-capability grants are behaviorally inert; opt-in
 read target authorization follows the separate XSUAA target-authorization specification. Writes
-must require enforcement and must not run under its legacy compatibility policy.
+must require enforcement and must not run under its standard compatibility policy.
 
 **Rollback:** before writes exist, this code is behaviorally inert and may be rolled back without
 destination changes. Once V2-08 exists, multi-target writes must imply target-grant enforcement and
@@ -1075,7 +1075,7 @@ If those conditions are not met, pinned write routes remain the final architectu
 
 - multi-target flag off with every existing single-target auth/deployment style;
 - reject mixed independent `/mcp` plus multi runtimes when target enforcement is enabled; verify
-  single-target-only and legacy mixed deployments still work unchanged on upgrade;
+  single-target-only and standard mixed deployments still work unchanged on upgrade;
 - zero, one, two, 16, 17, 100, 256, and 257 enabled candidates;
 - duplicate destination names, physical IDs, aliases, and route shadows;
 - PP-only, Basic-only, and mixed read-only registries;
@@ -1199,12 +1199,12 @@ the target authorization and live customer matrix pass.
 ### Safe migration
 
 1. Upgrade every serving instance with new mutation/capability rollout flags off. Preserve an
-   existing target-authorization opt-in; do not reset it to legacy as part of an upgrade.
+   existing target-authorization opt-in; do not reset it to standard as part of an upgrade.
 2. Drain all v1 instances before adding any v2-only destination property. A mixed v1/v2 fleet would
    quarantine a target on v1 while keeping it readable on v2.
 3. Confirm existing read-only pinned and aggregate routes.
 4. Create exact capability-bound target grants, enable the reviewed enforcement policy on all
-   serving instances, and test with separate users. Legacy read mode cannot enable writes.
+   serving instances, and test with separate users. Standard read mode cannot enable writes.
 5. Add destination policy to one non-production PP target.
 6. Restart or explicitly apply a future registry revision.
 7. Inspect effective policy through Admin `SAPTargets`.

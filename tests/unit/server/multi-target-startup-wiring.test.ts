@@ -1,5 +1,6 @@
 /** Exercise real startup orchestration, not only its exported authorization helpers. */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { parseArgs } from '../../../src/server/config.js';
 import { discoverDestinations } from '../../../src/server/destination-discovery.js';
 import { DestinationRegistry } from '../../../src/server/destination-registry.js';
 import { Logger } from '../../../src/server/logger.js';
@@ -76,9 +77,18 @@ describe('target-authorization startup wiring', () => {
     vi.unstubAllGlobals();
   });
 
-  it.each(['legacy', 'xsuaa-attribute'] as const)(
+  it.each(['standard', 'legacy', 'xsuaa-attribute'] as const)(
     'passes %s through real discovery and registry into the HTTP bootstrap arguments',
-    async (multiTargetAuthorization) => {
+    async (inputMode) => {
+      const { multiTargetAuthorization } = parseArgs([
+        '--multi-target-authorization',
+        inputMode,
+        '--multi-target-endpoints=true',
+        '--transport=http-streamable',
+        '--xsuaa-auth=true',
+        '--cache=none',
+      ]);
+      expect(multiTargetAuthorization).toBe(inputMode === 'legacy' ? 'standard' : inputMode);
       // Marker-missing candidates count only under the stricter enforced-mode bound.
       boundary.list.mockImplementation(async (_config, level) =>
         level === 'subaccount'
@@ -100,6 +110,13 @@ describe('target-authorization startup wiring', () => {
         expect(Logger.prototype.info).toHaveBeenCalledWith(expect.stringContaining('authorization'), {
           mode: multiTargetAuthorization,
         });
+        if (multiTargetAuthorization === 'standard') {
+          expect(Logger.prototype.info).toHaveBeenCalledWith(
+            'Standard multi-target authorization: per-target grants are not enforced.',
+            { mode: 'standard' },
+          );
+        }
+        expect(Logger.prototype.info).not.toHaveBeenCalledWith(expect.anything(), { mode: 'legacy' });
         expect(boundary.resolveSingle).not.toHaveBeenCalled();
         expect(boundary.http).toHaveBeenCalledOnce();
         const [single, , , , routing] = boundary.http.mock.calls[0];
@@ -119,7 +136,7 @@ describe('target-authorization startup wiring', () => {
     },
   );
 
-  it.each(['legacy', 'xsuaa-attribute'] as const)('retains %s options when discovery fails', async (mode) => {
+  it.each(['standard', 'xsuaa-attribute'] as const)('retains %s options when discovery fails', async (mode) => {
     boundary.list.mockRejectedValue(new Error('fixture discovery unavailable'));
     const unavailable = vi.spyOn(DestinationRegistry, 'unavailable');
     const server = await createAndStartServer({ ...config, multiTargetAuthorization: mode });
@@ -130,7 +147,7 @@ describe('target-authorization startup wiring', () => {
       );
       const routing = boundary.http.mock.calls[0][4];
       expect(routing.registry.available).toBe(false);
-      expect(routing.registry.countsComplete).toBe(mode === 'legacy');
+      expect(routing.registry.countsComplete).toBe(mode === 'standard');
       expect(routing.authorizationMode).toBe(mode);
     } finally {
       await server.close();
@@ -148,7 +165,7 @@ describe('target-authorization startup wiring', () => {
     expect(boundary.xsuaa).not.toHaveBeenCalled();
   });
 
-  it.each(['legacy', 'xsuaa-attribute'] as const)(
+  it.each(['standard', 'xsuaa-attribute'] as const)(
     'refuses %s startup when the XSUAA binding fails, before discovery or listeners',
     async (multiTargetAuthorization) => {
       boundary.xsuaa.mockImplementation(() => {

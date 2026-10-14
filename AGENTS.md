@@ -122,7 +122,7 @@ Full per-option details (defaults, clamps, layer interactions): [docs_page/confi
 | `SAP_BTP_DESTINATION` / `SAP_BTP_PP_DESTINATION` | BTP Destination names (PP = PrincipalPropagation type) |
 | `ARC1_MULTI_TARGET_ENDPOINTS` | Experimental/default-off BTP CF mode: marked subaccount destinations → mutation-free `/<SYSTEM-OR-ALIAS>/<CLIENT>/mcp` plus `/multi/mcp`; requires XSUAA, cache none, standard tools, UI/plugins off; PP targets are strict. |
 | `ARC1_MULTI_TARGET_ALLOW_BASIC_AUTH` | Default false. Permits shared BasicAuthentication targets in multi mode; never PP fallback, credentials stay request-local, and v1 requires exactly one CF instance. |
-| `ARC1_MULTI_TARGET_AUTHORIZATION` | Default/unset `legacy` = supported standard access, not deprecated. Opt-in `xsuaa-attribute` filters IAM-assigned targets, not discovered SAP accounts; multi-only, never fallback. Admin diagnostics do not grant execution. Contract/readiness: ADR-0008 + `docs/plans/xsuaa-target-authorization.md`. |
+| `ARC1_MULTI_TARGET_AUTHORIZATION` | Default/unset `standard` = supported standard access, not deprecated. Opt-in `xsuaa-attribute` filters IAM-assigned targets, not discovered SAP accounts; multi-only, never fallback. Admin diagnostics do not grant execution. Contract/readiness: ADR-0008 + `docs/plans/xsuaa-target-authorization.md`. |
 | `SAP_PP_ENABLED` / `SAP_PP_STRICT` / `SAP_PP_ALLOW_SHARED_COOKIES` | Principal propagation + strict mode + cookie-coexistence escape hatch |
 | `SAP_DISABLE_SAML` | Disable SAML redirect — never on BTP ABAP / S/4 Public Cloud |
 | `ARC1_MINIMAL_ERRORS` | Hide SAP diagnostic details from client-facing tool errors; keep request correlation for operators |
@@ -384,7 +384,7 @@ never present mocks or skipped tests as live coverage. Documentation-only change
   mutation-free exception for pinned and aggregate endpoints. Principal Propagation remains recommended;
   ADR-0007 permits only an explicit, default-off shared Basic identity under its mutation-free, one-instance
   controls and never as a PP fallback. ADR-0008 adds only opt-in verified XSUAA target roles under
-  `docs/plans/xsuaa-target-authorization.md`; legacy stays unchanged. Follow these normative plans;
+  `docs/plans/xsuaa-target-authorization.md`; standard stays unchanged. Follow these normative plans;
   do not add writes, another discovery/auth model, or a hidden compatibility mode. Route requirements
   outside those boundaries to separate ARC-1 instances. Changing the boundary requires a new
   ADR/security review.

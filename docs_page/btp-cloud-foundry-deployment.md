@@ -182,7 +182,7 @@ startup/request pairing. Its least-privileged startup user is not a PP fallback.
 
 ### Multi-target PP-only profile
 
-The profile below keeps **standard access** (`legacy`): every reader may see/try all targets;
+The profile below keeps **standard access** (`standard`): every reader may see/try all targets;
 SAP still decides whether the call is authorized. This is a legitimate setup when everyone may
 see the shared inventory. For different per-team target lists, consider optional
 [target filtering](multi-target-authorization.md#when-to-use-it). It uses IAM assignments, not

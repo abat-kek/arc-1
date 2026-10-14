@@ -246,16 +246,16 @@ describe('opted-in complete target catalog', () => {
     expect(payload(snapshot).result.isError).toBe(true);
   });
 
-  it('retains legacy output and paging without introducing authorization or count metadata', () => {
+  it('retains standard output and paging without introducing authorization or count metadata', () => {
     const snapshot = registry(
       Array.from({ length: 70 }, (_, i) => destination(i)),
       false,
     );
-    const legacy = buildTargetCatalog(snapshot, { admin: true, query: 'DEST_', offset: 50 }) as Record<string, any>;
-    expect(legacy.admin.destinations).toHaveLength(20);
-    expect(legacy.admin.diagnosticOffset).toBe(50);
-    expect(legacy.admin).not.toHaveProperty('authorization');
-    expect(legacy.admin).not.toHaveProperty('countsComplete');
+    const standard = buildTargetCatalog(snapshot, { admin: true, query: 'DEST_', offset: 50 }) as Record<string, any>;
+    expect(standard.admin.destinations).toHaveLength(20);
+    expect(standard.admin.diagnosticOffset).toBe(50);
+    expect(standard.admin).not.toHaveProperty('authorization');
+    expect(standard.admin).not.toHaveProperty('countsComplete');
   });
 
   it('fails the defensive serialization guard without mutating a previously accepted registry', () => {

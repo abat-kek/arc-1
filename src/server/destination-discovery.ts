@@ -9,11 +9,12 @@ import {
   listDestinationsAtLevel,
 } from '@arc-mcp/xsuaa-auth/btp';
 import { authLibLogger } from './logger.js';
+import type { MultiTargetAuthorizationMode } from './multi-target-authorization.js';
 import { isSupportedMultiTargetArcProperty, isWriteRelatedArcProperty } from './multi-target-destination-config.js';
 import { MULTI_TARGET_MAX } from './multi-target-identity.js';
 
 export interface DestinationAuthorizationOptions {
-  readonly authorizationMode?: 'legacy' | 'xsuaa-attribute';
+  readonly authorizationMode?: MultiTargetAuthorizationMode;
 }
 
 export interface DiscoveredDestination {

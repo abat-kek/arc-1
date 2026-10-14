@@ -1,6 +1,6 @@
 # Optional overlay AFTER the conservative multi-PP profile, not a standalone profile.
 # Prepare roles unassigned; activate/verify enforcement before assigning restricted users.
-# Existing deployments keep supported standard access (legacy) unless the operator opts in.
+# Existing deployments keep supported standard access (standard) unless the operator opts in.
 # No independent single-target /mcp may coexist when enforcement is enabled.
 _schema-version: "3.1"
 ID: arc1-multi-pp-target-authorization-example

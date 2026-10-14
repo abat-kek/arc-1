@@ -41,7 +41,7 @@ describe('DestinationRegistry', () => {
       discovery([destination({ description: 'Prod label' })]),
       DEFAULT_CONFIG,
     );
-    for (const authorizationMode of ['legacy', 'xsuaa-attribute'] as const) {
+    for (const authorizationMode of ['standard', 'xsuaa-attribute'] as const) {
       const normalized = DestinationRegistry.fromDiscovery(
         discovery([destination({ description: 'Prod\u202E label\u200B' })]),
         DEFAULT_CONFIG,

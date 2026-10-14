@@ -3,7 +3,7 @@
 import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
 import { TARGET_ID_PATTERN } from './multi-target-identity.js';
 
-export type MultiTargetAuthorizationMode = 'legacy' | 'xsuaa-attribute';
+export type MultiTargetAuthorizationMode = 'standard' | 'xsuaa-attribute';
 export type TargetGrantFailure = 'TARGET_GRANT_MISSING' | 'TARGET_GRANT_MALFORMED' | 'TARGET_GRANT_LIMIT_EXCEEDED';
 
 export type TargetGrant =
@@ -31,7 +31,7 @@ function ownValue(value: unknown, key: string): unknown {
 
 /**
  * Consume only the auth package's verified, allowlisted values and extraction status.
- * This function neither verifies JWTs nor authorizes legacy mode. The HTTP boundary must
+ * This function neither verifies JWTs nor authorizes standard mode. The HTTP boundary must
  * supply AuthInfo from its configured XSUAA verifier; callers cannot supply their own extra.
  */
 export function parseTargetGrant(authInfo?: Pick<AuthInfo, 'extra'>): TargetGrant {

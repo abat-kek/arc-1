@@ -1,5 +1,10 @@
 # XSUAA Target Authorization: Research and Provisioning Validation
 
+> Terminology update (2026-10-14): the current mode is `standard`. References to `legacy` below
+> record the pre-release name used in these dated tests/reviews, not a deprecated access policy.
+> It remains an environment/CLI input alias only; use the [current guide](../../docs_page/multi-target-authorization.md)
+> for setup. Recorded test results have not been relabeled as tests of the renamed build.
+
 - **Date:** 2026-09-05
 - **Purpose:** refine [the proposed target-authorization spec](../plans/xsuaa-target-authorization.md)
   after Wouter's review; this is not evidence that ARC-1 already enforces target grants.

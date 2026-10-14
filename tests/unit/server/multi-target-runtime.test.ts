@@ -78,7 +78,7 @@ function destination(overrides: Record<string, unknown> = {}): Destination {
 }
 
 describe('multi-target runtime isolation', () => {
-  it.each(['legacy', 'xsuaa-attribute'] as const)(
+  it.each(['standard', 'xsuaa-attribute'] as const)(
     'preserves %s authorization in selected and aggregate runtime construction',
     (multiTargetAuthorization) => {
       const base = { ...DEFAULT_CONFIG, multiTargetAuthorization };

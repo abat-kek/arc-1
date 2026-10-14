@@ -120,7 +120,7 @@ describe('multi-target HTTP route authentication', () => {
         httpAddr: '127.0.0.1:0',
         xsuaaAuth: true,
         multiTargetEndpoints: true,
-        apiKeys: [{ key: 'legacy-viewer-key', profile: 'viewer' }],
+        apiKeys: [{ key: 'standard-viewer-key', profile: 'viewer' }],
         authRateLimit: 0,
         mcpHttpRateLimit: 0,
       },
@@ -128,7 +128,7 @@ describe('multi-target HTTP route authentication', () => {
       undefined,
       {
         registry: current,
-        authorizationMode: 'legacy',
+        authorizationMode: 'standard',
         aggregateFactory: aggregateFactory as never,
         createPinnedServer: vi.fn() as never,
       },
@@ -206,7 +206,7 @@ describe('multi-target HTTP route authentication', () => {
   it('keeps the multi-only Copilot /authorize fallback XSUAA-only', async () => {
     const apiKey = await request(app)
       .post('/authorize')
-      .set('Authorization', 'Bearer legacy-viewer-key')
+      .set('Authorization', 'Bearer standard-viewer-key')
       .send({ jsonrpc: '2.0', id: 1, method: 'tools/list' });
     expect(apiKey.status).toBe(401);
     expect(apiKey.headers['www-authenticate']).toContain('/.well-known/oauth-protected-resource/multi/mcp');
@@ -235,7 +235,7 @@ describe('multi-target HTTP route authentication', () => {
         httpAddr: '127.0.0.1:0',
         xsuaaAuth: true,
         multiTargetEndpoints: true,
-        apiKeys: [{ key: 'legacy-viewer-key', profile: 'viewer' }],
+        apiKeys: [{ key: 'standard-viewer-key', profile: 'viewer' }],
         authRateLimit: 0,
         mcpHttpRateLimit: 0,
       },
@@ -243,7 +243,7 @@ describe('multi-target HTTP route authentication', () => {
       undefined,
       {
         registry: current,
-        authorizationMode: 'legacy',
+        authorizationMode: 'standard',
         aggregateFactory: aggregateFactory as never,
         createPinnedServer: vi.fn() as never,
       },
@@ -251,7 +251,7 @@ describe('multi-target HTTP route authentication', () => {
 
     const apiKey = await request(app)
       .post('/authorize')
-      .set('Authorization', 'Bearer legacy-viewer-key')
+      .set('Authorization', 'Bearer standard-viewer-key')
       .send({ jsonrpc: '2.0', id: 3, method: 'tools/list' });
     expect(apiKey.status).toBe(401);
     expect(apiKey.headers['www-authenticate']).toContain('/.well-known/oauth-protected-resource/multi/mcp');

@@ -229,12 +229,12 @@ describe('opt-in target authorization over the real HTTP/SDK boundary', () => {
     return result(await rpc(token, 'tools/call', { name, arguments: args }, path));
   }
 
-  it.each(['legacy', 'xsuaa-attribute'] as const)(
+  it.each(['standard', 'xsuaa-attribute'] as const)(
     'wires the verifier contract for %s without changing single-target auth',
     async (mode) => {
       await start(makeRegistry(), { ...CONFIG, multiTargetAuthorization: mode });
       const calls = vi.mocked(createXsuaaTokenVerifier).mock.calls;
-      expect(calls).toHaveLength(mode === 'legacy' ? 1 : 2);
+      expect(calls).toHaveLength(mode === 'standard' ? 1 : 2);
       expect(calls[0][1]).not.toHaveProperty('requireUserToken');
       expect(calls[0][1]).not.toHaveProperty('userAttributeNames');
       if (mode === 'xsuaa-attribute') {
@@ -273,7 +273,7 @@ describe('opt-in target authorization over the real HTTP/SDK boundary', () => {
     }
   });
 
-  it.each(['legacy', 'xsuaa-attribute'] as const)(
+  it.each(['standard', 'xsuaa-attribute'] as const)(
     'does not audit valid discovery as a grant denial in %s',
     async (mode) => {
       await start(makeRegistry(), { ...CONFIG, multiTargetAuthorization: mode });
@@ -332,7 +332,7 @@ describe('opt-in target authorization over the real HTTP/SDK boundary', () => {
   );
 
   it('rejects missing or contradictory routing mode before mounting any route', async () => {
-    for (const authorizationMode of [undefined, 'legacy']) {
+    for (const authorizationMode of [undefined, 'standard']) {
       await expect(
         startHttpServer(undefined, CONFIG, XSUAA, undefined, {
           registry: makeRegistry(),
@@ -638,13 +638,13 @@ describe('opt-in target authorization over the real HTTP/SDK boundary', () => {
     );
   });
 
-  it('rejects paging in enforced mode and preserves the legacy catalog text/schema exactly', async () => {
+  it('rejects paging in enforced mode and preserves the standard catalog text/schema exactly', async () => {
     await start();
     const admin = addUser([], ['read', 'admin']);
     expect(payload(await call(admin, 'SAPTargets', { offset: 0 })).error).toBe('INVALID_ARGUMENTS');
-    const legacy = { ...CONFIG, multiTargetAuthorization: 'legacy' as const };
-    const registry = makeRegistry(17, [], legacy);
-    await start(registry, legacy);
+    const standard = { ...CONFIG, multiTargetAuthorization: 'standard' as const };
+    const registry = makeRegistry(17, [], standard);
+    await start(registry, standard);
     const tools = await list(admin);
     expect(tools.find((tool) => tool.name === 'SAPTargets')?.inputSchema.properties.offset).toBeDefined();
     const response = await call(admin, 'SAPTargets', { offset: 0 });

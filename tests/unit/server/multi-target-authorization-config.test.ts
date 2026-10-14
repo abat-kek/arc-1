@@ -22,19 +22,44 @@ describe('explicit multi-target authorization configuration', () => {
     process.env.ARC1_CACHE = 'none';
   }
 
-  it.each([false, true])('defaults to legacy with multi endpoints %s', (multi) => {
+  it.each([false, true])('defaults to standard with multi endpoints %s', (multi) => {
     if (multi) enableMulti();
     const { config, sources } = resolveConfig([]);
-    expect(config.multiTargetAuthorization).toBe('legacy');
+    expect(config.multiTargetAuthorization).toBe('standard');
     expect(sources.multiTargetAuthorization).toBe('default');
   });
 
-  it.each(['legacy', '  legacy \n'])('permits explicit legacy for single-target deployments: %j', (value) => {
+  it.each(['standard', '  standard \n'])('permits explicit standard for single-target deployments: %j', (value) => {
     process.env.ARC1_MULTI_TARGET_AUTHORIZATION = value;
     const { config, sources } = resolveConfig([]);
-    expect(config.multiTargetAuthorization).toBe('legacy');
+    expect(config.multiTargetAuthorization).toBe('standard');
     expect(sources.multiTargetAuthorization).toEqual({ env: 'ARC1_MULTI_TARGET_AUTHORIZATION' });
     expect(config.multiTargetEndpoints).toBe(false);
+  });
+
+  describe.each([false, true])('input alias with multi endpoints %s', (multi) => {
+    it.each(['legacy', ' \t legacy \n'])('normalizes environment alias %j to the unchanged default config', (value) => {
+      if (multi) enableMulti();
+      const expected = resolveConfig([]).config;
+      process.env.ARC1_MULTI_TARGET_AUTHORIZATION = value;
+      const { config, sources } = resolveConfig([]);
+      expect(config).toEqual(expected);
+      expect(config.multiTargetAuthorization).toBe('standard');
+      expect(sources.multiTargetAuthorization).toEqual({ env: 'ARC1_MULTI_TARGET_AUTHORIZATION' });
+    });
+
+    it.each([['--multi-target-authorization=legacy'], ['--multi-target-authorization', ' \t legacy \n']])(
+      'normalizes CLI alias %j before validation and preserves CLI precedence',
+      (...args) => {
+        if (multi) enableMulti();
+        const expected = resolveConfig([]).config;
+        process.env.ARC1_MULTI_TARGET_AUTHORIZATION = 'xsuaa-attribute';
+        const { config, sources } = resolveConfig(args);
+        expect(config).toEqual(expected);
+        expect(config.multiTargetAuthorization).toBe('standard');
+        expect(sources.multiTargetAuthorization).toEqual({ flag: '--multi-target-authorization' });
+      },
+    );
   });
 
   it.each(['xsuaa-attribute', ' \t xsuaa-attribute \n'])('enables only explicit enforcement: %j', (value) => {
@@ -45,12 +70,12 @@ describe('explicit multi-target authorization configuration', () => {
     expect(sources.multiTargetAuthorization).toEqual({ env: 'ARC1_MULTI_TARGET_AUTHORIZATION' });
   });
 
-  it.each(['', ' ', '\t\n', 'XSUAA-ATTRIBUTE', 'Legacy', 'true', 'all-readers', 'auto', '*'])(
+  it.each(['', ' ', '\t\n', 'XSUAA-ATTRIBUTE', 'Standard', 'Legacy', 'true', 'all-readers', 'auto', '*'])(
     'rejects explicit invalid values instead of falling back: %j',
     (value) => {
       enableMulti();
       process.env.ARC1_MULTI_TARGET_AUTHORIZATION = value;
-      expect(() => resolveConfig([])).toThrow('ARC1_MULTI_TARGET_AUTHORIZATION must be legacy or xsuaa-attribute');
+      expect(() => resolveConfig([])).toThrow('ARC1_MULTI_TARGET_AUTHORIZATION must be standard or xsuaa-attribute');
     },
   );
 
@@ -61,26 +86,41 @@ describe('explicit multi-target authorization configuration', () => {
 
   it('uses normal CLI precedence for the same setting without silently accepting an empty flag', () => {
     enableMulti();
-    process.env.ARC1_MULTI_TARGET_AUTHORIZATION = 'legacy';
+    process.env.ARC1_MULTI_TARGET_AUTHORIZATION = 'standard';
     const { config, sources } = resolveConfig(['--multi-target-authorization=xsuaa-attribute']);
     expect(config.multiTargetAuthorization).toBe('xsuaa-attribute');
     expect(sources.multiTargetAuthorization).toEqual({ flag: '--multi-target-authorization' });
-    expect(resolveConfig(['--multi-target-authorization', 'legacy']).config.multiTargetAuthorization).toBe('legacy');
+    expect(resolveConfig(['--multi-target-authorization', 'standard']).config.multiTargetAuthorization).toBe(
+      'standard',
+    );
     expect(() => resolveConfig(['--multi-target-authorization='])).toThrow('empty values are invalid');
     expect(() => resolveConfig(['--multi-target-authorization', '  '])).toThrow('empty values are invalid');
   });
 
-  it('rejects a flag missing its value and otherwise permits intentional deletion on a new startup', () => {
+  it('keeps explicit enforcement and invalid CLI values authoritative over the environment alias', () => {
     enableMulti();
-    expect(() => resolveConfig(['--multi-target-authorization'])).toThrow('requires legacy or xsuaa-attribute');
-    process.env.ARC1_MULTI_TARGET_AUTHORIZATION = 'xsuaa-attribute';
-    expect(() => resolveConfig(['--multi-target-authorization'])).toThrow('requires legacy or xsuaa-attribute');
-    expect(resolveConfig([]).config.multiTargetAuthorization).toBe('xsuaa-attribute');
-    delete process.env.ARC1_MULTI_TARGET_AUTHORIZATION;
-    expect(resolveConfig([]).config.multiTargetAuthorization).toBe('legacy');
+    process.env.ARC1_MULTI_TARGET_AUTHORIZATION = 'legacy';
+    expect(resolveConfig(['--multi-target-authorization=xsuaa-attribute']).config.multiTargetAuthorization).toBe(
+      'xsuaa-attribute',
+    );
+    for (const value of ['', 'auto', 'Standard', 'Legacy']) {
+      expect(() => resolveConfig([`--multi-target-authorization=${value}`])).toThrow(
+        'ARC1_MULTI_TARGET_AUTHORIZATION must be standard or xsuaa-attribute',
+      );
+    }
   });
 
-  it.each(['', 'unknown', undefined])('validates programmatic config too: %j', (value) => {
+  it('rejects a flag missing its value and otherwise permits intentional deletion on a new startup', () => {
+    enableMulti();
+    expect(() => resolveConfig(['--multi-target-authorization'])).toThrow('requires standard or xsuaa-attribute');
+    process.env.ARC1_MULTI_TARGET_AUTHORIZATION = 'xsuaa-attribute';
+    expect(() => resolveConfig(['--multi-target-authorization'])).toThrow('requires standard or xsuaa-attribute');
+    expect(resolveConfig([]).config.multiTargetAuthorization).toBe('xsuaa-attribute');
+    delete process.env.ARC1_MULTI_TARGET_AUTHORIZATION;
+    expect(resolveConfig([]).config.multiTargetAuthorization).toBe('standard');
+  });
+
+  it.each(['', 'unknown', 'legacy', undefined])('requires canonical programmatic config: %j', (value) => {
     const config = { ...DEFAULT_CONFIG, multiTargetAuthorization: value } as unknown as ServerConfig;
     expect(() => validateConfig(config)).toThrow('ARC1_MULTI_TARGET_AUTHORIZATION');
   });

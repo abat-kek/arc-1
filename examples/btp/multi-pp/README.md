@@ -25,7 +25,7 @@ and FLP actions cannot be enabled through feature toggles. The optional `SAPRead
 `BSP_DEPLOY` reads UI5 Repository metadata outside ADT; it is disabled by this initial profile's
 `SAP_FEATURE_UI5REPO=off`. Keep all three probes off for ADT-only acceptance.
 
-The unchanged `profile.mtaext` keeps **standard access** (`legacy`): readers may see/try all active
+The unchanged `profile.mtaext` keeps **standard access** (`standard`): readers may see/try all active
 targets, and SAP still checks their access. This is supported, not deprecated. Optional filtering
 is most useful when different teams need different subsets of a larger landscape; it follows IAM
 assignments rather than automatically discovering SAP accounts. Static roles need no IAS change.

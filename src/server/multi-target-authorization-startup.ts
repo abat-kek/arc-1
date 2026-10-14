@@ -14,8 +14,8 @@ export async function discoverMultiTargetRegistry(
   logger.info(
     config.multiTargetAuthorization === 'xsuaa-attribute'
       ? `Multi-target authorization enforced; catalog bounded to ${MULTI_TARGET_MAX} ARC-related destinations.`
-      : 'Legacy multi-target authorization: per-target grants are not enforced.',
-    { mode: config.multiTargetAuthorization ?? 'legacy' },
+      : 'Standard multi-target authorization: per-target grants are not enforced.',
+    { mode: config.multiTargetAuthorization ?? 'standard' },
   );
   const options = { authorizationMode: config.multiTargetAuthorization };
   try {

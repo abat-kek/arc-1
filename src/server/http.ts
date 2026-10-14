@@ -315,7 +315,7 @@ export function createAggregateMcpHandler(multi: MultiTargetRouting) {
 }
 
 function assertRoutingAuthorizationMode(multi: MultiTargetRouting): void {
-  if (multi.authorizationMode !== 'legacy' && multi.authorizationMode !== 'xsuaa-attribute') {
+  if (multi.authorizationMode !== 'standard' && multi.authorizationMode !== 'xsuaa-attribute') {
     throw new Error('Multi-target routing requires an explicit authorization mode');
   }
 }

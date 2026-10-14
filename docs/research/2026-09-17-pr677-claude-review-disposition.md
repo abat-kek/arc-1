@@ -1,5 +1,10 @@
 # PR #677 — Claude review disposition
 
+> Terminology update (2026-10-14): the current mode is `standard`. References to `legacy` below
+> record the pre-release name used in these dated tests/reviews, not a deprecated access policy.
+> It remains an environment/CLI input alias only; use the [current guide](../../docs_page/multi-target-authorization.md)
+> for setup. Recorded test results have not been relabeled as tests of the renamed build.
+
 Date: 2026-09-17. Review supplied by the maintainer against `1a9ab4e6`; evaluated against
 `91839ad5` and the accepted [ADR-0008](../adr/0008-opt-in-xsuaa-target-authorization.md).
 This records the applicable fixes, not a new design or a claim of customer readiness.

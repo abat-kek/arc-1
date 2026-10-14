@@ -3,7 +3,8 @@ import type { AdtHttpClient } from './http.js';
 import { clampUrlLimit } from './result-limits.js';
 import { findDeepNodes, parseXml } from './xml-parser.js';
 
-/** Classic quick search silently ignores packageName; require SAP's advertised filter. */
+/** Require SAP's advertised filter for getPackageContents' request (no objectType/useSearchProvider).
+ *  Slash-typed objectType or useSearchProvider overrides can select classic search, which ignores packageName. */
 export function supportsPackageFilteredSearch(xml: string): boolean {
   const searchPath = '/sap/bc/adt/repository/informationsystem/search';
   for (const workspace of findDeepNodes(parseXml(xml), 'workspace')) {

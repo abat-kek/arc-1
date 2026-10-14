@@ -1,9 +1,8 @@
 # XSUAA Target Authorization: Research and Provisioning Validation
 
-> Terminology update (2026-10-14): the current mode is `standard`. References to `legacy` below
-> record the pre-release name used in these dated tests/reviews, not a deprecated access policy.
-> It remains an environment/CLI input alias only; use the [current guide](../../docs_page/multi-target-authorization.md)
-> for setup. Recorded test results have not been relabeled as tests of the renamed build.
+> Editorial update (2026-10-14): mode terminology below uses the current names `standard` and
+> `xsuaa-attribute`. Recorded test dates, builds and outcomes are unchanged; these are not tests of
+> the later naming change. For setup, use the [current guide](../../docs_page/multi-target-authorization.md).
 
 - **Date:** 2026-09-05
 - **Purpose:** refine [the proposed target-authorization spec](../plans/xsuaa-target-authorization.md)
@@ -13,7 +12,7 @@
 
 **Policy update, 2026-09-06:** the user subsequently approved a non-breaking, explicit opt-in.
 The [current specification](../plans/xsuaa-target-authorization.md) supersedes this record's
-mandatory-rollout recommendation: unset/`legacy` preserves current behavior; `xsuaa-attribute`
+mandatory-rollout recommendation: unset/`standard` preserves current behavior; `xsuaa-attribute`
 enforces grants without fallback. The historical provisioning evidence and untested-token limits
 below are unchanged. This note records a design decision, not a new live test.
 

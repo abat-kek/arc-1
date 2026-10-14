@@ -70,10 +70,6 @@ grant does not create an SAP user, prove backend access, or allow multi-target w
 Unset or explicit `standard` leaves existing authorization, paging and tool visibility unchanged.
 Display-label sanitization applies in both modes; see the [compatibility note](multi-target-administration.md#enforced-catalog-differences).
 
-For existing pre-release test deployments, `legacy` is accepted only as an environment/CLI input
-alias for `standard`. Resolved configuration and startup logs always use `standard`; use that name
-in new configuration and operator automation. This is a naming change, not an access-policy change.
-
 Enforcement is **multi-only**: an independently configured single-target `/mcp` cannot coexist in
 the same app. Single-target deployments remain unchanged. A separate app with a distinct XSUAA
 identity is needed if you also require independent single-target access.

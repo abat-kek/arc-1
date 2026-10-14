@@ -1,9 +1,8 @@
 # PR #677 — Target Authorization Implementation and Validation
 
-> Terminology update (2026-10-14): the current mode is `standard`. References to `legacy` below
-> record the pre-release name used in these dated tests/reviews, not a deprecated access policy.
-> It remains an environment/CLI input alias only; use the [current guide](../../docs_page/multi-target-authorization.md)
-> for setup. Recorded test results have not been relabeled as tests of the renamed build.
+> Editorial update (2026-10-14): mode terminology below uses the current names `standard` and
+> `xsuaa-attribute`. Recorded test dates, builds and outcomes are unchanged; these are not tests of
+> the later naming change. For setup, use the [current guide](../../docs_page/multi-target-authorization.md).
 
 Status (2026-09-17): implemented and locally reviewed; **published dependency integration is
 complete, but live acceptance remains incomplete. Do not merge/deploy to a customer yet.**
@@ -260,7 +259,7 @@ model choosing not to call a hidden target is not proof that the server rejects 
 
 ### Automated cases
 
-1. Legacy default and explicit legacy retain existing inputs, paging and global-reader behavior.
+1. Standard default and explicit standard retain existing inputs, paging and global-reader behavior.
    Empty/unknown opt-in and enforced mixed single-target startup fail before network contact.
 2. Zero, one, two, sixteen, seventeen, one hundred and 256 visible targets exercise every schema
    threshold. One target is still explicitly required. Admin without grants gets diagnostics only.
@@ -644,7 +643,7 @@ network connection is not an authorization pass.
    that port. A two-server reproduction established the cause. The enforcement test now explicitly
    binds and awaits the IPv4 loopback listener, then deterministically closes it. No authentication
    assertion was weakened; production authentication did not need a workaround.
-5. Final operator review corrected rollback instructions: deliberately deploy explicit `legacy`
+5. Final operator review corrected rollback instructions: deliberately deploy explicit `standard`
    through the owning extension and verify the actual CF environment. Deleting a descriptor line
    can leave its previous deployed value intact. Ungranted target denial still precedes any
    registry-availability error.

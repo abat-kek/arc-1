@@ -77,7 +77,7 @@ describe('target-authorization startup wiring', () => {
     vi.unstubAllGlobals();
   });
 
-  it.each(['standard', 'legacy', 'xsuaa-attribute'] as const)(
+  it.each(['standard', 'xsuaa-attribute'] as const)(
     'passes %s through real discovery and registry into the HTTP bootstrap arguments',
     async (inputMode) => {
       const { multiTargetAuthorization } = parseArgs([
@@ -88,7 +88,7 @@ describe('target-authorization startup wiring', () => {
         '--xsuaa-auth=true',
         '--cache=none',
       ]);
-      expect(multiTargetAuthorization).toBe(inputMode === 'legacy' ? 'standard' : inputMode);
+      expect(multiTargetAuthorization).toBe(inputMode);
       // Marker-missing candidates count only under the stricter enforced-mode bound.
       boundary.list.mockImplementation(async (_config, level) =>
         level === 'subaccount'
@@ -116,7 +116,6 @@ describe('target-authorization startup wiring', () => {
             { mode: 'standard' },
           );
         }
-        expect(Logger.prototype.info).not.toHaveBeenCalledWith(expect.anything(), { mode: 'legacy' });
         expect(boundary.resolveSingle).not.toHaveBeenCalled();
         expect(boundary.http).toHaveBeenCalledOnce();
         const [single, , , , routing] = boundary.http.mock.calls[0];

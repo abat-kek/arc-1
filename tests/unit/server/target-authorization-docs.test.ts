@@ -83,10 +83,32 @@ describe('target authorization operator documentation', () => {
     expect(targetAccess).toContain('No new IAS configuration is required');
     expect(targetAccess).toContain('## How the parts fit together');
     expect(targetAccess).toContain('**not an SAP PFCG role**');
-    expect(read('docs_page/llms.txt')).toContain('Use these canonical values in new configuration');
-    expect(targetAccess).toContain('`legacy` is accepted only as an environment/CLI input alias for `standard`');
-    expect(targetAccess).toContain('Resolved configuration and startup logs always use `standard`');
-    expect(read('AGENTS.md')).toContain('supported standard access, not deprecated');
+    expect(read('docs_page/llms.txt')).toContain('These are the only two accepted values');
+    expect(read('AGENTS.md')).toContain('Default/unset `standard` = standard access');
+  });
+
+  it('uses only the two supported mode names throughout feature guidance', () => {
+    for (const path of [
+      'docs_page/multi-target-authorization.md',
+      'docs_page/multi-target-setup.md',
+      'docs_page/multi-target-administration.md',
+      'docs_page/llms.txt',
+      'docs/adr/0008-opt-in-xsuaa-target-authorization.md',
+      'docs/plans/xsuaa-target-authorization.md',
+      'examples/btp/multi-pp/README.md',
+      'examples/btp/multi-pp/target-authorization.mtaext',
+      'docs/research/2026-09-05-xsuaa-target-authorization-validation.md',
+      'docs/research/2026-09-15-pr677-target-authorization-implementation.md',
+      'docs/research/2026-09-17-pr677-claude-review-disposition.md',
+      'docs/research/2026-10-13-pr677-final-build-acceptance.md',
+    ]) {
+      expect(read(path), path).not.toMatch(/\blegacy\b/i);
+    }
+    const reference = readFileSync(new URL('../../../docs_page/configuration-reference.md', import.meta.url), 'utf8')
+      .split('\n')
+      .find((line) => line.startsWith('| `ARC1_MULTI_TARGET_AUTHORIZATION`'));
+    expect(reference).toContain('These are the only two accepted values');
+    expect(reference).not.toMatch(/\blegacy\b/i);
   });
 
   it('separates grants, capability union, diagnostics and actual SAP access', () => {

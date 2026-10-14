@@ -37,19 +37,22 @@ describe('explicit multi-target authorization configuration', () => {
     expect(config.multiTargetEndpoints).toBe(false);
   });
 
-  describe.each([false, true])('input alias with multi endpoints %s', (multi) => {
-    it.each(['legacy', ' \t legacy \n'])('normalizes environment alias %j to the unchanged default config', (value) => {
-      if (multi) enableMulti();
-      const expected = resolveConfig([]).config;
-      process.env.ARC1_MULTI_TARGET_AUTHORIZATION = value;
-      const { config, sources } = resolveConfig([]);
-      expect(config).toEqual(expected);
-      expect(config.multiTargetAuthorization).toBe('standard');
-      expect(sources.multiTargetAuthorization).toEqual({ env: 'ARC1_MULTI_TARGET_AUTHORIZATION' });
-    });
+  describe.each([false, true])('explicit standard mode with multi endpoints %s', (multi) => {
+    it.each(['standard', ' \t standard \n'])(
+      'resolves environment value %j to the unchanged default config',
+      (value) => {
+        if (multi) enableMulti();
+        const expected = resolveConfig([]).config;
+        process.env.ARC1_MULTI_TARGET_AUTHORIZATION = value;
+        const { config, sources } = resolveConfig([]);
+        expect(config).toEqual(expected);
+        expect(config.multiTargetAuthorization).toBe('standard');
+        expect(sources.multiTargetAuthorization).toEqual({ env: 'ARC1_MULTI_TARGET_AUTHORIZATION' });
+      },
+    );
 
-    it.each([['--multi-target-authorization=legacy'], ['--multi-target-authorization', ' \t legacy \n']])(
-      'normalizes CLI alias %j before validation and preserves CLI precedence',
+    it.each([['--multi-target-authorization=standard'], ['--multi-target-authorization', ' \t standard \n']])(
+      'resolves CLI value %j and preserves CLI precedence',
       (...args) => {
         if (multi) enableMulti();
         const expected = resolveConfig([]).config;
@@ -60,6 +63,22 @@ describe('explicit multi-target authorization configuration', () => {
         expect(sources.multiTargetAuthorization).toEqual({ flag: '--multi-target-authorization' });
       },
     );
+  });
+
+  describe.each([false, true])('unsupported mode with multi endpoints %s', (multi) => {
+    it.each(['legacy', ' \t legacy \n'])('rejects %j in both environment and CLI inputs', (value) => {
+      if (multi) enableMulti();
+      process.env.ARC1_MULTI_TARGET_AUTHORIZATION = value;
+      expect(() => resolveConfig([])).toThrow('must be standard or xsuaa-attribute');
+      // A valid environment value must not hide an invalid CLI override.
+      process.env.ARC1_MULTI_TARGET_AUTHORIZATION = multi ? 'xsuaa-attribute' : 'standard';
+      expect(() => resolveConfig([`--multi-target-authorization=${value}`])).toThrow(
+        'must be standard or xsuaa-attribute',
+      );
+      expect(() => resolveConfig(['--multi-target-authorization', value])).toThrow(
+        'must be standard or xsuaa-attribute',
+      );
+    });
   });
 
   it.each(['xsuaa-attribute', ' \t xsuaa-attribute \n'])('enables only explicit enforcement: %j', (value) => {
@@ -97,13 +116,13 @@ describe('explicit multi-target authorization configuration', () => {
     expect(() => resolveConfig(['--multi-target-authorization', '  '])).toThrow('empty values are invalid');
   });
 
-  it('keeps explicit enforcement and invalid CLI values authoritative over the environment alias', () => {
+  it('keeps explicit enforcement and invalid CLI values authoritative over standard environment mode', () => {
     enableMulti();
-    process.env.ARC1_MULTI_TARGET_AUTHORIZATION = 'legacy';
+    process.env.ARC1_MULTI_TARGET_AUTHORIZATION = 'standard';
     expect(resolveConfig(['--multi-target-authorization=xsuaa-attribute']).config.multiTargetAuthorization).toBe(
       'xsuaa-attribute',
     );
-    for (const value of ['', 'auto', 'Standard', 'Legacy']) {
+    for (const value of ['', 'auto', 'Standard', 'Legacy', 'legacy']) {
       expect(() => resolveConfig([`--multi-target-authorization=${value}`])).toThrow(
         'ARC1_MULTI_TARGET_AUTHORIZATION must be standard or xsuaa-attribute',
       );

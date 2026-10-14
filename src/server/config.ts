@@ -844,10 +844,7 @@ export function resolveConfig(args: string[]): { config: ServerConfig; sources: 
     // Unlike resolveStr, an explicit empty value must never disable enforcement.
     sources.multiTargetAuthorization = 'default';
   } else {
-    const inputMode = targetAuthorizationRaw.trim();
-    // Accept the pre-release spelling only at the input boundary. Runtime state and logs
-    // use the canonical name so standard access is never presented as an obsolete mode.
-    const mode = inputMode === 'legacy' ? 'standard' : inputMode;
+    const mode = targetAuthorizationRaw.trim();
     if (mode !== 'standard' && mode !== 'xsuaa-attribute') {
       throw new Error('ARC1_MULTI_TARGET_AUTHORIZATION must be standard or xsuaa-attribute; empty values are invalid.');
     }

@@ -18,8 +18,7 @@ owns target-access readiness and the static-role procedure; the old setup anchor
 or custom build hook. The optional worksheet owns handoff inputs, expected evidence and stop conditions.
 
 In operator prose, call `standard` **standard access** and `xsuaa-attribute` **target-filtered access**.
-Both remain supported choices; use these canonical values in examples and runtime state. The
-pre-release `legacy` spelling is normalized only by the environment/CLI parser, not a third mode. Filtering is
+These are the only two accepted values; use them consistently in examples and runtime state. Filtering is
 optional IAM-assigned target access, not automatic discovery of SAP accounts or a mandatory IAS setup.
 
 When changing setup guidance, check the relevant runtime/descriptor and existing examples together.

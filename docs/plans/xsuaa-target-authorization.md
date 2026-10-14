@@ -2,7 +2,7 @@
 
 - **Status:** Accepted specification; implementation/live validation in PR #677
 - **Date:** 2026-08-04
-- **Last revised:** 2026-10-14 (canonical `standard` naming; pre-release input alias retained)
+- **Last revised:** 2026-10-14 (two supported modes: `standard` and `xsuaa-attribute`)
 - **Code baseline reviewed:** `origin/main` at `31690347` (ARC-1 1.2.0), merged by `2814b8f2`;
   PR #677 now uses published `@arc-mcp/xsuaa-auth ^1.1.0`, locked to `1.1.0` by `a25d62c6`.
   Clean-install validation passes; remaining live acceptance is tracked in the
@@ -558,13 +558,11 @@ Add one setting, `ARC1_MULTI_TARGET_AUTHORIZATION`, resolved once at startup:
 |---|---|
 | Unset | `standard`: preserve existing multi-target behavior, including verifier options, mixed routes, catalog schema and enabled-target bound |
 | `standard` | Same as unset; do not extract or enforce target attributes |
-| `legacy` (pre-release environment/CLI input alias only) | Normalize to `standard`; resolved configuration, routing and logs use the canonical name |
 | `xsuaa-attribute` | Require verified user-principal target grants throughout multi-target handling; use the new unpaged catalog |
 | Empty/whitespace-only or another value | Clear startup configuration error; never silently choose standard |
 | `xsuaa-attribute` with multi-target endpoints disabled | Clear startup configuration error so a misplaced setting cannot falsely claim protection of single-target `/mcp` |
 
-Trim surrounding whitespace and accept only the two exact lowercase mode names plus the input alias.
-The alias does not enter runtime mode types or bypass validation. Single-target
+Trim surrounding whitespace and accept only the two exact lowercase mode names. Single-target
 deployments with the setting absent or `standard` are unchanged. XSUAA auth, its service binding, and
 HTTP transport remain multi-target prerequisites; this feature adds no new auth mechanism. Do not
 infer enforcement from a claim, role assignment, descriptor version, or whether a token has grants.

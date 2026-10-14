@@ -1,9 +1,8 @@
 # PR #677 — Claude review disposition
 
-> Terminology update (2026-10-14): the current mode is `standard`. References to `legacy` below
-> record the pre-release name used in these dated tests/reviews, not a deprecated access policy.
-> It remains an environment/CLI input alias only; use the [current guide](../../docs_page/multi-target-authorization.md)
-> for setup. Recorded test results have not been relabeled as tests of the renamed build.
+> Editorial update (2026-10-14): mode terminology below uses the current names `standard` and
+> `xsuaa-attribute`. Recorded test dates, builds and outcomes are unchanged; these are not tests of
+> the later naming change. For setup, use the [current guide](../../docs_page/multi-target-authorization.md).
 
 Date: 2026-09-17. Review supplied by the maintainer against `1a9ab4e6`; evaluated against
 `91839ad5` and the accepted [ADR-0008](../adr/0008-opt-in-xsuaa-target-authorization.md).
@@ -11,7 +10,7 @@ This records the applicable fixes, not a new design or a claim of customer readi
 
 ## Outcome
 
-**Applicable findings fixed locally and regression-tested.** The narrow changes preserve legacy
+**Applicable findings fixed locally and regression-tested.** The narrow changes preserve standard
 opt-in behavior, explicit IAM `*`, Admin diagnostics without execution bypass, and the explicitly
 requested complete/unpaged enforced catalog. Neither the blanket “35 findings confirmed” verdict
 nor the proposed 4,500-line deletion is adopted without checking the accepted contracts.
@@ -30,8 +29,8 @@ The new contracts nevertheless refuse omissions and contradictions explicitly.
 | Unicode normalization manufactures grants | Confirmed with five failing pre-fix regressions. Raw byte limits run first, then an ASCII gate before trim/case conversion. Long-s, BOM/invisible-star and Unicode-whitespace cases now deny the entire set. Existing ASCII lowercase/whitespace, exact IDs and literal `*` remain supported. |
 | Invisible label characters reach instructions | Confirmed. Share the existing display-only NFKC/control/format-character normalization between registry labels and diagnostic projection. HTTP initialize/catalog tests cover bidi, zero-width and Unicode tag characters. Connection fields and IAM grants are not display-normalized. |
 | Outage reported as an IAM problem | Confirmed. The caller-safe no-target message directs the ARC-1 administrator to check grants **and** target configuration/availability, without disclosing hidden target IDs. Unavailable/quarantined cases are tested. |
-| Optional routing mode / conflicting modes | Hardened. The internal routing mode is required and runtime-validated; it must match configuration before routes mount. Direct handler factories also reject an omitted mode. Legacy callers pass `legacy` explicitly. |
-| Optional catalog enforcement fallback | Hardened and simplified. Removed the optional legacy/enforced catalog adapter. The enforced handler calls the enforced builder directly and requires its request projection. No silent legacy branch remains there. |
+| Optional routing mode / conflicting modes | Hardened. The internal routing mode is required and runtime-validated; it must match configuration before routes mount. Direct handler factories also reject an omitted mode. Standard callers pass `standard` explicitly. |
+| Optional catalog enforcement fallback | Hardened and simplified. Removed the optional standard/enforced catalog adapter. The enforced handler calls the enforced builder directly and requires its request projection. No silent standard branch remains there. |
 | Verifier wiring not tested | Confirmed. The HTTP mock now emits attributes only when the allowlist is requested. Tests also assert `requireUserToken`, the exact allowlist, and unchanged baseline verifier options. |
 | Startup wiring not tested | Confirmed gap. New tests exercise real startup orchestration with only external boundaries mocked: discovery/registry/HTTP mode flow, 257-candidate handling and mixed-route rejection before network access. |
 | Per-user one-target instructions untested | Confirmed. Interleaved/concurrent HTTP initialize calls for disjoint grants verify each instruction set includes only its own target. |
@@ -51,15 +50,15 @@ The new contracts nevertheless refuse omissions and contradictions explicitly.
 |---|---|
 | Delete the bearer adapter because the SDK returns 403 | Not equivalent. The adapter intentionally omits the SDK's `insufficient_scope`/`WWW-Authenticate` challenge for a supported-user-principal denial. The accepted contract forbids inviting futile re-login. Correct the obsolete 500 rationale, retain behavior and tests. |
 | Replace the grant parser with the tool-input normalizer | Rejected: tool inputs are forgiving, IAM grants must not Unicode-fold into privileges. The newly reproduced finding makes this distinction intentional. Raw/UTF-8/unique bounds also remain policy. |
-| Replace the whole implementation with a filtered legacy registry | Not adopted. The proposed passing subset is not proof of the accepted full contract: complete Admin diagnostics, separate reader projection, unknown/partial counts, finite serialization and zero/one/many schemas matter too. Removing those requires a new product/ADR decision. |
+| Replace the whole implementation with a filtered standard registry | Not adopted. The proposed passing subset is not proof of the accepted full contract: complete Admin diagnostics, separate reader projection, unknown/partial counts, finite serialization and zero/one/many schemas matter too. Removing those requires a new product/ADR decision. |
 | Remove the unpaged catalog, 256-candidate ceiling, 512 KiB budget and size preflight | Rejected for this task: complete unpaged `SAPTargets` was explicitly requested for multi-system debugging. Its bounded-resource controls stay with it. Runtime checks still protect construction/serialization boundaries. |
-| Merge catalogs because they give different health totals/order | Their contracts differ deliberately: legacy pagination versus enforced complete totals, projected grants and deterministic diagnostics. Removed only the unnecessary switching adapter, not the contractual differences. |
+| Merge catalogs because they give different health totals/order | Their contracts differ deliberately: standard pagination versus enforced complete totals, projected grants and deterministic diagnostics. Removed only the unnecessary switching adapter, not the contractual differences. |
 | Derive completeness solely from `registry.failure` | Retained evidence fields: interrupted discovery knows a lower bound, not an exact total; other failures have different completeness. Do not replace explicit evidence with inference from a failure code merely to shorten the code. |
 | Remove projection/read checks, startup validation or private-header layers | Retained boundary checks for direct constructors, runtime setup and HTTP entry points. Middleware order alone is not the only supported path; `on-headers` protects final SDK writes, and its idempotence guard prevents duplicate hooks. |
 | Delete audit grant context, safe diagnostic reprojection, or empty enforced precompute | Retained accepted debugging, secret-safe projection and default-deny construction contracts. Admin diagnostics must not become execution grants or expose unsafe destination metadata. |
 | Delete test matrices/harness/history wholesale | Not justified by a finite mutation sample. Keep named regressions and reproducible live acceptance tools; now run their offline oracles in CI. Preserve historical build-specific evidence while outstanding gates remain. Larger documentation consolidation can follow release, with links and evidence retained. |
 | Remove candidate/readiness banners now | Not yet: final-build live acceptance is still incomplete. Removing them would imply readiness the evidence does not support. |
-| Remove legacy startup-mode log | Already refuted: the accepted opt-in/rollback contract requires observable effective mode. |
+| Remove standard startup-mode log | Already refuted: the accepted opt-in/rollback contract requires observable effective mode. |
 | Alias/public-ID takeover is a new bypass | Not a new defect: ADR-0008 explicitly trusts destination/IAM administrators and binds grants to public IDs. Repointing/reusing one requires the operator's security review. |
 | Rewrite repeated type unions | No demonstrated behavior defect; TypeScript checks their compatibility. Leave unrelated refactoring out of this security/deployment follow-up. |
 
@@ -110,8 +109,8 @@ from proposed simplifications; none established a runtime target-authorization b
 | Internal catalog projection throw untested | Its private caller already denies a missing projection before dispatch. Strengthen the reachable HTTP test to call `SAPTargets` explicitly and require `INSUFFICIENT_SCOPE`; retain the internal assertion rather than export a private helper or fabricate an impossible public call. |
 | Whitespace normalization weakens prose assertions | Preserve paragraph boundaries; pin complete normative paragraphs for defaults, all-target assignment and zero/one-target discovery. Negative examples reject prefixed/suffixed negation and cross-paragraph joining. Remaining presence/link checks are explicitly smoke tests, not semantic proof of arbitrary prose. |
 | Seven/eight collections, audit code and ADR links stale | Correct canonical deployment/XSUAA guidance: seven functional plus one unassigned collection granting `read` and `*`. Document audit-only `TARGET_NOT_GRANTED`; qualify ADR-0006/0007 with ADR-0008. Also correct the spec's short rollout summary: verify enforcement before assigning restricted users. |
-| One non-ASCII value denies the entire grant set silently | Whole-set rejection is intentional and retained, including alongside `*`. Fix observability: aggregate `initialize`/`tools/list` now audit missing/malformed/limited grants with safe codes and no raw values or target inventory, including the Copilot alias. Three new tests failed before this fix. Valid and legacy discovery remain unaffected. |
-| Legacy display normalization changes descriptions/revisions | Confirmed intentional shared label hygiene, not an authorization change. Document the exception to broad “unchanged” wording and verify identical normalized labels/fingerprints/revisions across modes. Ordinary descriptions and routing remain unchanged. |
+| One non-ASCII value denies the entire grant set silently | Whole-set rejection is intentional and retained, including alongside `*`. Fix observability: aggregate `initialize`/`tools/list` now audit missing/malformed/limited grants with safe codes and no raw values or target inventory, including the Copilot alias. Three new tests failed before this fix. Valid and standard discovery remain unaffected. |
+| Standard display normalization changes descriptions/revisions | Confirmed intentional shared label hygiene, not an authorization change. Document the exception to broad “unchanged” wording and verify identical normalized labels/fingerprints/revisions across modes. Ordinary descriptions and routing remain unchanged. |
 | Heap/profiling/report flags bypass harness guard | Extend startup rejection to the artifact-generating flags and underscore aliases in `execArgv`/`NODE_OPTIONS`. Regression failed before the fix. Real child processes reject heap snapshot, heap/CPU profiling and report flags before loading credentials; temporary profiler artifacts contain no loaded credentials and are cleaned up. This remains accidental-disclosure hardening, not a runtime sandbox. |
 | `forget` leaves pending/exchanging logins alive | Add identity-backed reservation commits/releases. Forget clears pending state/timers and invalidates exchanging callbacks; old completions/releases cannot overwrite or release a newer same-label login. Shutdown invalidates pending commits too. Tests cover deferred exchange, reuse, saved-session removal and the combined bound. Already-running requests and issued tokens are not revoked. |
 | MTA assertions pass against the base | Those assertions protect effective safety, not overlay presence; label them accordingly. Add a profile-specific deny-action assertion alongside mode/endpoints/cache assertions and a separate PP safety check. Keep parsed generated YAML: validating a source `extends:` token alone does not prove the effective chain. Document the check's POSIX/WSL scope with an explicit Windows diagnostic. |

@@ -1,9 +1,8 @@
 # PR #677 — refreshed acceptance tests and October 13 live baseline
 
-> Terminology update (2026-10-14): the current mode is `standard`. References to `legacy` below
-> record the pre-release name used in these dated tests/reviews, not a deprecated access policy.
-> It remains an environment/CLI input alias only; use the [current guide](../../docs_page/multi-target-authorization.md)
-> for setup. Recorded test results have not been relabeled as tests of the renamed build.
+> Editorial update (2026-10-14): mode terminology below uses the current names `standard` and
+> `xsuaa-attribute`. Recorded test dates, builds and outcomes are unchanged; these are not tests of
+> the later naming change. For setup, use the [current guide](../../docs_page/multi-target-authorization.md).
 
 Status: **core static-role and initial real-client acceptance recorded; customer-ready gates remain open.**
 This supplements the [September validation record](2026-09-15-pr677-target-authorization-implementation.md)
@@ -288,7 +287,7 @@ Basis evidence gap above.
 - On some callbacks Inspector returned to a disconnected server card. Selecting Connect again
   completed initialization and tool listing; no ARC-1 runtime change was required.
 - This is aggregate-route Inspector coverage only. It does not replace the full named-client
-  matrix, unchanged legacy-mode checks, pinned-route client UX or an LLM-driven Copilot run.
+  matrix, unchanged standard-mode checks, pinned-route client UX or an LLM-driven Copilot run.
   VS Code 1.140.0 was opened with an isolated, credential-free MCP configuration, but execution
   stopped at its workspace-trust prompt. Without confirmation to trust that folder, the prompt
   was cancelled and only the temporary window was closed; VS Code is not counted as passed.
@@ -320,7 +319,7 @@ all closed**. In particular:
    enable broad tracing, create helpers or grant SAP_ALL. No further login alone closes this gap.
 2. **Installed clients:** Inspector now has the aggregate Viewer/Data/SQL/Admin, denied-target,
    no-grant and fresh-login catalog checks recorded above. Complete the remaining named-client
-   and unchanged-legacy cases; VS Code still needs workspace-trust confirmation. The harness is
+   and unchanged-standard cases; VS Code still needs workspace-trust confirmation. The harness is
    not Cursor/VS Code coverage, and the external tester's unversioned success report cannot
    replace these cases.
 3. **Application/origin isolation:** reciprocal application acceptance and the same email under

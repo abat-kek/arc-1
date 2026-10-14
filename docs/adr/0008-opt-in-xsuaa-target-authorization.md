@@ -20,9 +20,6 @@ additional boundary only with `ARC1_MULTI_TARGET_AUTHORIZATION=xsuaa-attribute`.
 values are configuration errors; enabled enforcement never falls back to standard on a missing
 claim, malformed claim, backend failure or role combination.
 
-The pre-release spelling `legacy` remains an environment/CLI input alias for `standard`.
-Normalize it before validation, routing and logging; it is not a third authorization mode.
-
 Use XSUAA's native instance authorization model: one required string attribute `arc1_targets`,
 supplied by static role values or an optional dedicated IAS attribute. Exact grants use the
 existing canonical public system/client ID. The complete literal `*` is an explicit all-target

@@ -148,9 +148,9 @@ it('does not hide an error nested inside another message', () => {
   );
   const result = parseSyntaxBatch(`<checkRunReports>${report}</checkRunReports>`, [syntaxObject], 'active');
   expect(result.status).toBe('failed');
-  expect(result.results[0]?.messages).toEqual(
-    expect.arrayContaining([expect.objectContaining({ text: 'Nested error', severity: 'error' })]),
-  );
+  expect(result.results[0]).toMatchObject({
+    messages: expect.arrayContaining([expect.objectContaining({ text: 'Nested error', severity: 'error' })]),
+  });
 });
 it('keeps a foreign report nested inside a recognized report incomplete', () => {
   const nested = cleanReport.replace('abapCheckRun', 'foreign');

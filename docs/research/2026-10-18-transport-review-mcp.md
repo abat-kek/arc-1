@@ -106,7 +106,23 @@ the three released changes and returned 00002 → 00000 with zero changes for th
 The design and [BTP follow-up](transport-review-mcp/claude-design-followup.md) were reviewed by
 Claude Code Opus 5.5 Max in the GUI. The [implementation review](transport-review-mcp/claude-implementation-review.md) found the
 active-baseline defect above. Its documentation/test issues, safe local error notes, pending-draft
-visibility and catalog headroom have been addressed. Final review and checks are in progress. Earlier #1008 approvals cover the superseded CLI/report implementation only.
+visibility and catalog headroom have been addressed. The [final review](transport-review-mcp/claude-final-review.md)
+found no remaining blockers at `d595157f`, conditional on CI. Claude independently ran 1,096
+focused tests, 13 probes, the final surface checks and a clean merge/schema check with #1020.
+
+| Local check | Result |
+|---|---|
+| Full unit suite, runtime commit `98c3b028` | 332 files / 9,299 tests pass (`--maxWorkers=2`) |
+| Tool surface after wording-only `d595157f` | 127 tests pass; six snapshots regenerated and reviewed |
+| Typecheck, build, lint, policy, strict docs, file/schema budgets | Pass |
+| Combined schema with dump-filter #1020 at `60127869` | 74,454 bytes / ~18,614 tokens; all scenarios pass |
+
+The combined schema failed at 74,504 bytes before the 50-byte wording reduction. No ceiling
+was raised. The combined check includes #1020's description-count adjustment; it is a schema
+compatibility check, not a test of that PR's runtime. An earlier unrestricted-worker run hit three
+startup timing failures; those startup files also passed on clean main. The complete bounded-worker
+run above passed without changing startup behavior. Earlier #1008 approvals cover the superseded
+CLI/report implementation only.
 
 The SAP Marketplace was re-opened on 18 October: its current feature list still includes
 Timeline, Transport Organizer, feeds, Dictionary logs and notebooks. SAP Help's MCP page

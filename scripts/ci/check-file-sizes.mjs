@@ -41,8 +41,8 @@ const BUDGETS = {
   // +30 for SAPDiagnose ATC objects[]; keep its small item schema with the tool (no new module).
   // Combined #769/#772: 1791 lines, retaining 4 lines of headroom.
   // +4: parent function group for SAPTransport check/history.
-  // +6: dumps-only filter definition and optional schema discovery; input schemas live separately.
-  'src/handlers/tools.ts': 1784,
+  // SAPQuery schemas moved to query-tool.ts (-33); dump filters add six lines.
+  'src/handlers/tools.ts': 1751,
   // +shared parseNamedItems relocated here from transport.ts (now used by ATC variants too) +
   // parseAtcSystemCheckVariant (FEAT-68 ATC variant listing) + parseFunctionModuleProperties and
   // the pre-7.52 projectexplorer function-group parser.

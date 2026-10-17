@@ -34,7 +34,7 @@ the [declared protocol](../plans/2026-10-17-dump-filter-extraction.md).
 
 We retain the shortened unrelated action descriptions to keep the existing ceilings. Their
 constraints remain documented and unit-tested, but those actions were not model-evaluated.
-Current full catalog: 74,420 bytes / approximately 18,605 tokens; BTP: 70,591 / 17,648.
+Before the main merge: full catalog 74,420 bytes / approximately 18,605 tokens; BTP 70,591 / 17,648.
 The optional unknown-datatype message improvement is deferred; unsupported types already fail closed.
 
 [Final Claude Opus 5.5 Max review](dump-filter-extraction/claude-final-review.md) of `027159e3`:
@@ -131,3 +131,20 @@ Original research and earlier failures remain at
 Batch syntax still has observed value (FEAT-69) and is not included. Saved activation logs remain
 deferred (FEAT-71). #1011 stays open as an extraction source; this PR does not meet the user's
 condition to close it only after no useful work remains. No transport/notebook dependency is added.
+
+## Main advanced during validation
+
+Main merged stored-text support (#1012, `37fece94`) while #1020's first CI run was in progress.
+That earlier head passed all 9,003 tests on Node 22/24, including coverage runs; SAP integration
+passed 260 tests with 97 skips. These are earlier-head results, not verification of the merge.
+
+Merge conflicts affected only the file-size and description-count ratchets. The resolution combines
+LONG_TEXT's eight descriptions with the filter's one, and retains the extracted query schema's lower
+file budget. The combined catalog exceeded the wire ceiling by 92 bytes. Removing 100 bytes of
+duplicated dump/discovery wording preserves the filter example, AND/eight-term limit, newest-first
+ordering and optional discovery. No wire/token ceiling is raised. Combined full surface: 74,492
+bytes / approximately 18,623 tokens; BTP: 69,596 / 17,399.
+
+The 24 model trials remain historical comparisons against main `498c12bb`. Neither the new main's
+stored-text surface nor this final wording trim was model-evaluated. No new reliability claim or
+success-driven model rerun is made. Focused tests cover both dump and stored-text routes after the merge.

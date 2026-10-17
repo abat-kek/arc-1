@@ -17,6 +17,7 @@ vi.mock('../../../src/server/multi-target-destination-runtime.js', async (import
 const { AdtClient } = await import('../../../src/adt/client.js');
 const { AdtApiError } = await import('../../../src/adt/errors.js');
 const { AdtHttpClient } = await import('../../../src/adt/http.js');
+const featureProbeModule = await import('../../../src/adt/features.js');
 const { featuresOff } = await import('../handlers/handler-test-config.js');
 const { getCachedFeatures, resetCachedFeatures, setCachedFeatures } = await import(
   '../../../src/handlers/feature-cache.js'
@@ -236,6 +237,74 @@ describe('multi-target principal-propagation retry', () => {
     expect(featureProbes).toBe(1);
     expect(getCachedFeatures('A4H/100')?.hana).toBeUndefined();
     expect(getCachedFeatures('A4H/100')?.authProbe).toBeUndefined();
+    expect(getCachedFeatures('A4H/100')?.rap?.available).toBe(true);
+  });
+
+  it.each(['authorization', 'network'])(
+    'retries a full probe after only configuration survived a %s failure',
+    async (failure) => {
+      const current = registry();
+      resolveRuntimeSubaccountPpDestination.mockResolvedValue({
+        destination: DESTINATION,
+        authTokens: { sapConnectivityAuth: 'Bearer per-user-assertion' },
+      });
+      vi.spyOn(AdtClient.prototype, 'getSystemInfo').mockResolvedValue('{"sid":"A4H","client":"100"}');
+      let recovered = false;
+      let fullProbes = 0;
+      vi.spyOn(AdtHttpClient.prototype, 'get').mockImplementation(async (path) => {
+        if (path === '/sap/bc/adt/ddic/sysinfo/hanainfo') fullProbes++;
+        if (!recovered)
+          throw failure === 'authorization' ? new AdtApiError('Forbidden', 403, path) : new Error('offline');
+        return { statusCode: 200, headers: {}, body: '<root/>' };
+      });
+      const instanceConfig = { ...DEFAULT_CONFIG, featureGcts: 'off' as const };
+      const server = createServer(buildAggregateToolSurfaceConfig(instanceConfig, current.targets), {
+        btpConfig: BTP_CONFIG,
+        multiTarget: { mode: 'aggregate', registry: current, instanceConfig },
+      });
+      const call = requestHandler(server);
+      const request = {
+        method: 'tools/call',
+        params: { name: 'SAPRead', arguments: { type: 'SYSTEM', target: 'A4H/100' } },
+      };
+      await call(request, { authInfo: READ_AUTH });
+      expect(getCachedFeatures('A4H/100')).toMatchObject({ systemType: 'onprem', gcts: { mode: 'off' } });
+      expect(getCachedFeatures('A4H/100')?.rap).toBeUndefined();
+      recovered = true;
+      await call(request, { authInfo: { ...READ_AUTH, extra: { userName: 'AUTHORIZED_USER' } } });
+      expect(fullProbes).toBe(2);
+      expect(getCachedFeatures('A4H/100')?.rap?.available).toBe(true);
+    },
+  );
+
+  it('still probes all features after a failed full probe followed by a successful source search', async () => {
+    const current = registry();
+    resolveRuntimeSubaccountPpDestination.mockResolvedValue({
+      destination: DESTINATION,
+      authTokens: { sapConnectivityAuth: 'Bearer per-user-assertion' },
+    });
+    vi.spyOn(AdtHttpClient.prototype, 'get').mockResolvedValue({ statusCode: 200, headers: {}, body: '<root/>' });
+    vi.spyOn(AdtClient.prototype, 'searchSource').mockResolvedValue([]);
+    vi.spyOn(AdtClient.prototype, 'getSystemInfo').mockResolvedValue('{"sid":"A4H","client":"100"}');
+    const fullProbe = vi.spyOn(featureProbeModule, 'probeFeatures').mockRejectedValueOnce(new Error('probe failed'));
+    const server = createServer(buildAggregateToolSurfaceConfig(DEFAULT_CONFIG, current.targets), {
+      btpConfig: BTP_CONFIG,
+      multiTarget: { mode: 'aggregate', registry: current, instanceConfig: DEFAULT_CONFIG },
+    });
+    const call = requestHandler(server);
+    await call(
+      {
+        method: 'tools/call',
+        params: { name: 'SAPSearch', arguments: { searchType: 'source_code', query: 'test', target: 'A4H/100' } },
+      },
+      { authInfo: READ_AUTH },
+    );
+    expect(getCachedFeatures('A4H/100')?.textSearch?.available).toBe(true);
+    await call(
+      { method: 'tools/call', params: { name: 'SAPRead', arguments: { type: 'SYSTEM', target: 'A4H/100' } } },
+      { authInfo: READ_AUTH },
+    );
+    expect(fullProbe).toHaveBeenCalledTimes(2);
     expect(getCachedFeatures('A4H/100')?.rap?.available).toBe(true);
   });
 });

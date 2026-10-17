@@ -22,9 +22,10 @@ import { hasRequiredScope } from '../authz/policy.js';
 import type { CachingLayer } from '../cache/caching-layer.js';
 import { getToolRegistry, handleToolCall } from '../handlers/dispatch.js';
 import {
-  cacheFeatureEvidence,
+  cacheProbedFeatures,
   getCachedDiscovery,
   getCachedFeatures,
+  hasCompletedFeatureProbe,
   setCachedDiscovery,
   setCachedFeatures,
 } from '../handlers/feature-cache.js';
@@ -473,7 +474,7 @@ export async function probeClientFeatures(
     }
   }
   const featureKey = config.targetId ?? config.destinationName;
-  cacheFeatureEvidence(features, config.ppEnabled && !!btpConfig && !cacheAuthorizationLimitedEvidence, featureKey);
+  cacheProbedFeatures(features, config.ppEnabled && !!btpConfig && !cacheAuthorizationLimitedEvidence, featureKey);
   // Proactive warning: on SAP_BASIS < 7.51 the ADT REST handler does not honor the
   // stateful-session header over HTTP, so object writes fail with 423 "invalid lock
   // handle" until the abapfs_extensions enhancement is installed. Warn at startup —
@@ -847,7 +848,7 @@ export function createServer(config: ServerConfig, options: CreateServerOptions 
           const cacheAuthorizationLimitedEvidence = selectedTarget?.authentication === 'BasicAuthentication';
           await ensureMultiTargetFeatureProbe(
             targetKey,
-            !!targetKey && !!getCachedFeatures(targetKey),
+            !!targetKey && hasCompletedFeatureProbe(targetKey),
             () => probeClientFeatures(activeConfig, resolvedClient, btpConfig, cacheAuthorizationLimitedEvidence),
             () => setCachedFeatures(undefined, targetKey),
           );

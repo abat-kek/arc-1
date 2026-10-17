@@ -18,7 +18,10 @@ import { getCurrentContext } from '../server/context.js';
 interface FeatureStore {
   features: Partial<ResolvedFeatures> | undefined;
   discovery: Map<string, string[]>;
+  probeComplete: boolean;
 }
+
+const FEATURE_KEYS = ['hana', 'abapGit', 'gcts', 'rap', 'amdp', 'ui5', 'transport', 'ui5repo', 'flp'] as const;
 
 /** Key for single-target mode. Multi-target feature state uses the public SID/client ID. */
 const DEFAULT_KEY = '';
@@ -30,7 +33,7 @@ function storeFor(destination?: string): FeatureStore {
   const key = destination ?? context?.target ?? context?.destination ?? DEFAULT_KEY;
   let store = stores.get(key);
   if (!store) {
-    store = { features: undefined, discovery: new Map() };
+    store = { features: undefined, discovery: new Map(), probeComplete: false };
     stores.set(key, store);
   }
   return store;
@@ -41,9 +44,11 @@ export function resetCachedFeatures(): void {
   stores.clear();
 }
 
-/** Set cached features directly (probe result, or for testing BTP mode, etc.) */
+/** Install a completed probe directly, or clear it (also used by test fixtures). */
 export function setCachedFeatures(features: Partial<ResolvedFeatures> | undefined, destination?: string): void {
-  storeFor(destination).features = features;
+  const store = storeFor(destination);
+  store.features = features;
+  store.probeComplete = features !== undefined;
 }
 
 /** Get cached features (for tool definition adaptation) */
@@ -51,15 +56,25 @@ export function getCachedFeatures(destination?: string): Partial<ResolvedFeature
   return storeFor(destination).features;
 }
 
-/** Share backend facts, not a caller's permissions. Missing fields remain unknown. */
+/** Lazy operation facts do not establish that the full feature probe completed. */
+export function hasCompletedFeatureProbe(destination?: string): boolean {
+  return storeFor(destination).probeComplete;
+}
+
+/** Config-only/auth-only results stay retryable; unrelated successful SAP evidence survives. */
+export function cacheProbedFeatures(features: ResolvedFeatures, perUser: boolean, destination?: string): void {
+  if (cacheFeatureEvidence(features, perUser, destination)) storeFor(destination).probeComplete = true;
+}
+
+/** Share safe facts; return whether SAP supplied any conclusive backend evidence. */
 export function cacheFeatureEvidence(
   features: Partial<ResolvedFeatures>,
   perUser: boolean,
   destination?: string,
-): void {
+): boolean {
   const evidence = { ...features };
   const authFailure = /(authorization|auth failure|forbidden|\b401\b|\b403\b)/i;
-  for (const key of ['hana', 'abapGit', 'gcts', 'rap', 'amdp', 'ui5', 'transport', 'ui5repo', 'flp'] as const) {
+  for (const key of FEATURE_KEYS) {
     const status = evidence[key];
     if (
       status?.mode === 'auto' &&
@@ -78,6 +93,13 @@ export function cacheFeatureEvidence(
     store.features = { ...store.features, ...evidence };
     if (evidence.discoveryMap) store.discovery = evidence.discoveryMap;
   }
+  return !!(
+    evidence.textSearch ||
+    evidence.discoveryMap ||
+    evidence.abapRelease ||
+    evidence.systemTypeSource === 'probe' ||
+    FEATURE_KEYS.some((key) => evidence[key]?.mode === 'auto')
+  );
 }
 
 /** Set validated ADT discovery capability hints (never object data or authorization results). */

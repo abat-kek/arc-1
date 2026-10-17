@@ -26,7 +26,7 @@ import { getTransportInfo } from '../adt/transport.js';
 import { parseSearchResults } from '../adt/xml-parser.js';
 import type { CachingLayer } from '../cache/caching-layer.js';
 import type { ServerConfig } from '../server/types.js';
-import { cacheFeatureEvidence, getCachedFeatures, isPackagesEndpointAvailable } from './feature-cache.js';
+import { cacheProbedFeatures, getCachedFeatures, isPackagesEndpointAvailable } from './feature-cache.js';
 import { functionModuleObjectUrl, inferObjectType, normalizeObjectType, objectUrlForType } from './object-types.js';
 import { errorResult, type ToolResult, textResult, toolJson } from './shared.js';
 import {
@@ -523,6 +523,7 @@ export async function handleSAPManage(
       // Override with server config feature toggles
       featureConfig.hana = config.featureHana as 'auto' | 'on' | 'off';
       featureConfig.abapGit = config.featureAbapGit as 'auto' | 'on' | 'off';
+      featureConfig.gcts = config.featureGcts as 'auto' | 'on' | 'off';
       featureConfig.rap = config.featureRap as 'auto' | 'on' | 'off';
       featureConfig.amdp = config.featureAmdp as 'auto' | 'on' | 'off';
       featureConfig.ui5 = config.featureUi5 as 'auto' | 'on' | 'off';
@@ -532,7 +533,7 @@ export async function handleSAPManage(
 
       const probed = await probeFeatures(client.http, featureConfig, config.systemType);
 
-      cacheFeatureEvidence(probed, !!isPerUserClient || config.ppEnabled);
+      cacheProbedFeatures(probed, !!isPerUserClient || config.ppEnabled);
       const discoveryMap = getCachedFeatures()?.discoveryMap;
       if (discoveryMap) client.http.setDiscoveryMap(discoveryMap);
       return textResult(toolJson(probed));

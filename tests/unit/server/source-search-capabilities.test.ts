@@ -7,6 +7,7 @@ import * as features from '../../../src/adt/features.js';
 import {
   cacheFeatureEvidence,
   getCachedFeatures,
+  hasCompletedFeatureProbe,
   resetCachedFeatures,
   setCachedFeatures,
 } from '../../../src/handlers/feature-cache.js';
@@ -55,7 +56,7 @@ it('retains source-search capability despite an unrelated user authorization fai
   const invoke = () =>
     ensureMultiTargetFeatureProbe(
       target,
-      !!getCachedFeatures(target),
+      hasCompletedFeatureProbe(target),
       () => probeClientFeatures(cfg, sap, {} as BTPConfig),
       () => setCachedFeatures(undefined, target),
     );
@@ -77,6 +78,22 @@ it('lets a per-user manual probe refresh safe capability facts without sharing t
   expect(getCachedFeatures(target)?.textSearch).toEqual(unsupported());
   expect(getCachedFeatures(target)?.gcts).toBeUndefined();
   expect(getCachedFeatures(target)?.authProbe).toBeUndefined();
+});
+
+it('preserves an administrator-disabled gCTS feature during a per-user manual refresh', async () => {
+  vi.spyOn(features, 'probeFeatures').mockImplementation(async (_http, config) =>
+    features.resolveWithoutProbing(config),
+  );
+  await inTarget(target, () =>
+    handleSAPManage(
+      client(),
+      { ...DEFAULT_CONFIG, ppEnabled: true, featureGcts: 'off' },
+      { action: 'probe' },
+      undefined,
+      true,
+    ),
+  );
+  expect(getCachedFeatures(target)?.gcts).toMatchObject({ available: false, mode: 'off' });
 });
 
 it('learns source search is disabled lazily and avoids direct searches and repeated support probes', async () => {

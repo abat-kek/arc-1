@@ -115,7 +115,11 @@ focused tests, 13 probes, the final surface checks and a clean merge/schema chec
 | Full unit suite, runtime commit `98c3b028` | 332 files / 9,299 tests pass (`--maxWorkers=2`) |
 | Tool surface after wording-only `d595157f` | 127 tests pass; six snapshots regenerated and reviewed |
 | Typecheck, build, lint, policy, strict docs, file/schema budgets | Pass |
+| Golden live integration case, A4HK906291 | Pass; aligned the old comparison-label assertion, retaining all attribution checks |
 | Combined schema with dump-filter #1020 at `60127869` | 74,454 bytes / ~18,614 tokens; all scenarios pass |
+
+The golden integration case failed on its old label assertion before that test-only correction
+and passed afterward; no runtime change was needed.
 
 The combined schema failed at 74,504 bytes before the 50-byte wording reduction. No ceiling
 was raised. The combined check includes #1020's description-count adjustment; it is a schema

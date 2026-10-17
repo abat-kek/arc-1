@@ -1,11 +1,8 @@
+import { SYNTAX_BATCH_TYPES } from '../adt/syntax-batch.js';
+import { diagnosticObjectsJson, dumpFiltersJson } from './diagnostic-inputs.js';
 /** Intent-based tool schemas; BTP omits classic object types and adjusts descriptions. */
 
-import {
-  ATC_BATCH_MAX_OBJECTS,
-  ATC_BATCH_NAME_MAX_LENGTH,
-  ATC_BATCH_NAME_PATTERN,
-  ATC_BATCH_TYPES,
-} from '../adt/atc-batch.js';
+import { ATC_BATCH_TYPES } from '../adt/atc-batch.js';
 import { KTD_SHORT_TEXT_MAX_LENGTH } from '../adt/ddic-xml.js';
 import { TEXT_ELEMENT_PARTS } from '../adt/text-elements.js';
 import type { ResolvedFeatures } from '../adt/types.js';
@@ -91,13 +88,13 @@ function isBtpMode(config: ServerConfig): boolean {
 const SAPREAD_DESC_ONPREM =
   'Read SAP ABAP source, metadata or syntax-check results. For purpose, explanations, specs, reviews or pre-change context, prefer SAPContext first. DDIC metadata: omit format (default text); structured is CLAS-only for ordinary reads. ' +
   'Types: PROG, CLAS, INTF, FUNC, FUGR (expand_includes=true for all include sources), INCL, DDLS, DCLS, DDLX, BDEF, SRVD, SRVB, SKTD/KTD (KTD aliases SKTD), TABL (covers both transparent tables AND DDIC structures — no separate STRU type), TABL/DTT (technical settings), TTYP, VIEW, DOMA, DTEL, TRAN, TABLE_CONTENTS (single-column filter), TABLE_QUERY (multi-column WHERE via the freestyle endpoint; gated by allowDataPreview; CDS views need SAP_BASIS 752+), DEVC, SOBJ (BOR — method param reads one method), SYSTEM, COMPONENTS, MSAG, TEXT_ELEMENTS, VARIANTS, BSP, BSP_DEPLOY, API_STATE (contract states C0-C4; objectType for non-class), INACTIVE_OBJECTS (no name; pending-activation list), AUTH, FEATURE_TOGGLE, ENHO, VERSIONS, VERSION_SOURCE. AUTH/FEATURE_TOGGLE/VERSIONS/VERSION_SOURCE are on-prem only. ' +
-  'SYNTAX: read-only SAP check (objectType+name, optional source for unsaved text). CLAS: method="*" for signatures, method="NAME" for one body, or grep. Global class declaration/implementation: MAIN (omit include). definitions/implementations contain local helpers. ' +
+  'SYNTAX: SAP check (objectType+name, optional unsaved source; or 1–20 explicit objects with stored active/inactive source). CLAS: method="*" for signatures, method="NAME" for one body, or grep. Global class declaration/implementation: MAIN (omit include). definitions/implementations contain local helpers. ' +
   'grep: case-insensitive regex; returns matching lines, context and line numbers, with owning class/method for CLAS.';
 
 const SAPREAD_DESC_BTP =
   'Read SAP ABAP source, metadata or syntax-check results (BTP ABAP Environment). For purpose, explanations, specs, reviews or pre-change context, prefer SAPContext first. DDIC metadata: omit format (default text); structured is CLAS-only for ordinary reads. ' +
   'Types: CLAS, INTF, FUNC (released/custom only), FUGR (released/custom only), DDLS (primary data model on BTP), DCLS, DDLX, BDEF, SRVD, SRVB, SKTD/KTD (KTD aliases SKTD), TABL (custom tables AND structures — no separate STRU type), TABL/DTT (technical settings), TTYP, DOMA, DTEL, TABLE_CONTENTS (custom tables + released CDS only; standard tables blocked), TABLE_QUERY (multi-column WHERE on custom tables + released CDS; needs SAP_BASIS 752+), DEVC, SYSTEM, COMPONENTS, MSAG (custom only), BSP, BSP_DEPLOY, API_STATE (contract states C0-C4; objectType for non-class), INACTIVE_OBJECTS (no name; pending-activation list), ENHO. PROG/INCL/VIEW/TRAN/TEXT_ELEMENTS/VARIANTS and VERSIONS/VERSION_SOURCE are not available on BTP (use CLAS with IF_OO_ADT_CLASSRUN for console apps, DDLS for data models). ' +
-  'SYNTAX: read-only SAP check (objectType+name, optional source for unsaved text). CLAS: method="*" for signatures, method="NAME" for one body, or grep. Global class declaration/implementation: MAIN (omit include). definitions/implementations contain local helpers. ' +
+  'SYNTAX: SAP check (objectType+name, optional unsaved source; or 1–20 explicit objects with stored active/inactive source). CLAS: method="*" for signatures, method="NAME" for one body, or grep. Global class declaration/implementation: MAIN (omit include). definitions/implementations contain local helpers. ' +
   'grep: case-insensitive regex; returns matching lines, context and line numbers, with owning class/method for CLAS.';
 
 // ─── SAPContext Types ───────────────────────────────────────────────
@@ -410,7 +407,7 @@ export function getToolDefinitions(
             type: 'string',
             enum: btp ? SAPREAD_TYPES_BTP : SAPREAD_TYPES_ONPREM,
             description:
-              'Object or metadata type. TABL includes DDIC structures; KTD aliases SKTD (Knowledge Transfer Documents). SYNTAX checks objectType+name. Server-driven objects use discovery-gated XML metadata and AFF JSON source (DTSC/DSFD/DTDC/DRTY use DDL text). DESD logical external schema; EVTB event binding; EVTO event object; CSNM CSN model; COTA communication target; DTSC static cache; DTDC dynamic cache; DSFD scalar function; UIAD launchpad descriptor; DRTY CDS type; APLO log object; SAJC/SAJT job catalog/template; TABL/DTI secondary index named TABLE~INDEX (read prefers pending JSON). Deprecated: MESSAGES→MSAG.' +
+              'Object or metadata type. TABL includes DDIC structures; KTD aliases SKTD (Knowledge Transfer Documents). SYNTAX checks objectType+name or objects[]. Server-driven objects use discovery-gated XML metadata and AFF JSON source (DTSC/DSFD/DTDC/DRTY use DDL text). DESD logical external schema; EVTB event binding; EVTO event object; CSNM CSN model; COTA communication target; DTSC static cache; DTDC dynamic cache; DSFD scalar function; UIAD launchpad descriptor; DRTY CDS type; APLO log object; SAJC/SAJT job catalog/template; TABL/DTI secondary index named TABLE~INDEX (read prefers pending JSON). Deprecated: MESSAGES→MSAG.' +
               (btp ? ' ENQU lock object as JSON.' : ' FTG2→FEATURE_TOGGLE. ENQU lock object as JSON.'),
           },
           name: { type: 'string', description: 'Object name (e.g., ZTEST_PROGRAM, ZCL_ORDER, MARA)' },
@@ -530,6 +527,9 @@ export function getToolDefinitions(
             type: 'string',
             description:
               'TABLE_CONTENTS condition expression only (no WHERE, no SELECT); broken on 758 (SAP expects SELECT). Use TABLE_QUERY where.',
+          },
+          objects: {
+            ...diagnosticObjectsJson(btp ? SYNTAX_BATCH_TYPES.filter((type) => type !== 'PROG') : SYNTAX_BATCH_TYPES),
           },
           objectType: {
             type: 'string',
@@ -1133,6 +1133,8 @@ export function getToolDefinitions(
       name: 'SAPDiagnose',
       description:
         'ABAP diagnostics and runtime analysis. Actions:\n' +
+        '- "feed_schema": dump filter attributes/operators. dumps filters are ANDed; datetime uses UTC YYYYMMDDHHMMSS.\n' +
+        '- "activation_log": latest advertised DDIC log (DOMA/DTEL/TABL/DDLS); no activation or attempt correlation.\n' +
         '- "explain_policy": explain current caller gates for built-in proposedTool/proposedArgs (64 KiB max) on this connection; never executes the proposal or certifies SAP authorization.\n' +
         '- "syntax": compatibility check; when available prefer SAPRead(type="SYNTAX", objectType, name, version?, source?).\n' +
         '- "unittest": harmless ABAP Unit for CLAS/PROG/FUGR or DEVC (exact; includeSubpackages recurses).\n' +
@@ -1161,6 +1163,8 @@ export function getToolDefinitions(
             enum: [
               'syntax',
               'explain_policy',
+              'feed_schema',
+              'activation_log',
               'unittest',
               'unittest_ci',
               'atc',
@@ -1185,6 +1189,7 @@ export function getToolDefinitions(
               'authorization_trace',
             ],
           },
+          filters: dumpFiltersJson,
           proposedTool: { type: 'string', minLength: 1, maxLength: 40 },
           proposedArgs: { type: 'object' },
           name: {
@@ -1201,25 +1206,9 @@ export function getToolDefinitions(
             description: 'Object type; unittest accepts CLAS, PROG, FUGR, or DEVC.',
           },
           objects: {
-            type: 'array',
-            minItems: 1,
-            maxItems: ATC_BATCH_MAX_OBJECTS,
+            ...diagnosticObjectsJson(btp ? ATC_BATCH_TYPES_BTP : ATC_BATCH_TYPES),
             description:
-              'ATC only, instead of name/type/url. One batch + at most one verification. Returns coverage; unreported objects stay incomplete. No packages.',
-            items: {
-              type: 'object',
-              required: ['type', 'name'],
-              additionalProperties: false,
-              properties: {
-                type: { type: 'string', enum: btp ? ATC_BATCH_TYPES_BTP : [...ATC_BATCH_TYPES] },
-                name: {
-                  type: 'string',
-                  minLength: 1,
-                  maxLength: ATC_BATCH_NAME_MAX_LENGTH,
-                  pattern: ATC_BATCH_NAME_PATTERN,
-                },
-              },
-            },
+              'ATC or syntax, instead of name/type/url/source. Syntax: CLAS/PROG/INTF/DDLS; stored active/inactive. Missing or ambiguous reports stay incomplete. No packages.',
           },
           source: {
             type: 'string',

@@ -276,6 +276,20 @@ export function normalizeTypeArgsForValidation(
       return {
         ...cleaned,
         type: normalizeObjectType(String(cleaned.type ?? '')),
+        objects: Array.isArray(cleaned.objects)
+          ? cleaned.objects.map((obj) => {
+              if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) return obj;
+              const item = obj as Record<string, unknown>;
+              return {
+                ...item,
+                type: typeof item.type === 'string' ? normalizeObjectType(item.type.trim()) : item.type,
+                name:
+                  typeof item.name === 'string'
+                    ? item.name.trim().replace(/[a-z]/g, (char) => char.toUpperCase())
+                    : item.name,
+              };
+            })
+          : cleaned.objects,
         objectType:
           cleaned.objectType === undefined ? undefined : normalizeObjectType(String(cleaned.objectType ?? '')),
       };
@@ -353,7 +367,7 @@ export function normalizeTypeArgsForValidation(
       if (
         Array.isArray(cleaned.objects) &&
         cleaned.objects.length === 0 &&
-        (cleaned.action !== 'atc' ||
+        (!['atc', 'syntax'].includes(String(cleaned.action)) ||
           cleaned.name !== undefined ||
           cleaned.type !== undefined ||
           cleaned.url !== undefined)

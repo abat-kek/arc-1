@@ -15,18 +15,15 @@
 
 import { z } from 'zod';
 import { API_RELEASE_VISIBILITIES } from '../adt/api-release.js';
-import {
-  ATC_BATCH_MAX_OBJECTS,
-  ATC_BATCH_NAME_MAX_LENGTH,
-  ATC_BATCH_NAME_PATTERN,
-  ATC_BATCH_TYPES,
-} from '../adt/atc-batch.js';
+import { ATC_BATCH_TYPES } from '../adt/atc-batch.js';
 import { DTEL_MAX_LABEL_LENGTHS, TABLE_TYPE_DIMENSION_MAX } from '../adt/ddic-xml.js';
 import { canonicalRevisionSourcePath, isCanonicalHostRelativeAdtPath } from '../adt/path-safety.js';
 import { isServerDrivenObjectType } from '../adt/server-driven.js';
+import { SYNTAX_BATCH_TYPES } from '../adt/syntax-batch.js';
 import { TEXT_ELEMENT_PARTS as SAPREAD_TEXT_ELEMENT_INCLUDES } from '../adt/text-elements.js';
 import { MAX_GREP_PATTERN_LENGTH } from '../context/grep.js';
 import { CI_PACKAGES_SCHEMA } from './diagnose-fields.js';
+import { diagnosticObjectsSchema, dumpFilters, validateDiagnosticInputs } from './diagnostic-inputs.js';
 import { sourcePreconditionError } from './editable-source.js';
 import { FUNCTION_PROCESSING_TYPES, FUNCTION_UPDATE_TASK_KINDS } from './function-processing.js';
 import { CLASS_WRITE_INCLUDES, KNOWN_BASE_TYPES } from './object-types.js';
@@ -88,13 +85,14 @@ function validateSapReadInput(
     versionUri?: string;
     sqlFilter?: string;
     objectType?: string;
+    objects?: { type: string; name: string }[];
     source?: string;
     version?: string;
   },
   ctx: { addIssue: (issue: { code: 'custom'; path: string[]; message: string }) => void },
 ): void {
   if (input.type === 'SYNTAX') {
-    for (const key of ['name', 'objectType'] as const) {
+    for (const key of (input.objects === undefined ? ['name', 'objectType'] : []) as ('name' | 'objectType')[]) {
       if (!input[key]?.trim()) ctx.addIssue({ code: 'custom', path: [key], message: `SYNTAX requires ${key}.` });
     }
     if (input.objectType && !KNOWN_BASE_TYPES.has(input.objectType) && !isServerDrivenObjectType(input.objectType)) {
@@ -104,7 +102,11 @@ function validateSapReadInput(
         message: 'SYNTAX requires a supported repository object type.',
       });
     }
-    const allowed = new Set(['type', 'name', 'objectType', 'version', 'source']);
+    const allowed = new Set(
+      input.objects === undefined
+        ? ['type', 'name', 'objectType', 'version', 'source']
+        : ['type', 'objects', 'version'],
+    );
     for (const [key, value] of Object.entries<unknown>(input)) {
       // Ignore strict-client filler, but reject options that would change the requested check.
       const filler =
@@ -118,6 +120,8 @@ function validateSapReadInput(
     }
     if (input.version === 'auto')
       ctx.addIssue({ code: 'custom', path: ['version'], message: 'SYNTAX version must be active or inactive.' });
+  } else if (input.objects !== undefined) {
+    ctx.addIssue({ code: 'custom', path: ['objects'], message: 'SAPRead objects is only supported for type=SYNTAX.' });
   } else if (input.source !== undefined) {
     ctx.addIssue({ code: 'custom', path: ['source'], message: 'SAPRead source is only supported for type=SYNTAX.' });
   }
@@ -274,6 +278,7 @@ export const SAPReadSchema = z
     maxResults: z.coerce.number().optional(),
     sqlFilter: z.string().optional(),
     objectType: z.string().optional(),
+    objects: diagnosticObjectsSchema(SYNTAX_BATCH_TYPES),
     source: z.string().optional(),
     versionUri: z.string().optional(),
     /** For type=FUNC: when true, response is JSON {source, signature: {importing, exporting, ...}}. */
@@ -317,6 +322,7 @@ export const SAPReadSchemaBtp = z
     maxResults: z.coerce.number().optional(),
     sqlFilter: z.string().optional(),
     objectType: z.string().optional(),
+    objects: diagnosticObjectsSchema(SYNTAX_BATCH_TYPES.filter((type) => type !== 'PROG')),
     source: z.string().optional(),
     versionUri: z.string().optional(),
     /** For type=FUNC: when true, response is JSON {source, signature: {importing, exporting, ...}}. */
@@ -1027,25 +1033,13 @@ const QuickfixAffectedObjectSchema = z.object({
   content: z.string().optional(),
 });
 
-const atcBatchObjectsSchema = (types: readonly string[]) =>
-  z
-    .array(
-      z
-        .object({
-          type: z.enum(types),
-          name: z.string().min(1).max(ATC_BATCH_NAME_MAX_LENGTH).regex(new RegExp(ATC_BATCH_NAME_PATTERN)),
-        })
-        .strict(),
-    )
-    .min(1)
-    .max(ATC_BATCH_MAX_OBJECTS)
-    .optional();
-
 export const SAPDiagnoseSchema = z
   .object({
     action: z.enum([
       'syntax',
       'explain_policy',
+      'feed_schema',
+      'activation_log',
       'unittest',
       'unittest_ci',
       'atc',
@@ -1069,12 +1063,13 @@ export const SAPDiagnoseSchema = z
       'sql_trace_directory',
       'authorization_trace',
     ]),
+    filters: dumpFilters.optional(),
     proposedTool: z.string().min(1).max(40).optional(),
     proposedArgs: z.record(z.string(), z.unknown()).optional(),
     name: z.string().optional(),
     url: z.string().optional(),
     type: z.string().optional(),
-    objects: atcBatchObjectsSchema(ATC_BATCH_TYPES),
+    objects: diagnosticObjectsSchema(ATC_BATCH_TYPES),
     source: z.string().optional(),
     sourceUri: z.string().optional(),
     line: z.coerce.number().optional(),
@@ -1118,6 +1113,7 @@ export const SAPDiagnoseSchema = z
   })
   .strict()
   .superRefine((input, ctx) => {
+    validateDiagnosticInputs(input, ctx);
     if (input.action === 'explain_policy') {
       if (!input.proposedTool || !input.proposedArgs)
         ctx.addIssue({ code: 'custom', message: 'explain_policy requires proposedTool and proposedArgs.' });
@@ -1159,12 +1155,15 @@ export const SAPDiagnoseSchema = z
 
     if (
       input.objects !== undefined &&
-      (input.action !== 'atc' || input.name !== undefined || input.type !== undefined || input.url !== undefined)
+      (!['atc', 'syntax'].includes(input.action) ||
+        input.name !== undefined ||
+        input.type !== undefined ||
+        input.url !== undefined)
     ) {
       ctx.addIssue({
         code: 'custom',
         path: ['objects'],
-        message: 'objects is only supported for atc and cannot be combined with name, type, or url.',
+        message: 'objects is only supported for atc/syntax and cannot be combined with name, type, or url.',
       });
     }
     if (input.action === 'unittest' && input.type !== undefined) {
@@ -1231,7 +1230,7 @@ export const SAPDiagnoseSchema = z
     }
   });
 
-const SAPDiagnoseSchemaBtp = SAPDiagnoseSchema.safeExtend({ objects: atcBatchObjectsSchema(ATC_BATCH_TYPES_BTP) });
+const SAPDiagnoseSchemaBtp = SAPDiagnoseSchema.safeExtend({ objects: diagnosticObjectsSchema(ATC_BATCH_TYPES_BTP) });
 
 // ─── SAPTransport ───────────────────────────────────────────────────
 

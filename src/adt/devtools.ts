@@ -1001,7 +1001,7 @@ function extractInactiveObjectEntries(
  *  Format 1 (attribute): <msg shortText="..."/>
  *  Format 2 (element):   <msg><shortText><txt>line1</txt><txt>line2</txt></shortText></msg>
  */
-function extractShortText(m: Record<string, unknown>): string {
+export function extractShortText(m: Record<string, unknown>): string {
   // Try attribute first (older SAP systems / some message types)
   const attr = m['@_shortText'];
   if (attr) return String(attr);
@@ -1018,7 +1018,7 @@ function extractShortText(m: Record<string, unknown>): string {
   return '';
 }
 
-function parseSyntaxCheckResult(xml: string, expectedJsonUri?: string): SyntaxCheckResult {
+export function parseSyntaxCheckResult(xml: string, expectedJsonUri?: string): SyntaxCheckResult {
   // JSON candidate checks must prove that SAP processed this object. Keep legacy ABAP responses
   // compatible, but never interpret a login page, truncated XML, or missing report as a clean UIAD.
   if (expectedJsonUri && (Buffer.byteLength(xml) > 256 * 1024 || XMLValidator.validate(xml) !== true)) {

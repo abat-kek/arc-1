@@ -17,7 +17,7 @@ This is the durable index for the research, including ideas we deliberately defe
 |---|---|---|
 | SAP extension | Marketplace Version History refreshed on October 17: **1.2.0**, published October 16; installed `sapse.adt-vscode-1.2.0-darwin-arm64` | A client feature does not establish backend availability |
 | ARC-1 release | **v1.5.2**; [1.6 release PR #970](https://github.com/arc-mcp/arc-1/pull/970) still open | Main and deployed connectors are separate baselines |
-| ARC-1 main | `b10acb15` (includes #1006) | Recheck before each implementation slice |
+| ARC-1 main | `9aad13a1` (includes #1006 and #1007) | Recheck before each implementation slice |
 | Original research | `9775645400fdb27f37aff486f14fe9845ecf8639`; 181 unit tests and eight synthetic observations | Observation probes are not assertions or live coverage |
 | Existing local prototype | `codex/post-1-6-review-workflows`; 67 uncommitted files preserved | Includes later stages; not shipped or included wholesale in the transport PR |
 | Live prototype evidence | A4H/001, SAP_BASIS 758 SP02, local CLI over HTTPS 443 | Does not prove 750, 816, BTP or the deployed connector |
@@ -61,7 +61,7 @@ ordering. The earlier activation-log uncertainty is also superseded: the install
 | Diagnostic feeds | FEED-01 above | Dumps first; Gateway/ATC/Unit feeds only with advertised, verified contracts |
 | Dictionary activation log | DDIC-01 above | Reader before attempt correlation; never reactivate merely to get a log |
 | Object checking | SYN-01 above | Syntax, ATC and Unit are distinct; run relevant checks explicitly |
-| Source-code search | Reuse SAPSearch source_code | Reuse merged #1006; coordinate with open #1007; unavailable is not zero matches |
+| Source-code search | Reuse SAPSearch source_code | Reuse merged #1006; reuse merged #1007; unavailable is not zero matches |
 | Explanation / documentation | Reuse SAPContext, KTD and existing explanation skills | Improve citations/templates against a representative corpus; no core model-service dependency |
 | Source/file editing | Reuse method surgery; review open #586 | Validate duplicate anchors, stale source and locks; editor buffers need an explicit client bridge |
 | Object-action discovery | Conditional catalog of already classified operations | Concrete discovery use case; derive policy/capability-filtered catalog; never execute unknown advertised actions |
@@ -151,3 +151,16 @@ and bounded metrics. The [follow-up plan](../../plans/2026-10-17-adt-followups.m
 notebook, policy and diagnostic slices. The notebook runner is implemented in this branch; its
 [guide](../../../docs_page/sql-notebooks.md) documents explicit execution, narrow scalar assertions
 and limits. Validation and independent-review results are recorded with its draft PR.
+
+## Implementation checkpoints
+
+| Stage | Reviewable result | Evidence |
+|---|---|---|
+| Transport review | [Draft #1008](https://github.com/arc-mcp/arc-1/pull/1008) | Three independent Claude reviews; CI green; eight-request pilot |
+| SQL notebook | [Draft #1009](https://github.com/arc-mcp/arc-1/pull/1009) | Allowed/denied live run; exact scalar strings; review corrections and 8,976 tests |
+| Policy explanation | [Draft #1010](https://github.com/arc-mcp/arc-1/pull/1010) | Four live explanations; independent review corrections; no proposed execution |
+| Diagnostics | [Validation record](../../research/2026-10-17-verified-diagnostics.md) | Native syntax, typed feed filter and existing log reads on 758; parser/handler regressions |
+| Broader transport history | Research remains deferred | [Pilot follow-up](evidence/history-pilot-summary.json): no text history relation, current-only entries, one inaccessible archived domain revision |
+
+These are draft changes, not a released feature promise. Merge the stack in order after maintainer
+review. No measured preparation-time saving or blanket cross-release qualification is claimed.

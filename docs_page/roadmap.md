@@ -104,9 +104,6 @@ sequence.
 | [FEAT-73](#feat-73) | Additional server-driven object types | P3 | S | Needs research | Object coverage |
 | [FEAT-78](#feat-78) | Table type access type and keys | P2 | M | Needs research | Object coverage |
 | [FEAT-09](#feat-09) | Cross Trace result reader | P2 | M | Needs research | Diagnostics |
-| [FEAT-69](#feat-69) | Mass syntax check | P2 | S | Ready | Diagnostics |
-| [FEAT-71](#feat-71) | Dictionary activation log | P3 | M | Needs research | Diagnostics |
-| [FEAT-74](#feat-74) | Dump feed attribute filters | P3 | S | Ready | Diagnostics |
 | [FEAT-50](#feat-50) | ADT type-probe fixture coverage | P3 | XS each | Contributor-driven | Diagnostics |
 | [FEAT-32](#feat-32) | Stable data-preview pagination | P3 | M | Needs research | Data access |
 | [FEAT-36](#feat-36) | Type information | P3 | S | Blocked | Code intelligence |
@@ -478,8 +475,9 @@ releases and define a useful fallback when documentation is unavailable.
 **Idea.** Compare historical text pools, function-group parts and metadata where customer reviews
 currently show explicit gaps.
 
-**Why it remains.** The bounded 758 investigation found current text pools, active-only FUGR
-history and too few differing DDIC snapshots to prove adapters. Test-transport filtering,
+**Why it remains.** The eight-request pilot and follow-up 758 probe found no text-pool history
+relation, current-only FUGR/most DDIC histories and one archived domain revision whose content
+returned 403. No family supplied two archived payloads to prove an adapter. [Follow-up evidence](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-17-verified-diagnostics.md#historical-coverage). Test-transport filtering,
 method attribution across requests, deletion/Customizing keys and history continuation also lack
 representative live fixtures.
 
@@ -751,68 +749,6 @@ volume limits are not implemented.
 
 **Resume with.** Capture a bounded real trace result, define redaction and response-size behavior,
 and keep trace activation separate from result reading.
-
-<a id="feat-74"></a>
-### FEAT-74 — Dump feed attribute filters
-
-- **Priority / effort / status:** P3 / S / Ready
-- **Category:** Diagnostics
-
-**Idea.** Let `SAPDiagnose(action="dumps")` filter short dumps by the other attributes SAP's feed
-supports, not only `user` and the time window.
-
-**Why it remains.** `GET /sap/bc/adt/feeds` self-describes the dumps feed, and its
-`feed:attributes` list is much wider than what ARC-1 exposes: `runtimeError`, `exception`,
-`objectName`, `package`, `packageHierarchy`, `component`, `responsible`, `objectResponsible`,
-`packageResponsible`, and a `dateTime`-typed `datetime`. The declared operators are `equals`,
-`notEquals`, `contains`, `notContains`, `greater`, `greaterOrEquals`, `less`, `lessOrEquals`,
-`between`, `notBetween`, with `queryDepth` 2. Live-verified on SAP_BASIS 816 (2026-09-22):
-`and(contains(objectName,SAPM))` returned 11 entries and
-`and(between(datetime,20260901000000,20260910000000))` returned 49, against an unfiltered feed
-capped at 100. Filtering server-side is far cheaper than paging the whole feed and discarding
-entries client-side, and answers questions ARC-1 cannot express today, such as "every TIME_OUT
-dump in package Z\*".
-
-**Resume with.** Read the per-system `feed:attributes` rather than hardcoding the list (it is
-release-dependent and also published for system messages and the gateway error log), map a small
-typed filter input onto the `and(...)` grammar without string-concatenating caller text, and keep
-the existing `user`/`from`/`to` parameters working. Note that the feed's own `rel="next"` link
-appends `sap-client` on every hop, so paging must keep rebuilding the `to` cursor as
-`listDumps` does.
-
-<a id="feat-69"></a>
-### FEAT-69 — Mass syntax check
-
-- **Priority / effort / status:** P2 / S / Ready
-- **Category:** Diagnostics
-
-**Idea.** Extend the read-only `SAPRead(type="SYNTAX")` route to check a bounded list of objects
-and return per-object findings without stopping at the first failure.
-
-**Why it remains.** The current syntax action accepts one object. ATC can cover packages or object
-sets, but it is heavier and semantically different from a direct syntax check.
-
-**Resume with.** Validate multiple entries in ADT's existing `checkObjectList` request, then add a
-strict object-count limit, deterministic per-object findings, explicit incomplete/error results,
-and aggregate counts. Bound concurrency if a per-object fallback is necessary.
-
-<a id="feat-71"></a>
-### FEAT-71 — Dictionary activation log
-
-- **Priority / effort / status:** P3 / M / Needs research
-- **Category:** Diagnostics
-
-**Idea.** Return useful DDIC activation-log details after a failed or warning-producing activation.
-
-**Why it remains.** ADT 1.2 follows the object's advertised
-`http://www.sap.com/adt/relations/ddic/activationlog` link with GET and
-`application/vnd.sap.adt.logs+xml`. A local prototype read nine entries from an existing 758 domain
-log; its old timestamp does not correlate it with a new activation attempt. The reader is not
-included in the transport-review change.
-
-**Resume with.** Review the bounded local reader, verify missing/denied/stale logs and supported
-releases, and preserve unknown attempt correlation. Do not reactivate an object to get a log.
-See the [research archive](https://github.com/arc-mcp/arc-1/blob/main/docs/research/adt-vscode-1.2/README.md).
 
 <a id="feat-50"></a>
 ### FEAT-50 — ADT type-probe fixture coverage

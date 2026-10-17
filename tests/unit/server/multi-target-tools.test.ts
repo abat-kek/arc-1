@@ -59,6 +59,8 @@ describe('multi-target tool surface', () => {
     expect(property(diagnose, 'action').enum).toEqual([
       'syntax',
       'explain_policy',
+      'feed_schema',
+      'activation_log',
       'unittest',
       'atc',
       'atc_variants',
@@ -92,6 +94,8 @@ describe('multi-target tool surface', () => {
     expect(property(diagnose, 'action').enum).toEqual([
       'syntax',
       'explain_policy',
+      'feed_schema',
+      'activation_log',
       'unittest',
       'atc',
       'atc_variants',

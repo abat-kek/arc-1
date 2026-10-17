@@ -23,7 +23,9 @@ containing these changes; the 1.6.0 release does not include them.
 Use 1–20 distinct CLAS, PROG, INTF or DDLS objects (PROG is unavailable on BTP). The compatibility
 route `SAPDiagnose(action="syntax", objects=[...])` returns the same evidence. Omit `name`,
 `objectType`/`type` and `source` when using a batch; it checks stored active or inactive source.
-Single-object checks, including unsaved source, keep their existing behavior.
+Single-object checks, including unsaved source, remain available. An empty native
+`checkRunReports` envelope now reports `checked: false`; it cannot establish a clean check.
+The older message-only response format remains supported.
 
 | Result | Meaning |
 |---|---|

@@ -269,6 +269,28 @@ describe('DevTools', () => {
       expect(result.messages).toHaveLength(0);
     });
 
+    it.each(['<checkRunReports/>', '<checkRunReports></checkRunReports>'])(
+      'does not certify an empty native report: %s',
+      async (xml) => {
+        const result = await syntaxCheck(
+          mockHttp(xml),
+          unrestrictedSafetyConfig(),
+          '/sap/bc/adt/programs/programs/ZTEST',
+        );
+        expect(result.checked).toBe(false);
+        expect(result.statusText).toContain('no syntax-check report');
+      },
+    );
+
+    it('preserves the legacy message-only success shape', async () => {
+      const result = await syntaxCheck(
+        mockHttp('<checkMessages/>'),
+        unrestrictedSafetyConfig(),
+        '/sap/bc/adt/programs/programs/ZTEST',
+      );
+      expect(result.checked).toBe(true);
+    });
+
     it('reports checked:true for a processed report', async () => {
       const xml = `<?xml version="1.0" encoding="utf-8"?><chkrun:checkRunReports xmlns:chkrun="http://www.sap.com/adt/checkrun"><chkrun:checkReport chkrun:reporter="abapCheckRun" chkrun:status="processed" chkrun:statusText="Object ZTEST has been checked"/></chkrun:checkRunReports>`;
       const http = mockHttp(xml);

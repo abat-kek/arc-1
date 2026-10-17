@@ -84,7 +84,9 @@ export async function explainPolicy(
   checks.targetCeiling = {
     status: !config.targetId
       ? 'not-applicable'
-      : multiTargetInvocationDecision(tool, args, config) === 'allowed'
+      : (input.proposedTool !== 'SAP' ||
+            multiTargetInvocationDecision('SAP', { action: delegator }, config) === 'allowed') &&
+          multiTargetInvocationDecision(tool, args, config) === 'allowed'
         ? 'allowed'
         : 'denied',
   };

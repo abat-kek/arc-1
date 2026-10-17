@@ -15,9 +15,9 @@ decoding, with explicit limits on supported storage formats.
 
 ## Decision
 
-**Core ARC-1 must not run reports, run classes, call RFC directly, or use custom ABAP helpers as
-its implementation.** This covers built-in tools and their production request paths in the npm
-package and Docker image. General execution belongs in explicitly configured extensions.
+**General report/class execution, direct RFC calls, and custom ABAP helpers must stay out of
+core ARC-1.** This covers built-in tools and their production request paths in every distribution
+and deployment. General execution belongs in explicitly configured extensions.
 
 - Do not bundle, install, generate, or invoke ABAP helpers for core operations. This includes
   permanent add-ons, temporary classes/reports, dynamic ABAP, and custom RFC/ICF wrappers.
@@ -25,20 +25,21 @@ package and Docker image. General execution belongs in explicitly configured ext
 - Do not add built-in report-run, class-run, arbitrary ABAP, or RFC-call actions, even for existing
   SAP or customer objects. Calling a native ADT run endpoint or an HTTP wrapper does not make
   general execution acceptable in core. Direct RFC clients and generic function-module
-  dispatchers also belong outside core.
+  dispatchers also belong outside core. Starting or scheduling background/application jobs to
+  run reports or classes is also extension-only.
 - Use existing SAP APIs and TypeScript processing. Return an explicit unsupported result when
   necessary. Never fall back to create/run/delete ABAP or instruct a model to do so.
 - Keep custom execution in explicitly configured extensions with separate operator ownership.
-  The core extension API may provide guarded transport operations; no built-in feature may
-  silently load or depend on an extension to bypass this boundary.
+  The extension API may provide guarded execution primitives such as `ctx.run.classRun` and
+  `programRun`; no built-in feature may load or depend on an extension to bypass this boundary.
 
 ## Scope and permitted uses
 
 | Use | Boundary |
 | --- | --- |
-| User ABAP development | Read, generate, edit, and activate user deliverables under existing gates. Creating a class/report does not authorize core to run it. |
-| Native development operations | Dedicated syntax checks, ATC, and ABAP Unit keep their APIs and safety policies. SAP may execute ABAP/RFC internally; these workflows do not authorize a generic executor. |
-| Existing optional backends | Independently maintained services such as abapGit ADT remain capability-gated. ARC-1 does not install or maintain their SAP-side code. |
+| User ABAP development | Read, generate, edit, and activate user deliverables under existing gates. Creation grants no general execution permission; ABAP Unit test execution follows the row below. |
+| Native development operations | Workflows such as syntax checks, ATC, and ABAP Unit retain their APIs and gates. ABAP Unit executes the selected objects' tests declared harmless; this declaration is not a sandbox. Core features must not use tests to run helper logic. SAP may execute ABAP/RFC internally. |
+| Existing optional backends | Independently maintained services such as abapGit ADT remain capability-gated for their specific purpose (for example Git). ARC-1 does not install or maintain their SAP-side code. Services for report/class or RFC execution remain extension-only. |
 | Extensions | `ctx.run.classRun` / `programRun` require `SAP_ALLOW_PLUGIN_EXECUTE`, `SAP_ALLOW_WRITES`, a write-scoped tool, caller authorization, and SAP authorization. RFC integration belongs here too; this ADR adds no RFC API. See the [extension guide](../../docs_page/extensions.md#executing-abap-classes-and-reports). |
 | Tests and research | ABAP fixtures and authorized disposable test-system oracles are allowed with cleanup, outside production request paths. They cannot become runtime fallbacks. |
 

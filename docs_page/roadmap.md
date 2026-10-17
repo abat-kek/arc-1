@@ -846,8 +846,9 @@ layouts need separate API evidence; they cannot be inferred from ordinary table 
 fixtures for that profile or persistence route. Preserve exact keys, typed errors, current-user
 identity, data gates/blocklists, cumulative budgets, and content-redacted audit logs. Matching
 rereads are not a snapshot; opaque compressor trailers are not authenticated. Keep
-[#1000](https://github.com/arc-mcp/arc-1/issues/1000)'s broader companion-service option and FEAT-76's
-parameterized-service work separate. No RFC or dynamically executed ABAP fallback belongs in the reader
+[#1000](https://github.com/arc-mcp/arc-1/issues/1000)'s companion-service option extension-only,
+separate from this reader, alongside FEAT-76's parameterized-service work.
+No RFC or dynamically executed ABAP fallback belongs in the reader
 ([ADR-0009](https://github.com/arc-mcp/arc-1/blob/main/docs/adr/0009-abap-execution-and-rfc-belong-in-extensions.md)).
 
 <a id="feat-87"></a>

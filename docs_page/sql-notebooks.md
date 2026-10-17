@@ -3,7 +3,7 @@
 Save a repeatable investigation as Markdown and SQL cells, then explicitly run it through the
 configured ARC-1 connection. The runner uses SAPQuery's existing authorization, SQL policy and
 data limits. It adds no credentials or permissions. Available in builds containing this workflow;
-the published 1.5.2 package does not include it.
+the published 1.6.0 package does not include it.
 
 ## Import without executing
 

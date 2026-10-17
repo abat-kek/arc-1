@@ -7,8 +7,8 @@ deployment, SAP mutation or permission change is part of this work.
 ## Current baseline
 
 - Transport implementation: `f7598c33`; final documentation: `56c1d518` (PR #1008).
-- Main now includes `b10acb15` / #1006, the independent source-search fix. #1007 is still open.
-  Neither implements these stages. Release 1.6 remains PR #970; the package is still 1.5.2.
+- Main `041a9e48` includes #1006, #1007 and release #970. Version 1.6.0 was published on
+  October 17 at 11:21 UTC. These stages remain separate post-release drafts.
 - Reuse the reviewed workflow primitives by stacking the follow-up drafts on #1008. Recheck main
   and open PRs before each stage; avoid incidental changes to source search or legacy responses.
 - The original 67-file prototype in worktree `b945` is reference material only. Preserve its
@@ -65,8 +65,9 @@ separate from a current activation attempt. Prefer a small focused module for ea
 ## Progress
 
 - [x] Transport pilot: eight existing requests; Dictionary and non-source text scope prioritized.
-- [ ] Bounded historical investigation guided by those gaps.
-- [ ] Notebook runner, tests, docs, live run and independent review.
+- [x] Bounded historical investigation: no verified pair; keep adapters deferred (FEAT-86).
+  See diagnostic draft #1011 for the 15-request probe and exact stop condition.
+- [x] Notebook runner, tests, docs, live run and three independent review rounds (#1009).
 - [ ] Policy explanations, parity tests, docs, live read-only check and independent review.
 - [ ] Verified syntax/feed/DDIC diagnostics, tests, docs, live checks and independent review.
 - [ ] Final preservation check and links to all draft PRs and evidence.

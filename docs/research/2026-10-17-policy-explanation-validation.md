@@ -99,3 +99,8 @@ A quick exact-commit verification follows.
 The review also noted a pre-existing distinction: `SAP.read` denies the delegator route; a direct
 intent call needs an intent-level rule. The user guide now states this instead of expanding this
 PR into a tool-registration redesign.
+
+[Final Claude verification](adt-vscode-1.2/evidence/policy-claude-review-3.md) approved product
+`70388fa1`: 106 focused tests and source/test typechecks passed on Node 22.21.1. Its only optional
+note was moving the hyperfocused deny-rule explanation out of References; done in this documentation
+follow-up. No policy product changes followed that approval.

@@ -18,7 +18,7 @@ and dispatcher enforcement; it adds no authentication, SQL execution or permissi
 | Import / output guards | No client construction on import; explicit mappings, private new files, bounded UTF-8 input |
 | Cancellation | Real local HTTP stream closes after abort; remaining cell not executed |
 | Initial regression spike | Eight newly added cases failed before corrections; scalar metadata added two more fail-before cases |
-| Independent Claude GUI review | Opus 5.5 Max approved `ce1537fc`; follow-up fixes await final review |
+| Independent Claude GUI review | Three Opus 5.5 Max GUI rounds; final product `df8e642f` approved |
 
 The unconstrained full run hit two existing HTTP/shutdown timing failures; both affected files
 passed in isolation (35 tests), then the full suite passed with four workers. No unrelated test
@@ -89,3 +89,8 @@ found that the server byte-limit error is JSON, unlike the synthetic test input.
 recognizes that actual dispatcher shape. Two tests using real `handleToolCall` and error classes
 failed before the correction, then passed in both normal and minimal-error modes. The local byte
 limit and all four data-policy codes retain their distinct incomplete/blocked states.
+
+[Final Claude verification](adt-vscode-1.2/evidence/notebook-claude-review-3.md) approved exact
+product commit `df8e642f` with no actionable residual. It passed 52 focused tests and source/test
+typechecks on Node 22.21.1. Later changes only integrate the parent parser budget and record
+review/release documentation; notebook product code is unchanged.

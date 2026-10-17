@@ -6,8 +6,8 @@ Add `SAPDiagnose action=explain_policy` with `proposedTool` and `proposedArgs`. 
 operation on the already selected connection. No new permissions, target selection, user lookup,
 SQL execution, mutation or authorization probe. Stack on notebook draft #1009.
 
-Upstream recheck: main is `9aad13a1` (#1007 merged after #1006). Those independent legacy-response
-and source-search fixes do not implement this action. Release 1.6 remains draft #970. This stage
+Final upstream recheck: main is `041a9e48`, with #1006, #1007 and release 1.6.0 (#970). Those
+independent legacy-response and source-search fixes do not implement this action. This stage
 changes no HTTP/parser behavior; keep the stack based on the reviewed transport foundation.
 
 ## Plan review
@@ -43,5 +43,5 @@ execution guarantee. Every execution repeats all guards. Unknown state stays unr
 original b945 prototype remains untouched. FEAT-88 will narrow to any remaining useful gap after
 this action is validated; do not claim broad create/lineage/package preflight support.
 
-Implementation, local gates and four read-only live explanations passed; independent GUI review
-is pending. See [validation](../research/2026-10-17-policy-explanation-validation.md).
+Implementation, local gates and four read-only live explanations passed. Three independent GUI
+review rounds approved final product `70388fa1`; the optional documentation placement was corrected. See [validation](../research/2026-10-17-policy-explanation-validation.md).

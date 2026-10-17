@@ -705,6 +705,13 @@ SQL query or extra discovery probe is performed. Git capability remains unresolv
 operation-specific discovery check; a Git read therefore cannot receive an unconditional allowed
 result from this explanation.
 
+### Hyperfocused deny rules
+
+Use intent-level deny rules (for example `SAPRead.PROG`) when a denial must cover both standard
+and hyperfocused calls. A rule such as `SAP.read` applies to the delegator route only; a client
+that directly calls an intent tool is checked against that intent tool's rules. Policy explanations
+on a hyperfocused connection conservatively include the delegator layer.
+
 ## References
 
 - [Configuration Reference](configuration-reference.md) - every flag and env var
@@ -716,10 +723,3 @@ result from this explanation.
 - [Updating](updating.md) - migration from v0.6
 - [Cloud Foundry UAA: Session Management](https://docs.cloudfoundry.org/api/uaa/index.html#session-management) - `/logout.do` parameters and behavior
 - [SAP: Configure Redirect URLs for Browser Logout](https://help.sap.com/docs/btp/sap-business-technology-platform/configure-redirect-urls-for-browser-logout) - logout redirect allowlisting
-
-### Hyperfocused deny rules
-
-Use intent-level deny rules (for example `SAPRead.PROG`) when a denial must cover both standard
-and hyperfocused calls. A rule such as `SAP.read` applies to the delegator route only; a client
-that directly calls an intent tool is checked against that intent tool's rules. Policy explanations
-on a hyperfocused connection conservatively include the delegator layer.

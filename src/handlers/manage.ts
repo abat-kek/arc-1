@@ -26,12 +26,7 @@ import { getTransportInfo } from '../adt/transport.js';
 import { parseSearchResults } from '../adt/xml-parser.js';
 import type { CachingLayer } from '../cache/caching-layer.js';
 import type { ServerConfig } from '../server/types.js';
-import {
-  getCachedFeatures,
-  isPackagesEndpointAvailable,
-  setCachedDiscovery,
-  setCachedFeatures,
-} from './feature-cache.js';
+import { cacheFeatureEvidence, getCachedFeatures, isPackagesEndpointAvailable } from './feature-cache.js';
 import { functionModuleObjectUrl, inferObjectType, normalizeObjectType, objectUrlForType } from './object-types.js';
 import { errorResult, type ToolResult, textResult, toolJson } from './shared.js';
 import {
@@ -537,28 +532,9 @@ export async function handleSAPManage(
 
       const probed = await probeFeatures(client.http, featureConfig, config.systemType);
 
-      // In PP mode with a per-user client, auth-sensitive results (401/403 on any
-      // feature) must not poison the global cache — another user may have different
-      // authorizations.  Return the per-user result to the caller but keep the global
-      // cache unchanged. For requests using the shared/default client (for example,
-      // an API-key request), the probe uses the same credentials as startup, so
-      // updating the cache is safe and allows a manual probe to repair a failed startup.
-      // Apply the same auth-failure sanitization as the startup probe: in PP mode,
-      // shared-client 401/403 on textSearch must not hide source_code from users who
-      // might have authorization via per-user clients.
-      if (!isPerUserClient) {
-        if (config.ppEnabled && probed.textSearch && !probed.textSearch.available) {
-          const reason = probed.textSearch.reason ?? '';
-          if (reason.includes('authorization') || reason.includes('401') || reason.includes('403')) {
-            probed.textSearch = undefined;
-          }
-        }
-        setCachedFeatures(probed);
-        if (probed.discoveryMap) {
-          setCachedDiscovery(probed.discoveryMap);
-          client.http.setDiscoveryMap(probed.discoveryMap);
-        }
-      }
+      cacheFeatureEvidence(probed, !!isPerUserClient || config.ppEnabled);
+      const discoveryMap = getCachedFeatures()?.discoveryMap;
+      if (discoveryMap) client.http.setDiscoveryMap(discoveryMap);
       return textResult(toolJson(probed));
     }
 

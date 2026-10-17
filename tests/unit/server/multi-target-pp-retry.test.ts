@@ -18,7 +18,9 @@ const { AdtClient } = await import('../../../src/adt/client.js');
 const { AdtApiError } = await import('../../../src/adt/errors.js');
 const { AdtHttpClient } = await import('../../../src/adt/http.js');
 const { featuresOff } = await import('../handlers/handler-test-config.js');
-const { resetCachedFeatures, setCachedFeatures } = await import('../../../src/handlers/feature-cache.js');
+const { getCachedFeatures, resetCachedFeatures, setCachedFeatures } = await import(
+  '../../../src/handlers/feature-cache.js'
+);
 const { canonicalDestinationUrl, opaqueDestinationValue } = await import(
   '../../../src/server/destination-discovery.js'
 );
@@ -198,7 +200,7 @@ describe('multi-target principal-propagation retry', () => {
     });
   });
 
-  it('does not cache authorization-limited feature evidence across per-user PP calls', async () => {
+  it('retains successful backend evidence while leaving a PP authorization-limited feature unknown', async () => {
     const current = registry();
     const instanceConfig = DEFAULT_CONFIG;
     const aggregateConfig = buildAggregateToolSurfaceConfig(instanceConfig, current.targets);
@@ -231,6 +233,9 @@ describe('multi-target principal-propagation retry', () => {
 
     expect((await call(request, { authInfo: READ_AUTH })).isError).not.toBe(true);
     expect((await call(request, { authInfo: READ_AUTH })).isError).not.toBe(true);
-    expect(featureProbes).toBe(2);
+    expect(featureProbes).toBe(1);
+    expect(getCachedFeatures('A4H/100')?.hana).toBeUndefined();
+    expect(getCachedFeatures('A4H/100')?.authProbe).toBeUndefined();
+    expect(getCachedFeatures('A4H/100')?.rap?.available).toBe(true);
   });
 });

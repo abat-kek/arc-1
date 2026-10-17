@@ -16,7 +16,7 @@ import type { ResolvedFeatures } from '../adt/types.js';
 import { getCurrentContext } from '../server/context.js';
 
 interface FeatureStore {
-  features: ResolvedFeatures | undefined;
+  features: Partial<ResolvedFeatures> | undefined;
   discovery: Map<string, string[]>;
 }
 
@@ -42,13 +42,42 @@ export function resetCachedFeatures(): void {
 }
 
 /** Set cached features directly (probe result, or for testing BTP mode, etc.) */
-export function setCachedFeatures(features: ResolvedFeatures | undefined, destination?: string): void {
+export function setCachedFeatures(features: Partial<ResolvedFeatures> | undefined, destination?: string): void {
   storeFor(destination).features = features;
 }
 
 /** Get cached features (for tool definition adaptation) */
-export function getCachedFeatures(destination?: string): ResolvedFeatures | undefined {
+export function getCachedFeatures(destination?: string): Partial<ResolvedFeatures> | undefined {
   return storeFor(destination).features;
+}
+
+/** Share backend facts, not a caller's permissions. Missing fields remain unknown. */
+export function cacheFeatureEvidence(
+  features: Partial<ResolvedFeatures>,
+  perUser: boolean,
+  destination?: string,
+): void {
+  const evidence = { ...features };
+  const authFailure = /(authorization|auth failure|forbidden|\b401\b|\b403\b)/i;
+  for (const key of ['hana', 'abapGit', 'gcts', 'rap', 'amdp', 'ui5', 'transport', 'ui5repo', 'flp'] as const) {
+    const status = evidence[key];
+    if (
+      status?.mode === 'auto' &&
+      !status.available &&
+      (/network error|not probed|cannot determine/i.test(status.message ?? '') ||
+        (perUser && authFailure.test(status.message ?? '')))
+    )
+      delete evidence[key];
+  }
+  if (perUser) delete evidence.authProbe;
+  if (evidence.textSearch && !evidence.textSearch.available && !evidence.textSearch.unsupported)
+    delete evidence.textSearch;
+  if (!evidence.discoveryMap?.size) delete evidence.discoveryMap;
+  if (Object.values(evidence).some((value) => value !== undefined)) {
+    const store = storeFor(destination);
+    store.features = { ...store.features, ...evidence };
+    if (evidence.discoveryMap) store.discovery = evidence.discoveryMap;
+  }
 }
 
 /** Set validated ADT discovery capability hints (never object data or authorization results). */

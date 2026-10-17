@@ -907,7 +907,8 @@ export async function executeCliToolCall(
   try {
     const result = await runtime.deps.dispatchToolCall(
       direct.client,
-      config,
+      // IDE links are MCP presentation, never part of CLI source/JSON exports (including .env opt-in).
+      { ...config, ideLinks: 'off' },
       toolName,
       args,
       undefined,

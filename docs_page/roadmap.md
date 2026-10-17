@@ -1,6 +1,6 @@
 # ARC-1 Idea Roadmap
 
-**Last reviewed:** 2026-10-17
+**Last reviewed:** 2026-10-18
 
 This page is ARC-1's idea parking lot. It records worthwhile work that is **not implemented now** so
 it does not disappear, but it is not a delivery schedule and it does not answer "what should we do
@@ -75,6 +75,8 @@ sequence.
 | [COMPAT-16](#compat-16) | API-release directory cleanup | P2 | S | Needs research | Compatibility |
 | [COMPAT-17](#compat-17) | Package contents without filtered search | P2 | M | Needs research | Compatibility |
 | [COMPAT-18](#compat-18) | Newly created program metadata on 7.50 | P2 | S | Needs research | Compatibility |
+| [COMPAT-19](#compat-19) | Per-client IDE destination mapping | P2 | M | Needs research | Compatibility |
+| [COMPAT-20](#compat-20) | Canonical ADT editor identity for AI edits | P2 | M | Needs research | Compatibility |
 | [COMPAT-10](#compat-10) | CDS set-operation lineage | P2 | M | Needs research | Compatibility |
 | [COMPAT-12](#compat-12) | Deletion with another user's text draft | P3 | S | Needs research | Compatibility |
 | [COMPAT-15](#compat-15) | Empty inactive text-pool recovery | P2 | M | Needs research | Compatibility |
@@ -362,6 +364,42 @@ source update and activation, so only its activation succeeded without recovery.
 **Resume with.** Verify source persistence and default/active/inactive metadata across releases;
 trace the SAP response before changing package resolution. Preserve fail-closed package checks. Unique E2E
 fixtures avoid the pre-delete, but do not fix this runtime gap; do not add a skip for it.
+
+<a id="compat-19"></a>
+### COMPAT-19 — Per-client IDE destination mapping
+
+- **Priority / effort / status:** P2 / M / Needs research
+- **Category:** Compatibility
+
+**Remaining gap.** Native ADT 1.2 source links work with one explicit local destination alias over
+stdio. Shared HTTP/BTP and multi-target callers need a per-client mapping from an authorized target
+to their own IDE alias. A workspace root or client name does not prove that mapping. Older bridge
+links and auto-detection in closed [PR #676](https://github.com/arc-mcp/arc-1/pull/676) do not solve it.
+
+**Resume with.** First qualify client-side composition of ARC-1 object evidence with SAP
+`abap_object_get_file_uri`; its installed 1.2 implementation exists, but it was unavailable in the
+tested Copilot tool inventory. If core mapping is still needed, define a client-scoped contract
+that survives multiple workspaces, prevents cross-target confusion, and fails closed when
+ambiguous. Verify with two clients whose aliases differ. See the [native-link research](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-17-adt12-native-ide-links.md).
+
+<a id="compat-20"></a>
+### COMPAT-20 — Canonical ADT editor identity for AI edits
+
+- **Priority / effort / status:** P2 / M / Needs research
+- **Category:** Compatibility
+
+**Remaining gap.** ADT 1.2 opens qualified source through `abap:/flat/…`, but the same object can
+already have a dirty `repotree-v1` editor. Successful navigation does not establish buffer reuse,
+Keep/Undo, save, validation, transport assignment, or activation parity. The
+[ABAP Bridge](https://github.com/arc-mcp/arc1-abap-bridge) still supports validation and editable diffs.
+
+**Resume with.** Qualify the availability and returned URIs of SAP
+`abap_object_get_file_uri`/`abap_object_list_file_uris`, already found in the ADT 1.2 distribution.
+Test canonical editor identity and dirty-buffer reuse on disposable objects with unsaved edits.
+Qualify each edit/save operation separately before replacing
+the bridge workflow; keep navigation available independently. Evidence: the
+[ADT 1.2 research record](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-17-adt12-native-ide-links.md)
+and closed [PR #676](https://github.com/arc-mcp/arc-1/pull/676).
 
 <a id="sec-14"></a>
 ### SEC-14 — DNS rebinding and Host-header hardening

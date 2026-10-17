@@ -76,6 +76,20 @@ describe('parseArgs', () => {
     expect(() => parseArgs([])).toThrow(/ARC1_MULTI_TARGET_ENDPOINTS/);
   });
 
+  it('requires explicit, valid local IDE configuration and preserves CLI precedence', () => {
+    expect(parseArgs([]).ideLinks).toBe('off');
+    process.env.ARC1_IDE_LINKS = 'vscode';
+    expect(() => parseArgs([])).toThrow(/requires ARC1_IDE_DESTINATION/);
+    process.env.ARC1_IDE_DESTINATION = 'DEV 001';
+    expect(parseArgs([]).ideDestination).toBe('DEV 001');
+    expect(parseArgs(['--ide-destination', 'QA']).ideDestination).toBe('QA');
+    expect(parseArgs(['--ide-links', 'off']).ideLinks).toBe('off');
+    expect(() => parseArgs(['--ide-links', 'auto'])).toThrow(/must be off or vscode/);
+    expect(() => parseArgs(['--ide-destination', 'x?command=evil'])).toThrow(/local ADT alias/);
+    expect(() => parseArgs(['--ide-destination', 'DEV '])).toThrow(/local ADT alias/);
+    expect(() => parseArgs(['--transport', 'http-streamable'])).toThrow(/single-target local stdio/);
+  });
+
   it('parses CLI flags (--flag value)', () => {
     const config = parseArgs(['--url', 'http://sap:8000', '--user', 'admin', '--password', 'secret']);
     expect(config.url).toBe('http://sap:8000');

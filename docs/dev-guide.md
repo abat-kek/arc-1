@@ -38,6 +38,17 @@ Lives in [docs_page/configuration-reference.md](../docs_page/configuration-refer
 CLI flags, clamps, layer interactions — the user-facing reference is the single verbose source;
 duplicating it here proved to drift). The compact per-variable table stays in AGENTS.md.
 
+## Native VS Code source links
+
+Native VS Code source links: `src/server/ide-links.ts` appends a separate, bounded text block after
+successful research dispatch. `ARC1_IDE_LINKS=vscode` requires an explicit local ADT alias and local
+single-target stdio. Preserve original source/JSON, ignore arbitrary backend URIs, and avoid extra
+SAP requests. SAP's 1.2 handler opens flat AFF source filenames; namespaces use `(ns)name`.
+See [the contract and live checks](research/2026-10-17-adt12-native-ide-links.md) before expanding
+object types or claiming editor/save parity. `ide-config.ts` keeps alias validation independent of
+the handler import graph. Direct CLI calls explicitly disable decoration to preserve source/JSON
+exports. Tests: `server/ide-links`, `handlers/dispatch-ide-links`, and `cli/runtime`.
+
 ## Live relations verification
 
 From a repository checkout after `npm ci`:

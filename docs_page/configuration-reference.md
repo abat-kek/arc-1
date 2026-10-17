@@ -406,6 +406,19 @@ Optional pre-write validation layers and tool/schema selection.
 
 ---
 
+## IDE navigation
+
+Optional [native source links for SAP ADT for VS Code 1.2+](ide-integration.md). Single-target local
+stdio only; HTTP and multi-target deployments are excluded. These options affect presentation,
+not SAP connection selection or authorization.
+
+| Flag | Env var | Default | Effect |
+|---|---|---|---|
+| `--ide-links` | `ARC1_IDE_LINKS` | `off` | `vscode` appends up to eight current-source links in a separate text block after qualified research results. Existing source/JSON stays unchanged; no extra SAP requests. Other modes are rejected. |
+| `--ide-destination` | `ARC1_IDE_DESTINATION` | — | Exact local ADT connection alias for the same SAP system/client. Required with `vscode`; never inferred from SID or client roots. 1–128 letters/digits/spaces/`_`/`.`/`-`/parentheses, starting with a letter, digit or `_`, with no surrounding whitespace. |
+
+---
+
 ## Extensions (FEAT-61)
 
 Load your own `Custom_*` tools (the [extension framework](extensions.md)). Plugins are **trusted

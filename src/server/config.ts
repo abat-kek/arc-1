@@ -20,6 +20,7 @@ import { parseBlockedDataSourcesCsv } from '../adt/data-source-name.js';
 import type { SafetyConfig } from '../adt/safety.js';
 import { resolveSapUserAgent } from '../adt/user-agent.js';
 import { parseDenyActions, validateDenyActions } from './deny-actions.js';
+import { isIdeDestination } from './ide-config.js';
 import { logger } from './logger.js';
 import type {
   ConfigSource,
@@ -81,6 +82,8 @@ export const CLI_CONFIG_OPTION_SPECS: readonly CliConfigOptionSpec[] = [
   { name: 'max-http-request-bytes', valueName: 'bytes', description: 'MCP HTTP JSON body limit (1–16777216 bytes)' },
   { name: 'port', valueName: 'port', description: 'HTTP transport port override' },
   { name: 'server-name', valueName: 'name', description: 'MCP server name' },
+  { name: 'ide-links', valueName: 'mode', description: 'Local stdio source links: off or vscode (SAP ADT 1.2+)' },
+  { name: 'ide-destination', valueName: 'name', description: 'Exact local SAP ADT destination alias for source links' },
   { name: 'system-label', valueName: 'label', description: 'Connected-system label shown in MCP instructions' },
   {
     name: 'ui',
@@ -895,6 +898,13 @@ export function resolveConfig(args: string[]): { config: ServerConfig; sources: 
   // ── SAML Behavior ──────────────────────────────────────────────────
   config.disableSaml2 = resolveBool('disable-saml', 'SAP_DISABLE_SAML', false, 'disableSaml2');
 
+  const ideLinks = resolveStr('ide-links', 'ARC1_IDE_LINKS', 'off', 'ideLinks');
+  if (ideLinks !== 'off' && ideLinks !== 'vscode') {
+    throw new Error('ARC1_IDE_LINKS must be off or vscode.');
+  }
+  config.ideLinks = ideLinks;
+  config.ideDestination = resolveStr('ide-destination', 'ARC1_IDE_DESTINATION', '', 'ideDestination');
+
   // ── Tool Mode ──────────────────────────────────────────────────────
   const toolMode = resolveStr('tool-mode', 'ARC1_TOOL_MODE', 'standard', 'toolMode');
   config.toolMode = (toolMode === 'hyperfocused' ? 'hyperfocused' : 'standard') as ServerConfig['toolMode'];
@@ -1062,6 +1072,18 @@ export function parseArgs(args: string[]): ServerConfig {
  * Fails fast at startup for invalid or dangerous config combinations.
  */
 export function validateConfig(config: ServerConfig): void {
+  if (config.ideDestination && !isIdeDestination(config.ideDestination)) {
+    throw new Error(
+      'ARC1_IDE_DESTINATION must be a local ADT alias of 1–128 letters, digits, spaces, _, ., -, or parentheses; start with a letter, digit or _, with no surrounding whitespace.',
+    );
+  }
+  if (config.ideLinks === 'vscode') {
+    if (!config.ideDestination) throw new Error('ARC1_IDE_LINKS=vscode requires ARC1_IDE_DESTINATION.');
+    if (config.transport !== 'stdio' || config.multiTargetEndpoints) {
+      throw new Error('ARC1_IDE_LINKS=vscode supports single-target local stdio only.');
+    }
+  }
+
   if (config.multiTargetAuthorization !== 'standard' && config.multiTargetAuthorization !== 'xsuaa-attribute') {
     throw new Error('ARC1_MULTI_TARGET_AUTHORIZATION must be standard or xsuaa-attribute.');
   }

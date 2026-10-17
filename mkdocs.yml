@@ -81,6 +81,7 @@ nav:
       - Tools Reference: tools.md
       - Extensions (Custom Tools): extensions.md
       - MCP Usage Guide: mcp-usage.md
+      - Open Objects in VS Code: ide-integration.md
       - Skills: skills.md
       - More:
           - Blog Series: blog-series.md

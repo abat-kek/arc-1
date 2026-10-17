@@ -166,6 +166,11 @@ export interface ServerConfig {
   /** Hide SAP response details from client-facing tool errors while retaining server-side correlation data. */
   minimalErrors: boolean;
 
+  // --- IDE navigation (local stdio only) ---
+  ideLinks: 'off' | 'vscode';
+  /** Exact local SAP ADT destination alias; never inferred from client roots. */
+  ideDestination: string;
+
   // --- Tool Mode ---
   /** Tool mode: 'standard' (12 intent tools, SAPGit feature-gated) or 'hyperfocused' (1 universal SAP tool, ~200 tokens) */
   toolMode: 'standard' | 'hyperfocused';
@@ -310,6 +315,8 @@ export const DEFAULT_CONFIG: ServerConfig = {
   ppStrictExplicit: false,
   ppAllowSharedCookies: false,
   disableSaml2: false,
+  ideLinks: 'off',
+  ideDestination: '',
   toolMode: 'standard',
   schemaNullableOptionals: 'auto',
   plugins: [],

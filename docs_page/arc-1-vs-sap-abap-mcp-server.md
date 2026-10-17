@@ -13,8 +13,9 @@ with *ABAP Development Tools for VS Code* and *ADT for Eclipse*) so you can deci
 
 !!! info "How the facts here were sourced — public vs. snapshot"
     *Public guidance rechecked 2026-10-04 against SAP’s Marketplace listing, GA announcements, and
-    licensing documentation. The detailed tool and object inventories below retain the original
-    2026-06-16 observation; they are not a fresh test of the latest SAP server.*
+    licensing documentation. An installed ADT for VS Code 1.2.0 inspection on 2026-10-17 adds the
+    MCP read/search/resolve/edit capabilities noted below. The detailed June inventory remains
+    historical; this is not a fresh live test of every SAP tool.*
 
     - **Public / primary sources** (strongest): SAP's Marketplace listing, the **SAP Help "Model
       Context Protocol Tools"** page (toolset + per-tool *Joule License* column), SAP Help
@@ -48,7 +49,7 @@ ABAP / SQL · git · transports · dumps**, that is ARC-1's design center. Many 
 | **MCP clients** | Any — Claude, **Copilot Studio, automation/CI**, Cursor, CLI, JetBrains, web | Intended for local IDE agents; any local client *can* connect with URL+token |
 | **System reach** | Systems exposing the ADT REST endpoints a tool needs (on-prem→cloud) | **Connects to old & new** (ADT VS Code supports down to NW 7.3 EHP1 SP04); modern/RAP/AI need newer/cloud backends |
 | **Object types** | Classic **and** modern (PROG, FUGR, TABL, DOMA, DTEL, MSAG, ENHO… + CLAS, CDS, RAP) | 24 creatable types in the June snapshot (CLAS, INTF, CDS, RAP, FUGR, PROG, TABL…); see §8 for that snapshot’s omissions |
-| **Writes to SAP?** | Yes — create/update/delete + surgery + RAP scaffolding | **Yes — creates & generates objects** (`abap_creation-create_object`, `abap_generators-*`); editing existing source is done in the IDE editor |
+| **Writes to SAP?** | Yes — create/update/delete + surgery + RAP scaffolding | Yes — creation/generation, IDE editing, and an optional MCP edit-file tool in the inspected VS Code 1.2.0 distribution |
 | **Server-side AI** | None — uses *your* LLM (Claude/GPT/Gemini/…) | Optional **Joule** AI (model not publicly pinned) for the 2 ATC AI-fix tools — licensed |
 | **Cost** | Free (you pay only your infra + your LLM) | Extension has no additional purchase price; the documented ATC AI-fix tools require Joule entitlement. On-stack and side-by-side licensing differ (§12) |
 
@@ -270,12 +271,27 @@ determine today’s available tools. Consult [SAP Help](https://help.sap.com/doc
 
 **It does write** — `abap_creation-create_object` creates objects and `abap_generators-generate_objects`
 generates them (tables, CDS views, behavior definitions, service definitions/bindings, even an *OData UI
-Service from Scratch*). What it does **not** expose is an MCP tool to **edit the source of an existing
-object** — that is done in the IDE editor (the agent reads/edits through the editor + virtual workspace,
-not via an MCP tool). Other notable gaps in the documented set: **no source-read / search / where-used
-tool** (matters for non-IDE clients), and **no free SQL, git, transport release/delete, or runtime
-diagnostics (ST22 dumps, traces)**. On the tested backend the server exposed **only tools** (no MCP
+Service from Scratch*). The June set lacked source editing, source reading, search and where-used
+over MCP; those absences no longer describe the inspected VS Code 1.2.0 distribution below.
+Other June gaps were **free SQL, git, transport release/delete, and runtime diagnostics (ST22 dumps,
+traces)**; they are not freshly revalidated product-wide claims. On that tested backend the server exposed **only tools** (no MCP
 `resources`/`prompts`) — an observed snapshot.
+
+#### ADT for VS Code 1.2.0 update
+
+Bundled language-server classes in `com.sap.adt.tools.core_3.62.0.jar` identify
+`abap_object_get_file_uri`, `abap_object_list_file_uris`, `abap_object_read_file`, and
+`abap_object_edit_file`; `com.sap.adt.ris.search_3.62.0.jar` identifies
+`abap_repository_search_object` and `abap_repository_find_references`. These names were inspected
+in the installed server, not listed by the extension manifest. Edit-file exposure is off by default through
+`adt.mcpServer.enableEditFileToolForABAPObjects`; SAP notes possible conflicts with other edit tools.
+These are distribution observations, not a claim that every connected server exposes all tools.
+Trust the client's live tool list and SAP's configured destination/package restrictions.
+
+The new native VS Code URI handler allows [clickable ARC-1 source links](ide-integration.md).
+Client-side composition with SAP's canonical URI resolver may also replace the bridge's tree
+search. Native link opening was live-verified; the resolver itself was unavailable in the tested
+Copilot session. See [the evidence and limits](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-17-adt12-native-ide-links.md).
 
 ### 7.2 ARC-1's tools (12 intent tools)
 
@@ -299,20 +315,21 @@ user being authorized.
 
 ### 7.3 Capability matrix
 
-SAP MCP absences below describe the June inventory, not a verified absence from every later release. IDE features are labeled separately.
+The read/edit/search rows include the installed VS Code 1.2.0 update. Other SAP MCP absences describe
+the June inventory, not a verified absence from every later release. IDE features are labeled separately.
 
 | Capability | ARC-1 | SAP ABAP MCP Server |
 |---|:---:|:---:|
 | **Create objects** | ✅ | ✅ `create_object` |
 | **Generate objects** (RAP/CDS/Fiori service) | ⚠️ scaffolding + skills | ✅ native generator framework |
-| Edit existing source | ✅ incl. method/section surgery | ⚠️ via IDE editor + LS (no MCP edit-source tool) |
+| Edit existing source | ✅ incl. method/section surgery | IDE editor; optional MCP `abap_object_edit_file` in 1.2.0, off by default |
 | Activate | ✅ | ✅ |
 | Run ABAP Unit | ✅ | ✅ |
 | ATC run + results | ✅ | ✅ |
 | ATC **deterministic** quickfix | ✅ | ✅ |
 | ATC **AI** fix | ❌ (use your client LLM manually) | ✅ **Joule** — requires a licence |
-| Read source **over MCP** | ✅ `SAPRead` | ❌ not in the documented toolset (IDE editor reads instead) |
-| Search / where-used **over MCP** | ✅ | ❌ not in the documented toolset (roadmap item) |
+| Read source **over MCP** | ✅ `SAPRead` | `abap_object_read_file` in the inspected 1.2.0 distribution |
+| Search / where-used **over MCP** | ✅ | `abap_repository_search_object` / `abap_repository_find_references` in 1.2.0 |
 | Free SQL · table preview | ✅ (gated) | ❌ |
 | Git reads / gated abapGit workflows | ✅ (gCTS mutations quarantined) | ❌ |
 | Transport create / get / diff | ✅ | ✅ |
@@ -359,7 +376,8 @@ non-cloud backends is the **ABAP-Cloud-model** workflows (RAP/CDS/generators nee
     (lock object), TYPE (type group), DTEB (entity buffer), CHDO, NROB, NONT, RONT** plus the modern
     **DDLS, DDLX, DCLS, DRAS, DRTY, BDEF, SRVD, SRVB**. **Absent:** DOMA, DTEL, MSAG, SHLP, ENHO, XSLT,
     and all Dynpro/Web Dynpro. This is a **backend-driven snapshot**, not a product-wide guarantee — and
-    even where *create* is supported there is **no read/search** over MCP. ARC-1 supports the read/search path and the types listed in its [tool reference](tools.md);
+    the June snapshot also lacked read/search over MCP; ADT 1.2.0 now supplies those tools (§7.1).
+    ARC-1 supports the read/search path and the types listed in its [tool reference](tools.md);
     it does not cover every type absent from this snapshot.
 
 ---

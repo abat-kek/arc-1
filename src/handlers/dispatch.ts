@@ -36,6 +36,7 @@ import type { CachingLayer } from '../cache/caching-layer.js';
 import { type RegistryEntry, type ToolDispatchContext, ToolRegistry } from '../registry/tool-registry.js';
 import { sanitizeArgs } from '../server/audit.js';
 import { generateRequestId, getCurrentContext, requestContext } from '../server/context.js';
+import { appendIdeLinks } from '../server/ide-links.js';
 import { logger } from '../server/logger.js';
 import { type McpRateLimiter, resolveRateLimitUserKey } from '../server/mcp-rate-limit.js';
 import { formatClientInfo } from '../server/trace-context.js';
@@ -1024,6 +1025,7 @@ export async function handleToolCall(
 
         const guardedResult = postDispatchResult?.();
         if (guardedResult) result = guardedResult;
+        result = appendIdeLinks(result, toolName, args, config);
 
         const durationMs = Date.now() - start;
         const resultSize = result.content.reduce((bytes, item) => bytes + item.text.length, 0);

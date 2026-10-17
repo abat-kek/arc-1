@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
+import { DataSourcePolicyError } from '../../../src/adt/data-source-policy.js';
 import { errorResult, textResult } from '../../../src/handlers/shared.js';
 import { importAbapSql, renderNotebookRun, runNotebook } from '../../../src/workflows/sql-notebook.js';
 
@@ -224,4 +225,40 @@ describe('SQL notebook workflows', () => {
     expect(html).not.toContain('<img');
     expect(html).toContain('&lt;script&gt;');
   });
+});
+
+it.each([false, true])('labels real data-source policy refusals blocked, minimal=%s', async (minimal) => {
+  for (const code of [
+    'DATA_SOURCE_BLOCKED',
+    'DATA_POLICY_UNAVAILABLE',
+    'DATA_LINEAGE_UNRESOLVED',
+    'DATA_SQL_UNSUPPORTED',
+  ] as const) {
+    const refusal = new DataSourcePolicyError(code, 'ZTAB', [], 'Test policy refusal').clientMessage(minimal);
+    const run = await runNotebook(notebook, connection(vi.fn().mockResolvedValue(errorResult(refusal))));
+    expect(run.cells[0]?.status).toBe('blocked');
+  }
+});
+it.each([
+  errorResult('DATA_RESPONSE_TOO_LARGE: the configured byte allowance was exceeded.'),
+  textResult('x'.repeat(4 * 1024 * 1024 + 1)),
+])('keeps known response limits incomplete', async (reply) => {
+  const run = await runNotebook(notebook, connection(vi.fn().mockResolvedValue(reply)));
+  expect(run.cells[0]?.status).toBe('incomplete');
+});
+it('composes the five-minute deadline and stops subsequent queries', async () => {
+  const deadline = new AbortController();
+  const timeout = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(deadline.signal);
+  try {
+    const invoke = vi.fn(() => new Promise<ReturnType<typeof textResult>>(() => {}));
+    const pending = runNotebook({ ...notebook, cells: [cell, { ...cell, id: 'second' }] }, connection(invoke));
+    expect(timeout).toHaveBeenCalledWith(300_000);
+    expect(invoke).toHaveBeenCalledTimes(1);
+    deadline.abort();
+    const run = await pending;
+    expect(run.cells.map((c) => c.status)).toEqual(['incomplete', 'not-run']);
+    expect(invoke).toHaveBeenCalledTimes(1);
+  } finally {
+    timeout.mockRestore();
+  }
 });

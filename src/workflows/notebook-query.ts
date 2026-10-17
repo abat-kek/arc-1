@@ -9,6 +9,7 @@ const queryResult = z.object({
   rows: z.array(z.record(z.string(), z.string())).max(10_000),
   executedQueryString: z.string().optional(),
   queryExecutionTimeMs: z.number().nonnegative().optional(),
+  // Honor explicit incompleteness from compatible adapters; current SAPQuery emits row counts.
   truncated: z.boolean().optional(),
   complete: z.boolean().optional(),
 });

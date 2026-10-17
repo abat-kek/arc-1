@@ -1,5 +1,5 @@
 import { constants } from 'node:fs';
-import { open, writeFile } from 'node:fs/promises';
+import { open, rmdir, writeFile } from 'node:fs/promises';
 import type { Command } from 'commander';
 import type { CliRuntime } from '../cli.js';
 import type { ToolInvoker } from './artifact.js';
@@ -36,7 +36,10 @@ export function registerNotebookCommands(program: Command, runtime: CliRuntime, 
     .requiredOption('--out <file>', 'New notebook JSON file')
     .action(async (file: string, opts: { destination: string; target: string; out: string }) => {
       const imported = importAbapSql(await readDocument(file), { [opts.destination]: opts.target });
-      await writeFile(opts.out, `${JSON.stringify(imported, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+      const output = `${JSON.stringify(imported, null, 2)}\n`;
+      if (Buffer.byteLength(output) > MAX_NOTEBOOK_BYTES)
+        throw new Error('Formatted notebook exceeds the 1-MiB runner input limit.');
+      await writeFile(opts.out, output, { flag: 'wx', mode: 0o600 });
       console.log(`Imported ${opts.out}; no SQL executed.`);
     });
   notebook
@@ -53,7 +56,11 @@ export function registerNotebookCommands(program: Command, runtime: CliRuntime, 
         input,
         { [opts.target]: { identity, client: config.client, call } },
         { includeResults: opts.includeResults },
-      );
+      ).catch(async (error: unknown) => {
+        // Remove only our empty reservation. Never delete files if another process populated it.
+        await rmdir(opts.outputDir).catch(() => undefined);
+        throw error;
+      });
       await saveWorkflowArtifact(opts.outputDir, result, renderNotebookRun(result));
       if (result.status !== 'success') runtime.state.exitCode = 1;
     });

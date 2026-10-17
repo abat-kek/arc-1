@@ -18,7 +18,7 @@ and dispatcher enforcement; it adds no authentication, SQL execution or permissi
 | Import / output guards | No client construction on import; explicit mappings, private new files, bounded UTF-8 input |
 | Cancellation | Real local HTTP stream closes after abort; remaining cell not executed |
 | Initial regression spike | Eight newly added cases failed before corrections; scalar metadata added two more fail-before cases |
-| Independent Claude GUI review | Pending exact-commit review |
+| Independent Claude GUI review | Opus 5.5 Max approved `ce1537fc`; follow-up fixes await final review |
 
 The unconstrained full run hit two existing HTTP/shutdown timing failures; both affected files
 passed in isolation (35 tests), then the full suite passed with four workers. No unrelated test
@@ -58,3 +58,26 @@ This is a sequential observation, not an atomic data snapshot. The live notebook
 malformed replies, export limits, unsafe HTML, mappings and denied-operation behavior also have
 local regression coverage. HTML is statically checked; no rendered browser inspection was made.
 No human preparation-time or customer usefulness measurement is claimed.
+
+## Independent review follow-up
+
+[Unedited Claude report](adt-vscode-1.2/evidence/notebook-claude-review-1.md) reviews the initial
+commit against transport base `56c1d518`. The reviewer independently passed all 8,968 tests.
+
+| Finding | Response |
+|---|---|
+| F1: data policy refusals labeled error | Recognize the four stable policy codes in normal and minimal errors; report blocked |
+| F2: empty reserved directory survives invalid input | Remove only our empty reservation on failure; preserve any files |
+| F3: imported output can exceed input limit | Check compact and formatted output before writing |
+| F4: non-scalar count ambiguity | Keep conservative status; explain aggregate/DISTINCT limitation |
+| F5: response limit labeled error | Known server/local byte limits now report incomplete |
+| F6: cancellation boundary coverage | Exercise actual dispatcher and streaming socket; test five-minute deadline composition |
+| F7: small evidence/documentation nits | No execution timestamps for not-run cells; document reserved keys and optional flags |
+| F8: bounded parser cost | No extra abstraction; retain existing 64-Ki-character bound |
+
+Seven regression cases failed before the corresponding fixes (three CLI cases and four status
+cases). Focused workflow/CLI checks then passed 74 tests across nine files. The earlier live
+evidence belongs to its recorded source hashes; these follow-ups change validation and reporting.
+
+Follow-up full suite: **8,976 tests / 319 files passed**, with typecheck, build, Biome, policy,
+file/schema budgets and strict documentation build all passing. No schema budget was increased.

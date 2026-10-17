@@ -2,7 +2,8 @@ import { createServer } from 'node:http';
 import { expect, it } from 'vitest';
 import { AdtClient } from '../../../src/adt/client.js';
 import { defaultSafetyConfig } from '../../../src/adt/safety.js';
-import { textResult } from '../../../src/handlers/shared.js';
+import { handleToolCall } from '../../../src/handlers/dispatch.js';
+import { DEFAULT_CONFIG } from '../../../src/server/types.js';
 import { runNotebook } from '../../../src/workflows/sql-notebook.js';
 
 it('aborts an in-flight SAPQuery socket and never starts the next cell', async () => {
@@ -39,8 +40,7 @@ it('aborts an in-flight SAPQuery socket and never starts the next cell', async (
         dev: {
           identity: 'loopback',
           client: '001',
-          call: async (_tool, args) =>
-            textResult(JSON.stringify(await client.runQueryWithMetrics(String(args.sql), Number(args.maxRows)))),
+          call: (tool, args) => handleToolCall(client, { ...DEFAULT_CONFIG, allowFreeSQL: true }, tool, args),
         },
       },
       { signal: abort.signal },
@@ -49,6 +49,8 @@ it('aborts an in-flight SAPQuery socket and never starts the next cell', async (
     expect(posts).toBe(1);
     expect(run.cells.map((cell) => cell.status)).toEqual(['incomplete', 'not-run']);
     expect(run.status).toBe('partial');
+    expect(run.cells[1]?.startedAt).toBeUndefined();
+    expect(run.cells[1]?.elapsedMs).toBeUndefined();
   } finally {
     server.closeAllConnections();
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));

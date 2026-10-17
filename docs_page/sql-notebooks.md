@@ -14,8 +14,9 @@ arc1-cli notebook import Flight_Capacity_Showcase.abapsql \
 
 This adapts the observed ADT for VS Code 1.2 format. It creates a document and makes no SAP calls.
 The editor destination is a label, not a permission grant. Unknown fields remain under `imported`
-as inert metadata; a source field named `assertion` cannot become an executable ARC-1 check.
-The same source produces stable cell IDs. Existing output files are refused.
+as inert metadata (reserved JavaScript structural keys such as `__proto__` are omitted); a source field named `assertion` cannot become an executable ARC-1 check.
+The same source produces stable cell IDs. Existing output files are refused. The formatted imported
+document must also fit the 1-MiB input limit; no oversized output file is written.
 
 ## Run explicitly
 
@@ -33,7 +34,8 @@ SQL/data policies and SAP authorization.
 
 Each run creates private `evidence.json` and `report.html` files in a new directory. Results are
 excluded by default, but SQL, expected values and error messages can still contain sensitive data.
-HTML displays escaped text and contains no scripts. Markdown source is shown as text.
+HTML displays escaped text and contains no scripts. Markdown source is shown as text. Validation
+failure removes only the empty directory reserved by this run, so corrected input can reuse the path.
 
 ## Document format
 
@@ -76,7 +78,8 @@ substitution, auto-run on import, stored connection credential or interactive ed
 | Run `success`, exit 0 | All executed detail cells and requested assertions succeeded |
 
 A full page without an authoritative total stays incomplete. Detail completeness describes the
-submitted query, not the entire table. Whole-data assertions use their own aggregate SELECT,
+submitted query, not the entire table. Grouped aggregates and DISTINCT detail queries can remain
+incomplete when SAP counts matching input records; only the proven scalar case below overrides that count. Whole-data assertions use their own aggregate SELECT,
 never the limited detail rows. Queries run sequentially and are not an atomic snapshot.
 
 Assertions accept one classic `SELECT COUNT/SUM/AVG/MIN/MAX( column ) AS alias FROM ...`

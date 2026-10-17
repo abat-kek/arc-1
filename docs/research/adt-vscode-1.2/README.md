@@ -16,8 +16,8 @@ This is the durable index for the research, including ideas we deliberately defe
 | Evidence | Revalidated state | Limit |
 |---|---|---|
 | SAP extension | Marketplace Version History refreshed on October 17: **1.2.0**, published October 16; installed `sapse.adt-vscode-1.2.0-darwin-arm64` | A client feature does not establish backend availability |
-| ARC-1 release | **v1.5.2**; [1.6 release PR #970](https://github.com/arc-mcp/arc-1/pull/970) still open | Main and deployed connectors are separate baselines |
-| ARC-1 main | `9aad13a1` (includes #1006 and #1007) | Recheck before each implementation slice |
+| ARC-1 release | **v1.6.0** published October 17 at 11:21 UTC; [release PR #970](https://github.com/arc-mcp/arc-1/pull/970) merged during this work | Main and deployed connectors are separate baselines |
+| ARC-1 main | `041a9e48` (includes #1006, #1007 and release #970) | Recheck before each implementation slice |
 | Original research | `9775645400fdb27f37aff486f14fe9845ecf8639`; 181 unit tests and eight synthetic observations | Observation probes are not assertions or live coverage |
 | Existing local prototype | `codex/post-1-6-review-workflows`; 67 uncommitted files preserved | Includes later stages; not shipped or included wholesale in the transport PR |
 | Live prototype evidence | A4H/001, SAP_BASIS 758 SP02, local CLI over HTTPS 443 | Does not prove 750, 816, BTP or the deployed connector |
@@ -159,7 +159,7 @@ and limits. Validation and independent-review results are recorded with its draf
 | Transport review | [Draft #1008](https://github.com/arc-mcp/arc-1/pull/1008) | Three independent Claude reviews; CI green; eight-request pilot |
 | SQL notebook | [Draft #1009](https://github.com/arc-mcp/arc-1/pull/1009) | Allowed/denied live run; exact scalar strings; review corrections and 8,976 tests |
 | Policy explanation | [Draft #1010](https://github.com/arc-mcp/arc-1/pull/1010) | Four live explanations; independent review corrections; no proposed execution |
-| Diagnostics | [Validation record](../../research/2026-10-17-verified-diagnostics.md) | Native syntax, typed feed filter and existing log reads on 758; parser/handler regressions |
+| Diagnostics | [Draft #1011](https://github.com/arc-mcp/arc-1/pull/1011) · [validation](../2026-10-17-verified-diagnostics.md) | Native syntax, typed feed filter and existing log reads on 758; parser/handler regressions |
 | Broader transport history | Research remains deferred | [Pilot follow-up](evidence/history-pilot-summary.json): no text history relation, current-only entries, one inaccessible archived domain revision |
 
 These are draft changes, not a released feature promise. Merge the stack in order after maintainer

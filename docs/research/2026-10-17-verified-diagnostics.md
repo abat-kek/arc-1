@@ -51,8 +51,7 @@ with existing A4H credentials and an explicit new private output directory.
 - PROG/CLAS text metadata advertised no history relation.
 - Pilot DOMA/DTEL/TABL/TTYP/FUGR histories contained only `00000` (current state).
 - The transport demo domain had one archived `00001` plus current `00000`; this does not supply
-  two archived payloads, and its one archived content request returned 403. The read-only probe
-  stopped without any authorization workaround. No family met the adapter's historical evidence requirement.
+  two archived payloads, and its one archived content request returned 403. The denied content was not retried or bypassed. No family met the adapter's historical evidence requirement.
 - An initial pass reused the product's narrow source allowlist, which correctly refused these
   unsupported families. The research probe now permits only a canonical advertised revision URL
   under the exact fixed fixture owner; production URL policy remains unchanged.
@@ -73,4 +72,16 @@ uses that exact source commit. The native readers remain below 150 lines each; o
 dump paginator's file budget grew by 20 lines. No tool wire/token budget increased.
 
 The history probe used 15 GET attempts, 30,985 successful response bytes and 2,434 ms, with no
-mutations or exhausted budget. It stopped after the denied archived-content response.
+mutations or exhausted budget. The denied content was not retried; remaining fixed fixtures contributed metadata only.
+
+## Post-1.6 upstream revalidation
+
+Release [v1.6.0](https://github.com/arc-mcp/arc-1/releases/tag/v1.6.0) was published at 11:21 UTC
+during this work. Main is `041a9e48`; #970 adds version/release documentation on top of #1007.
+The complete draft stack merges cleanly with it. An isolated combined-tree validation follows;
+no branch was rebased, force-pushed, merged to main or deployed.
+
+Self-review also reproduced acceptance of duplicate filter-schema containers and multiple attribute
+datatypes. The parser now rejects those ambiguous shapes; 42 focused parser/log/handler tests
+passed after the regression failed on the prior implementation. The recorded live source remains
+`5bc693b3`; the stricter parser replays the same captured 758 schema offline.

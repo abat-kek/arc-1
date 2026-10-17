@@ -2,7 +2,7 @@
 
 These reads help inspect existing objects without saving or activating them. All calls retain the
 current caller's scope, deny rules, target restrictions and SAP authorization. Available in builds
-containing these changes; the published 1.5.2 package does not include them.
+containing these changes; the 1.6.0 release does not include them.
 
 ## Check several objects
 

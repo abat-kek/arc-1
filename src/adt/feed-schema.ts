@@ -47,6 +47,8 @@ export function parseDumpFeedSchema(xml: string): DumpFeedSchema {
   const dataNodes = toRecordArray(entry.extendedData);
   if (dataNodes.length !== 1) throw new Error('Ambiguous dump filter metadata.');
   const data = dataNodes[0]!;
+  if (toRecordArray(data.operators).length !== 1 || toRecordArray(data.attributes).length !== 1)
+    throw new Error('Ambiguous dump filter schema containers.');
   const operators = findDeepNodes(data.operators, 'operator');
   if (
     !operators.length ||
@@ -58,14 +60,19 @@ export function parseDumpFeedSchema(xml: string): DumpFeedSchema {
     )
   )
     throw new Error('Invalid or ambiguous dump operators.');
-  const attributes = findDeepNodes(data.attributes, 'attribute').map((a) => ({
-    id: String(a['@_id'] ?? ''),
-    type: String(toRecordArray(a.dataType)[0]?.['@_id'] ?? ''),
-    operators: findDeepNodes(a.operators, 'operator').map((op) => {
-      const id = String(op['@_id'] ?? '');
-      return { id, operands: Number(operators.find((o) => o['@_id'] === id)?.['@_numberOfOperands']) };
-    }),
-  }));
+  const attributes = findDeepNodes(data.attributes, 'attribute').map((a) => {
+    const dataTypes = toRecordArray(a.dataType);
+    if (dataTypes.length !== 1 || toRecordArray(a.operators).length !== 1)
+      throw new Error('Ambiguous dump attribute metadata.');
+    return {
+      id: String(a['@_id'] ?? ''),
+      type: String(dataTypes[0]?.['@_id'] ?? ''),
+      operators: findDeepNodes(a.operators, 'operator').map((op) => {
+        const id = String(op['@_id'] ?? '');
+        return { id, operands: Number(operators.find((o) => o['@_id'] === id)?.['@_numberOfOperands']) };
+      }),
+    };
+  });
   if (attributes.length > 50 || !attributes.length) throw new Error('Unsupported dump attribute schema.');
   if (
     new Set(attributes.map((a) => a.id)).size !== attributes.length ||

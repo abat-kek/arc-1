@@ -141,3 +141,14 @@ it('keeps all message branches inside a recognized report', () => {
     messages: expect.arrayContaining([expect.objectContaining({ text: 'Error in second branch' })]),
   });
 });
+it('refuses duplicate schema containers and ambiguous attribute datatypes', () => {
+  const operators = feedXml.match(/<feed:operators>[\s\S]*?<\/feed:operators>/)![0];
+  const attributes = feedXml.match(/<feed:attributes>[\s\S]*?<\/feed:attributes>/)![0];
+  for (const container of [operators, attributes])
+    expect(() => parseDumpFeedSchema(feedXml.replace(container, container + container))).toThrow();
+  expect(() =>
+    parseDumpFeedSchema(
+      feedXml.replace('<feed:dataType id="string"/>', '<feed:dataType id="string"/><feed:dataType id="dateTime"/>'),
+    ),
+  ).toThrow();
+});

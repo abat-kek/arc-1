@@ -43,5 +43,10 @@ export async function loadRapAvailability(client: Client): Promise<true | undefi
   const result = await callTool(client, 'SAPManage', { action: 'probe' });
   const features = JSON.parse(expectToolSuccess(result));
   expect(typeof features.rap?.available).toBe('boolean');
+  if (!features.rap.available && features.rap.mode !== 'off') {
+    expect(features.rap.message, 'RAP probe failure must not become a capability skip').toContain(
+      'endpoint not found (404)',
+    );
+  }
   return features.rap.available ? true : undefined;
 }

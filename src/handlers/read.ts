@@ -883,6 +883,7 @@ export async function handleSAPRead(
       }
     }
     case 'SOBJ': {
+      // Mandatory data prerequisite is also explained in policy-explanation.ts (parity regression tests).
       const method = String(args.method ?? '');
       // Sanitize inputs to prevent SQL injection — BOR names are alphanumeric + underscore only
       const safeName = name.toUpperCase().replace(/[^A-Z0-9_/]/g, '');

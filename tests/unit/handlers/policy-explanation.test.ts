@@ -9,7 +9,7 @@ import { DEFAULT_CONFIG } from '../../../src/server/types.js';
 const auth = { token: 'test', clientId: 'test', scopes: ['read'] };
 const parse = (result: Awaited<ReturnType<typeof explainPolicy>>) => JSON.parse(result.content[0]!.text);
 describe('current caller policy explanations', () => {
-  it('reports scope and server denials independently, without trying a mutation', async () => {
+  it('reports scope denial without revealing later gates or trying a mutation', async () => {
     const client = new AdtClient({ safety: defaultSafetyConfig() });
     const post = vi.spyOn(client.http, 'post');
     const put = vi.spyOn(client.http, 'put');
@@ -23,7 +23,7 @@ describe('current caller policy explanations', () => {
     );
     expect(result).toMatchObject({
       decision: 'denied',
-      checks: { scope: { status: 'denied' }, serverCeiling: { status: 'denied' } },
+      checks: { scope: { status: 'denied' } },
     });
     expect(post).not.toHaveBeenCalled();
     expect(put).not.toHaveBeenCalled();
@@ -252,4 +252,69 @@ describe('dispatcher and uncertainty boundaries', () => {
   ])('rejects incomplete or irrelevant explanation inputs', (input) => {
     expect(SAPDiagnoseSchema.safeParse(input).success).toBe(false);
   });
+});
+
+describe('independent review regressions', () => {
+  it.each([
+    ['SAPRead', { type: 'SOBJ', name: 'BUS2032' }],
+    ['SAPNavigate', { action: 'hierarchy', name: 'ZCL_DEMO' }],
+  ] as const)('matches handler-level data refusal for %s', async (tool, args) => {
+    const client = new AdtClient({ safety: defaultSafetyConfig() });
+    const get = vi.spyOn(client.http, 'get');
+    const post = vi.spyOn(client.http, 'post');
+    const explained = parse(
+      await explainPolicy(client, DEFAULT_CONFIG, { proposedTool: tool, proposedArgs: args }, auth),
+    );
+    const executed = await handleToolCall(client, DEFAULT_CONFIG, tool, args, auth);
+    expect(executed.isError).toBe(true);
+    expect(explained.decision).toBe('denied');
+    expect(get).not.toHaveBeenCalled();
+    expect(post).not.toHaveBeenCalled();
+  });
+  it.each(['SAPRead', 'SAP'])('includes hyperfocused delegator denial for %s proposals', async (tool) => {
+    const client = new AdtClient({ safety: defaultSafetyConfig() });
+    const config = { ...DEFAULT_CONFIG, toolMode: 'hyperfocused' as const, denyActions: ['SAP.read'] };
+    const proposedArgs =
+      tool === 'SAP' ? { action: 'read', type: 'PROG', name: 'ZREPORT' } : { type: 'PROG', name: 'ZREPORT' };
+    const result = await handleToolCall(
+      client,
+      config,
+      'SAP',
+      { action: 'diagnose', params: { action: 'explain_policy', proposedTool: tool, proposedArgs } },
+      auth,
+    );
+    expect(result.isError).toBeUndefined();
+    expect(parse(result).decision).toBe('denied');
+  });
+  it('does not disclose later gates to an under-scoped caller', async () => {
+    const client = new AdtClient({ safety: unrestrictedSafetyConfig() });
+    const metadata = vi.spyOn(client, 'resolveObjectPackage');
+    const result = parse(
+      await explainPolicy(
+        client,
+        { ...DEFAULT_CONFIG, allowWrites: true, denyActions: ['SAPWrite.delete'] },
+        { proposedTool: 'SAPWrite', proposedArgs: { action: 'delete', type: 'PROG', name: 'ZREPORT' } },
+        auth,
+      ),
+    );
+    expect(result.decision).toBe('denied');
+    expect(result.checks).toEqual({ scope: { status: 'denied', note: 'Requires write.' } });
+    expect(metadata).not.toHaveBeenCalled();
+  });
+  it.each([{ allowFreeSQL: true }, { allowDataPreview: true }])(
+    'leaves allowed hierarchy lineage unresolved for %j',
+    async (flags) => {
+      const client = new AdtClient({ safety: { ...defaultSafetyConfig(), ...flags } });
+      const result = parse(
+        await explainPolicy(
+          client,
+          { ...DEFAULT_CONFIG, ...flags },
+          { proposedTool: 'SAPNavigate', proposedArgs: { action: 'hierarchy', name: 'ZCL_DEMO' } },
+          auth,
+        ),
+      );
+      expect(result.decision).toBe('unresolved');
+      expect(result.checks.dataSources.status).toBe('unresolved');
+    },
+  );
 });

@@ -53,7 +53,7 @@ export function importAbapSql(input: unknown, destinationMap: Record<string, str
     .passthrough()
     .parse(input);
   const { cells, ...imported } = source;
-  return notebookSchema.parse({
+  const document = notebookSchema.parse({
     schemaVersion: 1,
     title: 'Imported ABAP SQL notebook',
     imported,
@@ -77,6 +77,8 @@ export function importAbapSql(input: unknown, destinationMap: Record<string, str
       };
     }),
   });
+  assertNotebookSize(document);
+  return document;
 }
 
 export const MAX_NOTEBOOK_BYTES = 1024 * 1024;

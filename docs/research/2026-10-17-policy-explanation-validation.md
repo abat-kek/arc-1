@@ -67,3 +67,23 @@ Creation, structural ownership, hierarchy-dependent package rules and SQL lineag
 Cached feature evidence is not SAP authorization. All guards run again on execution. FEAT-88 now
 tracks only those remaining prerequisites, with repeated real troubleshooting cases as its resume
 trigger. No live PP, multi-target or other-release acceptance is claimed for this new action.
+
+## Independent review follow-up
+
+[Claude Opus 5.5 Max report](adt-vscode-1.2/evidence/policy-claude-review-1.md) requested three
+changes at `6a964ad5`. The reviewer independently passed 8,990 tests and all gates.
+
+| Finding | Resolution |
+|---|---|
+| M1: internal data prerequisites | SOBJ requires free SQL; class hierarchy requires free SQL or preview. Reuse the safety evaluator; retain unresolved lineage. Runtime scope policy is unchanged. |
+| M2: hyperfocused denials | Expand SAP proposals with the dispatcher helper; check delegator scope/deny before the concrete operation. Intent proposals also include that layer in hyperfocused mode. |
+| M3: disclosure before scope | Scope denial now returns immediately, omitting later policy checks and metadata reads. |
+| R1: configured versus effective ceiling | Retained for callers holding the proposed scope, as the agreed troubleshooting contract requires; under-scoped callers see neither. |
+| R2–R5 | Report unknown field names, document outer target and hyperfocused forms, add parity tests, explain unresolved Git capability. |
+
+Seven new tests failed before the fixes and all 29 policy tests then passed. Parent notebook review
+fixes were merged normally, preserving the published stack. No proposed operation was executed.
+
+After these corrections and the notebook parent update, **9,005 tests / 320 files passed**.
+Typecheck, build, Biome, policy, file/schema budgets and strict docs all passed. Final independent
+review is requested on the resulting commit; the earlier live evidence retains its original hashes.

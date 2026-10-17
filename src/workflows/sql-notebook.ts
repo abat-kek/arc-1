@@ -139,7 +139,6 @@ export async function runNotebook(
       logicalTarget: cell.target,
       client: connection.client,
       maxRows: cell.maxRows,
-      startedAt: new Date().toISOString(),
     };
     const start = Date.now();
     if (signal.aborted || stopped) {
@@ -147,6 +146,7 @@ export async function runNotebook(
       entry.note = limitNote;
     } else
       try {
+        entry.startedAt = new Date().toISOString();
         const data = await query(connection, cell.value, cell.maxRows);
         entry.status = data.complete ? 'success' : 'incomplete';
         entry.completeness = data.complete ? 'complete' : 'limited-or-unknown';
@@ -170,7 +170,7 @@ export async function runNotebook(
       } catch (error) {
         Object.assign(entry, failure(error));
       }
-    entry.elapsedMs = Date.now() - start;
+    if (entry.startedAt) entry.elapsedMs = Date.now() - start;
     if (cell.assertion) {
       const a = cell.assertion;
       const evidence: AssertionEvidence = {
@@ -234,7 +234,7 @@ export function renderNotebookRun(run: NotebookRun) {
             text: [
               `Target: ${cell.target} · client ${cell.client}`,
               `Rows: ${cell.rowsReturned ?? 'unavailable'} · ${cell.completeness ?? cell.status}`,
-              `Elapsed: ${cell.elapsedMs ?? 0} ms · SAP: ${cell.backendMs ?? 'unknown'} ms`,
+              `Elapsed: ${cell.elapsedMs ?? 'not run'}${cell.elapsedMs === undefined ? '' : ' ms'} · SAP: ${cell.backendMs ?? 'unknown'} ms`,
               cell.assertion ? `Aggregate assertion: ${cell.assertion.status}` : '',
               cell.note ?? '',
               '',

@@ -527,7 +527,7 @@ while increasing tool-result bytes. The production runner still checks objects i
 single-object routes. Review integration must preserve dispatcher policy, source reconciliation,
 unsupported-type handling and failure isolation. Do not add a hidden raw-HTTP path merely to avoid
 schema changes. Measure a real workflow before claiming latency/token savings.
-[Spike and limitations](https://github.com/arc-mcp/arc-1/blob/codex/verified-diagnostics/docs/research/2026-10-17-diagnostic-main-decision.md).
+[Spike and limitations](https://github.com/arc-mcp/arc-1/blob/7604606b8f69c50bfd2b760c6636a3e0f6286517/docs/research/2026-10-17-diagnostic-main-decision.md).
 
 <a id="feat-71"></a>
 ### FEAT-71 — Reliable saved-log interpretation
@@ -544,7 +544,7 @@ claimed that correlation despite explicit unknown time and absent correlation ev
 unavailable and unrelated logs. Keep latest-attempt attribution unavailable unless a native SAP
 correlation contract is independently established; qualify other releases and object types before
 expanding coverage. A follow-up Qwen 3.6 answer also mixed a failure verdict with non-correlation
-caveats. [Failed controls and evidence](https://github.com/arc-mcp/arc-1/blob/codex/verified-diagnostics/docs/research/2026-10-17-diagnostic-main-decision.md).
+caveats. [Failed controls and evidence](https://github.com/arc-mcp/arc-1/blob/7604606b8f69c50bfd2b760c6636a3e0f6286517/docs/research/2026-10-17-diagnostic-main-decision.md).
 
 <a id="feat-74"></a>
 ### FEAT-74 — Model-usable dump filters
@@ -561,7 +561,7 @@ are unqualified. These observations establish a useful extraction, not universal
 **Resume with.** Extract only bounded dump filtering, optional recovery discovery and its tests
 onto main. Cover runtime-error equality first, mixed days, invalid-operator recovery and existing
 unfiltered calls. Qualify claimed target support. Keep schema discovery optional and retain the
-earlier model failures as controls. [Evidence and extraction boundary](https://github.com/arc-mcp/arc-1/blob/codex/verified-diagnostics/docs/research/2026-10-17-diagnostic-main-decision.md).
+earlier model failures as controls. [Evidence and extraction boundary](https://github.com/arc-mcp/arc-1/blob/7604606b8f69c50bfd2b760c6636a3e0f6286517/docs/research/2026-10-17-diagnostic-main-decision.md).
 
 <a id="feat-89"></a>
 ### FEAT-89 — Validate the legacy dump user filter

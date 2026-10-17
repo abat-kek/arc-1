@@ -26,3 +26,11 @@ read-only calls, and refuses to create a dump when none exists. Never commit its
 The workflow spike initially loaded the HTTP module before the test mock. Its failed run was a
 harness import-order error; dynamic import fixed it. No source in `src/` changed. Keep synthetic
 and live results distinct: fixture assertions do not establish server latency or release coverage.
+
+## Independent review
+
+[Claude Code Opus 5.5 Max review](../diagnostics-review/claude-value-review-4.md) approved
+`7604606b` with no blockers and reproduced the offline spike. Its documentation nits are addressed:
+near-context-limit trials are disclosed, roadmap links use a commit permalink, and the report
+says "observed" value. The optional test-placement nit is accepted deliberately: the deterministic,
+offline spike also runs under `npm run test:eval`; it calls neither models nor SAP.

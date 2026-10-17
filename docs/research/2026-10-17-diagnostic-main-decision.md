@@ -47,6 +47,8 @@ through five tasks in both arms. Same full nine-tool catalog, prompts, temperatu
 32,768 requested context and 2,048 output-token limit. All ten finished within the fixed
 15-minute stop. The earlier 48 formal trials remain separate. Qwen 3 and 3.6 are related models;
 these are not independent statistical samples or proof of universal reliability.
+Three baseline trials (dump retrieval and both log tasks) reached the ≥90% context-limit flag.
+Silent prompt truncation cannot be ruled out for those trials; this further limits the comparison.
 The frozen baseline is the #1009 stack at `62eb17b4`, not current main. It already includes the
 pending transport/notebook work; neither #1016 nor #1019 changes its tool catalog. This isolates
 the #1011 additions on that stack and is not a direct whole-catalog main-versus-head benchmark.
@@ -122,5 +124,5 @@ qualification or broad operator coverage.
 No new product code or schema was changed by this follow-up. The research scripts/tests are
 reproducible; [evidence inventory](adt-vscode-1.2/evidence/diagnostic-followup/README.md) and
 [fixed plan](../plans/2026-10-17-diagnostic-followup-research.md) record scope and limitations.
-FEAT-74 now has demonstrated task value and an A4H positive match; FEAT-69 retains integration gaps;
+FEAT-74 now has observed task value and an A4H positive match; FEAT-69 retains integration gaps;
 FEAT-71 retains the failed uncertainty control. #1011 remains a draft source for those extractions.

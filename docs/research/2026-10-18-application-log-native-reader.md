@@ -56,7 +56,7 @@ numbers, malformed responses and oversized pages are refused. Next links are nev
   paging; the client deadline and returned row limit do not bound all SAP-side computation.
 - No standalone `/$count`: the inspected native count shortcut precedes the normal header check.
   No text search: native search can render the entire log despite paging.
-- Any configured table blocklist refuses the action before SAP access. The opaque service can use
+- Any configured table blocklist hides the action and refuses calls before SAP access. The opaque service can use
   exits/custom persistence, so its complete table lineage cannot be proven.
 - No cross-request cache, transactional snapshot, automatic details/long-text loading, log discovery,
   or BTP ABAP support. Message timestamp strings retain SAP's OData representation.

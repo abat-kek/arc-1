@@ -66,8 +66,8 @@ export async function readApplicationLog(client: AdtClient, input: ApplicationLo
   const scope = context?.dataResultScope ?? client.createDataResultScope();
   const timeout = AbortSignal.timeout(30_000);
   const signal = context?.signal ? AbortSignal.any([context.signal, timeout]) : timeout;
-  await scope.acquire(signal);
   try {
+    await scope.acquire(signal);
     async function get(path: string, parameters: Record<string, string>, maximum: number) {
       checkOperation(client.safety, OperationType.Query, 'ReadApplicationLog');
       const result = await client.http.get(
@@ -145,6 +145,14 @@ export async function readApplicationLog(client: AdtClient, input: ApplicationLo
       ...(more && nextOffset > 5_000 ? { limitReached: true } : {}),
       snapshotGuaranteed: false,
     };
+  } catch (error) {
+    if (signal.aborted)
+      throw new AdtError(
+        timeout.aborted
+          ? 'Application-log read exceeded its 30-second deadline. No partial result was returned. Inspect this log in SAP; smaller pages may still require SAP to load the whole log.'
+          : 'Application-log read was cancelled. No partial result was returned.',
+      );
+    throw error;
   } finally {
     if (!context?.dataResultScope) scope.release();
   }

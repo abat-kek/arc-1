@@ -138,4 +138,12 @@ describe('application_log authorization and dispatch', () => {
     expect(createQueryDefinition({ ...config, allowDataPreview: false })).toBeUndefined();
     expect(filterToolsByAuthScope([definition], ['read'])).toEqual([]);
   });
+  it('omits the action and its fields under any configured table blocklist', () => {
+    const definition = createQueryDefinition({ ...config, blockedDataSources: ['UNRELATED_TABLE'] })!;
+    expect(JSON.stringify(definition)).not.toMatch(/application_log|applicationLog|SLG1/);
+    expect(definition.inputSchema.required).toEqual(['action', 'longText']);
+    const sqlEnabled = createQueryDefinition({ ...config, allowFreeSQL: true, blockedDataSources: ['BALHDR'] })!;
+    expect(JSON.stringify(sqlEnabled)).not.toMatch(/application_log|applicationLog|SLG1/);
+    expect(sqlEnabled.inputSchema.required).toEqual([]);
+  });
 });

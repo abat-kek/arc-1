@@ -1046,6 +1046,9 @@ describe('Tool Definitions', () => {
       const tools = getToolDefinitions(onpremConfig);
       const sapQuery = tools.find((t) => t.name === 'SAPQuery')!;
 
+      expect(sapQuery.description).toContain('ABAP SQL SELECT');
+      expect(sapQuery.description).toContain('DD02L/DD03L/TADIR/TFDIR/SWOTLV');
+      expect(sapQuery.description).toContain('Long literal IN-lists auto-chunk in plain projection SELECTs');
       expect(sapQuery.description).toContain('alias~field');
       expect(sapQuery.description).toContain('alias~*');
       expect(sapQuery.description).toContain('ASCENDING/DESCENDING');

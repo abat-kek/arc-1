@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { readApplicationLog } from '../../../src/adt/application-log.js';
 import { AdtClient } from '../../../src/adt/client.js';
 import { AdtApiError } from '../../../src/adt/errors.js';
+import { throwIfRequestCancelled } from '../../../src/adt/http-deadline.js';
 import { defaultSafetyConfig } from '../../../src/adt/safety.js';
 import { redactAuditEvent, sanitizeArgs } from '../../../src/server/audit.js';
 import { requestContext } from '../../../src/server/context.js';
@@ -182,6 +183,49 @@ describe('native application-log reader', () => {
       expect(get.mock.calls[0]![2]?.signal?.aborted).toBe(true);
     });
     scope.release();
+  });
+  it.each(['overview', 'messages'])(
+    'reports the session deadline during %s without a connectivity hint',
+    async (phase) => {
+      const { client, get } = setup();
+      const controller = new AbortController();
+      vi.spyOn(AbortSignal, 'timeout').mockReturnValue(controller.signal);
+      get.mockReset();
+      if (phase === 'messages') get.mockResolvedValueOnce(response([overview]));
+      get.mockImplementationOnce(async (_path, _headers, options) => {
+        controller.abort();
+        throwIfRequestCancelled(options);
+        throw new Error('Expected the request deadline to stop the native call');
+      });
+      const { handleToolCall } = await import('../../../src/handlers/dispatch.js');
+      const { DEFAULT_CONFIG } = await import('../../../src/server/types.js');
+      const output = await handleToolCall(
+        client,
+        { ...DEFAULT_CONFIG, systemType: 'onprem', allowDataPreview: true },
+        'SAPQuery',
+        { action: 'application_log', applicationLog: { logNumber } },
+      );
+      expect(output.isError).toBe(true);
+      expect(output.content[0]?.text).toContain('30-second deadline');
+      expect(output.content[0]?.text).not.toMatch(/Cannot reach|connectivity|SYSTEM/);
+      expect(get).toHaveBeenCalledTimes(phase === 'messages' ? 2 : 1);
+    },
+  );
+  it('reports cancellation while awaiting admission and releases its owned scope', async () => {
+    const { client, get } = setup();
+    const controller = new AbortController();
+    const scope = client.createDataResultScope();
+    vi.spyOn(client, 'createDataResultScope').mockReturnValue(scope);
+    const release = vi.spyOn(scope, 'release');
+    vi.spyOn(scope, 'acquire').mockImplementation(async () => {
+      controller.abort();
+      throw new Error('admission aborted');
+    });
+    await requestContext.run({ requestId: 'cancelled-log', signal: controller.signal }, async () => {
+      await expect(readApplicationLog(client, { logNumber })).rejects.toThrow('read was cancelled');
+    });
+    expect(release).toHaveBeenCalledOnce();
+    expect(get).not.toHaveBeenCalled();
   });
 });
 

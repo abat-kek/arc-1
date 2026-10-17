@@ -6,10 +6,11 @@ import { LONG_TEXT_DESCRIPTION, LONG_TEXT_PROPERTY } from './long-text-input.js'
 import type { ToolDefinition } from './tools.js';
 
 const QUERY_SQL_DIALECT_GUIDE =
-  'Read-only SELECT: AS aliases, alias~field/alias~*, ASCENDING/DESCENDING; single-quoted literals (no @/:/?). maxRows, not TOP/LIMIT/OFFSET/FETCH. JOIN/GROUP BY/aggregates/UNION/subqueries; no CTE/FULL JOIN/derived/window tables/INTERSECT/EXCEPT/comments/semicolons/schema prefixes. ';
+  'Read-only ABAP SQL SELECT: AS aliases, alias~field/alias~*, ASCENDING/DESCENDING; single-quoted literals (no @/:/?). maxRows, not TOP/LIMIT/OFFSET/FETCH. JOIN/GROUP BY/aggregates/UNION/subqueries; no CTE/FULL JOIN/derived/window tables/INTERSECT/EXCEPT/comments/semicolons/schema prefixes. Long literal IN-lists auto-chunk in plain projection SELECTs. ';
 
 export const QUERY_SQL_DESCRIPTION_ONPREM =
-  QUERY_SQL_DIALECT_GUIDE + 'Consumers: SAPContext(action="impact",type="DDLS"); avoid DDDDLSRC/ACMDCLSRC/DDLXSRC_SRC.';
+  QUERY_SQL_DIALECT_GUIDE +
+  'Metadata: DD02L/DD03L/TADIR/TFDIR/SWOTLV. Consumers: SAPContext(action="impact",type="DDLS"); avoid DDDDLSRC/ACMDCLSRC/DDLXSRC_SRC.';
 
 export const QUERY_SQL_DESCRIPTION_BTP =
   'Query BTP ABAP Environment with ABAP SQL; returns columns + rows. ' +
@@ -34,7 +35,12 @@ export function createQueryDefinition(
   const btp = config.systemType === 'btp' || resolvedFeatures?.systemType === 'btp';
   const sql = config.allowFreeSQL;
   const longText = config.allowDataPreview && !btp;
-  const actions = [...(sql ? ['sql'] : []), ...(longText ? ['long_text', 'application_log'] : [])];
+  const applicationLog = longText && config.blockedDataSources.length === 0;
+  const actions = [
+    ...(sql ? ['sql'] : []),
+    ...(longText ? ['long_text'] : []),
+    ...(applicationLog ? ['application_log'] : []),
+  ];
   if (actions.length === 0) return undefined;
   return {
     name: 'SAPQuery',
@@ -52,9 +58,10 @@ export function createQueryDefinition(
               },
             }
           : {}),
-        ...(longText ? { longText: LONG_TEXT_PROPERTY, applicationLog: APPLICATION_LOG_PROPERTY } : {}),
+        ...(longText ? { longText: LONG_TEXT_PROPERTY } : {}),
+        ...(applicationLog ? { applicationLog: APPLICATION_LOG_PROPERTY } : {}),
       },
-      required: sql ? (longText ? [] : ['sql']) : ['action'],
+      required: sql ? (longText ? [] : ['sql']) : applicationLog ? ['action'] : ['action', 'longText'],
       additionalProperties: false,
     },
   };

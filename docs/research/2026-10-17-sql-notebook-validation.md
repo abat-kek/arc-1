@@ -70,7 +70,7 @@ commit against transport base `56c1d518`. The reviewer independently passed all 
 | F2: empty reserved directory survives invalid input | Remove only our empty reservation on failure; preserve any files |
 | F3: imported output can exceed input limit | Check compact and formatted output before writing |
 | F4: non-scalar count ambiguity | Keep conservative status; explain aggregate/DISTINCT limitation |
-| F5: response limit labeled error | Known server/local byte limits now report incomplete |
+| F5: response limit labeled error | Local limit fixed initially; real server JSON reply corrected after review 2 (N1) |
 | F6: cancellation boundary coverage | Exercise actual dispatcher and streaming socket; test five-minute deadline composition |
 | F7: small evidence/documentation nits | No execution timestamps for not-run cells; document reserved keys and optional flags |
 | F8: bounded parser cost | No extra abstraction; retain existing 64-Ki-character bound |
@@ -81,3 +81,11 @@ evidence belongs to its recorded source hashes; these follow-ups change validati
 
 Follow-up full suite: **8,976 tests / 319 files passed**, with typecheck, build, Biome, policy,
 file/schema budgets and strict documentation build all passing. No schema budget was increased.
+
+### Final notebook correction (N1)
+
+[Review 2](adt-vscode-1.2/evidence/notebook-claude-review-2.md) approved the other changes but
+found that the server byte-limit error is JSON, unlike the synthetic test input. The classifier now
+recognizes that actual dispatcher shape. Two tests using real `handleToolCall` and error classes
+failed before the correction, then passed in both normal and minimal-error modes. The local byte
+limit and all four data-policy codes retain their distinct incomplete/blocked states.

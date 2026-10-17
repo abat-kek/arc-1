@@ -28,7 +28,11 @@ beforeEach(() => {
 });
 it.each(['SAPRead', 'SAP'])('ignores an empty batch placeholder on an ordinary %s read', async (tool) => {
   const adt = client();
-  const getProgram = vi.spyOn(adt, 'getProgram').mockResolvedValue({ source: 'REPORT zdemo.' });
+  const getProgram = vi.spyOn(adt, 'getProgram').mockResolvedValue({
+    source: 'REPORT zdemo.',
+    notModified: false,
+    statusCode: 200,
+  });
   const params = { type: 'PROG', name: 'ZDEMO', version: 'active', objects: [] };
   const args = tool === 'SAPRead' ? params : { action: 'read', params };
   const result = await handleToolCall(adt, DEFAULT_CONFIG, tool, args, reader);

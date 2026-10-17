@@ -12,7 +12,7 @@
       "status": "failed",
       "rows": null,
       "checkedObjectCount": 4,
-      "sha256": "bc0d85bc3bb77572f2746f36e0b00b1616654b4f5ba9a93a5743d19bacd38267"
+      "sha256": "d8361b40d56420a59e955d50d49884d911340ce9a6bcb5a5dd12fd0a1f939a16"
     },
     {
       "case": "dumps-nonmatch",
@@ -26,42 +26,43 @@
       "status": "available",
       "rows": null,
       "checkedObjectCount": null,
-      "sha256": "7addffe9fefc913b99371a3c252a43453741ddde69994f473fb46180178f45a9"
+      "sha256": "e66b82e4db9f02f85e786d01f342463da3fdfaf0273971d115b3620fb545cf38"
     },
     {
       "case": "log-DOMA",
       "status": "available",
       "rows": null,
       "checkedObjectCount": null,
-      "sha256": "d7c0d84935d8e1d109a0e0f73c1eaa7abe17f63b27128c3e8745f7648bfc1c96"
+      "sha256": "5f41e8da1bd69c4fb2a0033fa40f43c663142e64924e09806f3036c6735831f5"
     },
     {
       "case": "log-DTEL",
       "status": "unsupported",
       "rows": null,
       "checkedObjectCount": null,
-      "sha256": "aefe4afa2658c98206ee09acb8c8cb95b52bcd6e4bceb858d362e09a7145ffcb"
+      "sha256": "a0a4d609dd2c3de360bf7352e7c43bfdec32c4689406cac1f2d8b01ba2f4ac49"
     },
     {
       "case": "log-TABL",
       "status": "unsupported",
       "rows": null,
       "checkedObjectCount": null,
-      "sha256": "0e3eb76fc8de815ff241e1125aea9b7d6d16b6daa6af2c2d69ba6fc152a7aac0"
+      "sha256": "84c4cb26e970ac80de9926a6734e0e51be12f23023c7ae6b0bb8546beec4af5b"
     },
     {
       "case": "read-batch-active",
       "status": "passed",
       "rows": null,
       "checkedObjectCount": 4,
-      "sha256": "ed5096e1cbba964528ebf968b13d8629177e0b0d4d3675eeb46aee707ee897bf"
+      "sha256": "444cf6910b7da25a78b3f2ca8487f77800dd2c25322df717f2269ee9d55333a6"
     }
   ],
-  "sourceTreeManifestSha256": "1d85f67fa1b249bd475a16e0bae74fa3f4f93777c546a1c1bf6b5df2a29f2319",
+  "sourceTreeManifestSha256": "958f174e67c167ee45f80c7bf81c6c74026b2c5c39b1bcf56722d1c2b0e1c219",
   "sourceHashes": {
     "src/adt/feed-schema.ts": "01c1bbb44767e81fdee6bd6616fbe6b1756e72eb9f8b80659e860d286309d91b",
-    "src/adt/ddic-activation-log.ts": "cee1322e0b9e770f6c4c502b47388373e986ef5a6f4947f8c304567130ad8caf",
-    "src/adt/syntax-batch.ts": "9a35eebd044ca9b61c24c8afacb354ed302a2df2c9d2c51943215900862b703c",
+    "src/adt/ddic-activation-log.ts": "74b1f7e0c3b1fd4817b3b8c2eb0aa4b18164737ec0a119f3f93bb47a7cc64274",
+    "src/adt/syntax-batch.ts": "8dcbd59db9bbc36b61cb59b2c007181e9bb35b32b0cc51c22484f377c7f925e5",
     "src/handlers/diagnostic-inputs.ts": "99cafa4dce5ba4cfb3440658619ed4260b4d0b4b1817b49c3f25e154ddad4d9b"
-  }
+  },
+  "sourceCommit": "5bc693b3305c9dc509e0ab33b164ac97f0fb6ba8"
 }

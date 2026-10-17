@@ -26,12 +26,12 @@ No SAP objects or persistent settings changed. The final dispatcher path produce
 
 | Check | Observed result | Elapsed |
 |---|---|---|
-| Four CLAS/PROG/INTF/DDLS active objects via SAPRead | Passed; three DDLS warnings retained | 1,604 ms |
-| Same stored inactive request via SAPDiagnose | Failed; native program error retained | 633 ms |
-| Dumps schema | Advertised attributes/operators parsed | 117 ms |
-| Explicit nonmatching error + datetime filter | Zero rows; no incident content collected | 229 ms |
-| Existing domain activation log | Available, nine entries, old timestamp, no attempt correlation | 139 ms |
-| Sampled DTEL and TABL | Unsupported: relation not advertised | 89 / 98 ms |
+| Four CLAS/PROG/INTF/DDLS active objects via SAPRead | Passed; three DDLS warnings retained | 1,581 ms |
+| Same stored inactive request via SAPDiagnose | Failed; native program error retained | 827 ms |
+| Dumps schema | Advertised attributes/operators parsed | 198 ms |
+| Explicit nonmatching error + datetime filter | Zero rows; no incident content collected | 216 ms |
+| Existing domain activation log | Available, nine entries, old timestamp, no attempt correlation | 218 ms |
+| Sampled DTEL and TABL | Unsupported: relation not advertised | 193 / 184 ms |
 
 A separate missing-program spike returned a native processed error about the REPORT statement,
 not a clean result. This is why the docs do not equate a processed report with object existence.
@@ -66,3 +66,11 @@ An initial full run found documentation/schema snapshot drift; the matching tabl
 were corrected. The next complete run passed **9,030 tests / 323 files**. A later nested-message
 regression failed before the parser fix and then passed with all 35 focused syntax/handler checks.
 Final parent integration and exact-commit Claude Opus 5.5 Max GUI review follow below.
+
+The integrated product at `5bc693b3` passed **9,046 tests / 323 files**. Typecheck, build, Biome,
+policy validation, schema/file budgets and strict docs passed. The final live dispatcher run above
+uses that exact source commit. The native readers remain below 150 lines each; only the existing
+dump paginator's file budget grew by 20 lines. No tool wire/token budget increased.
+
+The history probe used 15 GET attempts, 30,985 successful response bytes and 2,434 ms, with no
+mutations or exhausted budget. It stopped after the denied archived-content response.

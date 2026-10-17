@@ -40,18 +40,6 @@ export interface CompletionResult {
   complete: boolean;
 }
 
-/** Available object type from Where-Used scope discovery */
-export interface WhereUsedScopeEntry {
-  objectType: string;
-  objectTypeDescription: string;
-  count: number;
-}
-
-/** Where-Used scope — available object types and their counts */
-export interface WhereUsedScope {
-  entries: WhereUsedScopeEntry[];
-}
-
 /** Detailed Where-Used result with additional fields (line, snippet, package) */
 export interface WhereUsedResult {
   uri: string;
@@ -131,50 +119,6 @@ export async function findReferences(
     line: 0,
     column: 0,
   }));
-}
-
-/**
- * Get available object types for Where-Used analysis (scope discovery).
- *
- * Step 1 of the 2-step scope-based Where-Used API:
- * POST to .../usageReferences/scope with the object URI in the request body.
- * Returns available object types and their reference counts.
- */
-export async function getWhereUsedScope(
-  http: AdtHttpClient,
-  safety: SafetyConfig,
-  objectUrl: string,
-): Promise<WhereUsedScope> {
-  checkOperation(safety, OperationType.Intelligence, 'FindWhereUsed');
-
-  const body = [
-    '<?xml version="1.0" encoding="UTF-8"?>',
-    '<usageReferences:scopeRequest xmlns:usageReferences="http://www.sap.com/adt/ris/usageReferences">',
-    `  <usageReferences:objectReference uri="${escapeXmlAttr(objectUrl)}"/>`,
-    '</usageReferences:scopeRequest>',
-  ].join('\n');
-
-  const resp = await http.post(
-    '/sap/bc/adt/repository/informationsystem/usageReferences/scope',
-    body,
-    'application/xml',
-    { Accept: 'application/xml' },
-  );
-
-  const parsed = parseXml(resp.body);
-  const entries: WhereUsedScopeEntry[] = [];
-
-  // Scope response has objectType entries with type, description, and count
-  const scopeNodes = findDeepNodes(parsed, 'objectType');
-  for (const node of scopeNodes) {
-    entries.push({
-      objectType: String(node['@_type'] ?? node['@_name'] ?? ''),
-      objectTypeDescription: String(node['@_description'] ?? ''),
-      count: Number(node['@_count'] ?? node['@_numberOfResults'] ?? 0),
-    });
-  }
-
-  return { entries };
 }
 
 /**

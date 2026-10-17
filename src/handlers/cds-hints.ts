@@ -8,7 +8,7 @@
 
 import { type CdsImpactDownstream, classifyCdsImpact } from '../adt/cds-impact.js';
 import type { AdtClient } from '../adt/client.js';
-import { findWhereUsed, getWhereUsedScope, type WhereUsedResult } from '../adt/codeintel.js';
+import { findWhereUsed, type WhereUsedResult } from '../adt/codeintel.js';
 import { AdtApiError } from '../adt/errors.js';
 import type { ResolvedFeatures } from '../adt/types.js';
 import { normalizeObjectType } from './object-types.js';
@@ -70,21 +70,6 @@ interface CdsOrderedObject {
 }
 
 const CDS_ORDERABLE_TYPES = new Set(['DDLS', 'DCLS', 'DDLX', 'BDEF', 'SRVD', 'SRVB']);
-const CDS_IMPACT_WHERE_USED_TYPES = new Set([
-  'DDLS',
-  'DCLS',
-  'DDLX',
-  'BDEF',
-  'SRVD',
-  'SRVB',
-  'CLAS',
-  'INTF',
-  'PROG',
-  'FUGR',
-  'TABL',
-  'SKTD',
-]);
-
 function formatCdsImpactBuckets(downstream: CdsImpactDownstream, maxNames = 4): string[] {
   const lines: string[] = [];
 
@@ -185,51 +170,10 @@ function dedupeWhereUsedResults(results: readonly WhereUsedResult[]): WhereUsedR
   return deduped;
 }
 
-function isCdsImpactWhereUsedType(objectType: string): boolean {
-  return CDS_IMPACT_WHERE_USED_TYPES.has(mainObjectType(objectType));
-}
-
-async function loadScopedCdsWhereUsedResults(client: AdtClient, objectUrl: string): Promise<WhereUsedResult[]> {
-  try {
-    const scope = await getWhereUsedScope(client.http, client.safety, objectUrl);
-    const scopedTypes = Array.from(
-      new Set(
-        scope.entries
-          .filter((entry) => entry.count > 0 && isCdsImpactWhereUsedType(entry.objectType))
-          .map((entry) => entry.objectType),
-      ),
-    );
-    const scopedResults: WhereUsedResult[] = [];
-
-    for (const objectType of scopedTypes) {
-      try {
-        scopedResults.push(...(await findWhereUsed(client.http, client.safety, objectUrl, objectType)));
-      } catch {
-        // Scoped results only enrich guidance; one unsupported filter must not
-        // make the write/delete/activate path fail.
-      }
-    }
-
-    return scopedResults;
-  } catch (err) {
-    if (err instanceof AdtApiError && [404, 405, 415, 501].includes(err.statusCode)) {
-      return [];
-    }
-    // Where-used enrichment is advisory; the original write/delete/activate
-    // result should not fail just because a scoped lookup is unavailable.
-    return [];
-  }
-}
-
 async function loadCdsImpactDownstream(client: AdtClient, objectUrl: string): Promise<CdsImpactDownstream | undefined> {
   try {
     const whereUsed = await findWhereUsed(client.http, client.safety, objectUrl);
-    // Some SAP releases return a shallow/default result set for unfiltered
-    // usageReferences. Scope + object-type filters usually expose the full
-    // bucket fan-out, which is exactly what CRUD guidance needs.
-    const scopedWhereUsed = await loadScopedCdsWhereUsedResults(client, objectUrl);
-    const combinedWhereUsed = dedupeWhereUsedResults([...whereUsed, ...scopedWhereUsed]);
-    return classifyCdsImpact(combinedWhereUsed, { includeIndirect: true });
+    return classifyCdsImpact(dedupeWhereUsedResults(whereUsed), { includeIndirect: true });
   } catch (err) {
     if (err instanceof AdtApiError && [404, 405, 415, 501].includes(err.statusCode)) {
       return undefined;

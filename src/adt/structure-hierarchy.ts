@@ -1,5 +1,5 @@
 import type { AdtClient, SourceReadOptions, SourceReadResult } from './client.js';
-import { findWhereUsed, getWhereUsedScope, type WhereUsedResult } from './codeintel.js';
+import { findWhereUsed, type WhereUsedResult } from './codeintel.js';
 import { AdtApiError, isNotFoundError } from './errors.js';
 
 export type StructureNodeKind = 'root' | 'include' | 'append';
@@ -178,38 +178,12 @@ async function findExtensionRefs(
     }
   };
 
-  let scopedTypes: string[];
-  try {
-    const scope = await getWhereUsedScope(client.http, client.safety, baseObjectUrl);
-    scopedTypes = Array.from(
-      new Set(
-        scope.entries
-          .filter((entry) => entry.count > 0 && /^TABL\//i.test(entry.objectType))
-          .map((entry) => entry.objectType),
-      ),
-    );
-    for (const objectType of scopedTypes) {
-      try {
-        collectCandidates(await findWhereUsed(client.http, client.safety, baseObjectUrl, objectType));
-      } catch (err) {
-        if (isUnavailableWhereUsedError(err)) continue;
-        throw err;
-      }
-    }
-  } catch (err) {
-    if (!isUnavailableWhereUsedError(err)) throw err;
-    warnings.push(
-      `Where-used scope endpoint unavailable for ${baseName}; append structure discovery may be incomplete.`,
-    );
-    disableAppendDiscovery();
-    return [];
-  }
-
   try {
     collectCandidates(await findWhereUsed(client.http, client.safety, baseObjectUrl));
   } catch (err) {
     if (isUnavailableWhereUsedError(err)) {
       warnings.push(`Where-used endpoint unavailable for ${baseName}; append structures were not resolved.`);
+      disableAppendDiscovery();
     } else {
       throw err;
     }

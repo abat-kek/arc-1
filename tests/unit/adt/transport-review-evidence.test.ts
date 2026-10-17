@@ -116,6 +116,11 @@ describe('transport review evidence regressions', () => {
     const pair = selectTransportRevisionPair(feed, ids, 'released');
     expect(baselineStatusFor(pair, feed)).toBe('baseline-ambiguous');
   });
+  it('does not certify the selected snapshot when a newer same-request version has no date', () => {
+    const feed = [rev('00002', request), rev('00001', 'OTHER', '2026-10-16'), rev('00003', request, '')];
+    const pair = selectTransportRevisionPair(feed, ids, 'released');
+    expect(baselineStatusFor(pair, feed)).toBe('baseline-ambiguous');
+  });
   it.each(['<feed><entry/></feed>', '<feed><entry>unexpected</entry></feed>'])(
     'rejects a malformed entry instead of silently reporting empty history: %s',
     (xml) => expect(() => parseRevisionFeed(xml)).toThrow(/unexpected/),

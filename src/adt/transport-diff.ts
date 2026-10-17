@@ -214,6 +214,9 @@ export function selectTransportRevisionPair(
   // after `current`, or a foreign snapshot numbered between the two, leaves chronology open.
   const [before, after] = [previous ? revisionNumber(previous) : '', revisionNumber(current)];
   const currentIsWorkState = WORK_STATE_VERSIONS.has(after);
+  const conflictingCurrent = sorted.some(
+    (r) => belongsToTransport(r) && revisionSourceState(r) === mode && revisionNumber(r) > after,
+  );
   const conflictingOrder =
     previous &&
     ((revisionSourceState(current) === 'released' && before >= after) ||
@@ -229,7 +232,7 @@ export function selectTransportRevisionPair(
     previous,
     selectionMethod,
     skipped,
-    ...(conflictingOrder ? { baselineAmbiguous: true } : {}),
+    ...(conflictingCurrent || conflictingOrder ? { baselineAmbiguous: true } : {}),
   };
 }
 

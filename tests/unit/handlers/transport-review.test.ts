@@ -148,3 +148,9 @@ it('keeps translation entries as inventory without reading object source', async
   expect(page.objects[0]).toMatchObject({ parts: [], inventoryReason: expect.stringContaining('LANG entry') });
   expect(client.getRevisions).not.toHaveBeenCalled();
 });
+it('keeps the refusal bounded when SAP returns oversized object metadata', async () => {
+  vi.mocked(getTransport).mockResolvedValue(transport(['Z'.repeat(70000)]));
+  const result = await run('alice', {});
+  expect(result.isError).toBe(true);
+  expect(Buffer.byteLength(result.content[0]!.text)).toBeLessThanOrEqual(64 * 1024);
+});

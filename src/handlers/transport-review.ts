@@ -16,7 +16,7 @@ export async function handleTransportReview(client: AdtClient, args: Record<stri
   if (!id) return errorResult('Transport ID is required for "diff" action.');
   const budget = new ReviewBudget();
   const transport = await budget.read((request) => getTransport(client.http, client.safety, id, request));
-  if (!transport) return errorResult(`Transport ${id} not found.`);
+  if (!transport) return errorResult(`Transport ${id.slice(0, 40)} not found.`);
   // TRSTATUS: R/N are released; D/L are modifiable. O/P are transitional.
   const mode = ['R', 'N'].includes(transport.status)
     ? 'released'
@@ -25,7 +25,7 @@ export async function handleTransportReview(client: AdtClient, args: Record<stri
       : undefined;
   if (!mode)
     return errorResult(
-      `Transport ${id} has status ${transport.status || 'unknown'}; a stable comparison state cannot be selected. Retry after release finishes or inspect the request in SAP.`,
+      `Transport ${id.slice(0, 40)} has status ${String(transport.status || 'unknown').slice(0, 16)}; a stable comparison state cannot be selected. Retry after release finishes or inspect the request in SAP.`,
     );
 
   const key = (o: { pgmid: string; type: string; name: string }) => `${o.pgmid}:${o.type}:${o.name}`.toUpperCase();
@@ -70,7 +70,7 @@ export async function handleTransportReview(client: AdtClient, args: Record<stri
       }
       if (!fits(diff))
         return errorResult(
-          `Review metadata for ${object.type} ${object.name} exceeds the output budget. Inspect this object in SAP.`,
+          'Review metadata for the first object exceeds the output budget. Inspect this object in SAP.',
         );
     }
     objects.push(diff);

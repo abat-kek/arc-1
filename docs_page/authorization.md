@@ -63,8 +63,8 @@ ARC-1's defaults keep the highest-risk data paths disabled. Two server flags map
 
 | Flag | Default | What it enables | Governance note |
 | ---- | ------- | --------------- | ----------------- |
-| `SAP_ALLOW_DATA_PREVIEW=true` | `false` (off) | `SAPRead(type=TABLE_CONTENTS)` — named table content preview | Can expose application-table data; keep off unless approved. |
-| `SAP_ALLOW_FREE_SQL=true` | `false` (off) | `SAPQuery` — freestyle ABAP SQL | Executes ad-hoc ABAP SQL; keep off unless approved. |
+| `SAP_ALLOW_DATA_PREVIEW=true` | `false` (off) | `SAPRead` table previews and `SAPQuery(action=long_text)` | Reads application data; requires `data` scope. |
+| `SAP_ALLOW_FREE_SQL=true` | `false` (off) | `SAPQuery(action=sql)` — freestyle ABAP SQL | Executes ad-hoc ABAP SQL; requires `sql` scope. |
 
 With both flags at their defaults, the data/sql rows in the capability matrix below are unreachable. Turning either flag on is a valid operational choice for approved scenarios, but it should be deliberate: check the current SAP API Policy, the customer's SAP agreement, SAP authorizations, and internal data-protection rules before enabling it on a productive system.
 
@@ -270,6 +270,7 @@ Use this table to answer: "what must be true before this action can run?" For HT
 | Read transport info | `read` | Nothing | `SAPTransport.list`, `get`, `diff`, `check`, `history` |
 | Read Git info | `read` | Nothing | `SAPGit.list_repos`, `history`, `objects`, etc. when Git feature exists |
 | Preview named table contents | `data` | `SAP_ALLOW_DATA_PREVIEW=true` | `sql` implies `data` |
+| Read saved SAPscript long texts | `data` | `SAP_ALLOW_DATA_PREVIEW=true` | `SAPQuery(action=long_text)`; free SQL is not required |
 | Authorization trace (`SUAUTHVALTRC`) | `data` | `SAP_ALLOW_DATA_PREVIEW=true` | `SAPDiagnose action=authorization_trace`; on-prem STUSERTRACE read only |
 | Run freestyle SQL | `sql` | `SAP_ALLOW_FREE_SQL=true` | High risk on productive systems |
 | Apply exact source blocklist (experimental) | Existing `data`/`sql` scope | `SAP_BLOCKED_DATA_SOURCES=...` | Further restricts all three data paths; cannot enable access, and unresolved lineage is denied |

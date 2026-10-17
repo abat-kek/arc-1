@@ -10,7 +10,7 @@
 
 ### SQL Query Limitations (SAPQuery)
 
-SAPQuery uses the ADT freestyle endpoint (`/sap/bc/adt/datapreview/freestyle`) with **ABAP SQL syntax**, not standard SQL.
+The SQL action of SAPQuery uses the ADT freestyle endpoint (`/sap/bc/adt/datapreview/freestyle`) with **ABAP SQL syntax**, not standard SQL.
 ABAP SQL as a language supports JOINs and subqueries, but the freestyle endpoint parser can still reject valid-looking SQL on some backend versions.
 
 | Feature | Status | Syntax |
@@ -65,13 +65,9 @@ SELECT carrid, COUNT(*) as cnt FROM sflight GROUP BY carrid ORDER BY cnt DESC
 | TEXT_ELEMENTS | **Y** | Program, class, or function-group text elements (`objectType`) |
 | VARIANTS | **Y** | Program variants |
 
-Saved SO10 and business-document SAPscript texts are a **SAPQuery action**, not a SAPRead object
-type: use `SAPQuery(action="long_text", longText=...)`. This is separate from `TEXT_ELEMENTS`,
-message-class texts, and form layouts. It requires `data` scope and `SAP_ALLOW_DATA_PREVIEW=true`;
-freestyle SQL remains a separate path requiring `sql` scope and `SAP_ALLOW_FREE_SQL=true`. Both
-are disabled by default. Discover by an object plus literal name prefix when the ID/language is
-unknown, then reuse returned exact keys. Ask for document-specific mappings you cannot identify;
-do not guess. See [the long-text contract and examples](tools.md#stored-sapscript-long-texts).
+For saved SO10 and business-document SAPscript texts, use `SAPQuery(action="long_text")`.
+It requires `SAP_ALLOW_DATA_PREVIEW=true` and `data` scope. See the
+[long-text examples and limits](tools.md#stored-sapscript-long-texts).
 
 ---
 
@@ -157,11 +153,7 @@ flowchart TD
 | Simple query | `SAPQuery` | `sql="SELECT * FROM t000"` |
 | Filtered query | `SAPQuery` | `sql="SELECT * FROM sflight WHERE carrid = 'LH'"` |
 | Aggregation | `SAPQuery` | `sql="SELECT carrid, COUNT(*) as cnt FROM sflight GROUP BY carrid ORDER BY cnt DESCENDING"` |
-
-For saved SAPscript long texts, call `SAPQuery(action="long_text", longText=...)`; do not put
-the text request in `sql`. This semantic action uses the data-preview gate and `data` scope, not
-the freestyle SQL gate/scope. The exact-key, discovery, batching, search, response, and scope
-contract is documented in [SAPQuery](tools.md#sapquery).
+| Saved SAPscript text | `SAPQuery` | `action="long_text", longText={mode:"read", keys:[...]}`; [examples](tools.md#stored-sapscript-long-texts) |
 
 ---
 

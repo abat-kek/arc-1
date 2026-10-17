@@ -106,8 +106,8 @@ Two ARC-1 capabilities can expose business data or execute ad-hoc SQL and requir
 
 | Capability | Env var | Default | Policy note |
 | ---------- | ------- | ------- | ----------- |
-| Named table content preview (`SAPRead(type=TABLE_CONTENTS)`) | `SAP_ALLOW_DATA_PREVIEW=true` | `false` (off) | Can expose application-table data; keep off unless the use case is approved. |
-| Freestyle ABAP SQL (`SAPQuery`) | `SAP_ALLOW_FREE_SQL=true` | `false` (off) | Executes ad-hoc ABAP SQL; keep off unless the use case is approved. |
+| Table previews and [saved SAPscript texts](tools.md#stored-sapscript-long-texts) | `SAP_ALLOW_DATA_PREVIEW=true` | `false` (off) | Reads application data; authenticated callers also need `data` scope. |
+| Freestyle ABAP SQL (`SAPQuery(action=sql)`) | `SAP_ALLOW_FREE_SQL=true` | `false` (off) | Executes ad-hoc ABAP SQL; authenticated callers also need `sql` scope. |
 | Exact table/CDS blocklist (experimental) | `SAP_BLOCKED_DATA_SOURCES=USR02,PA0002` | empty (off) | Defense-in-depth denial with live CDS/replacement lineage; unresolved requests fail closed. Not an allowlist or SAP authorization replacement. |
 
 **Recommended security-focused profile.** Keep structured data access and remove caller-authored SQL,
@@ -120,7 +120,7 @@ SAP_BLOCKED_DATA_SOURCES=USR02,PA0002
 ```
 
 Blocklist + free SQL remains a supported *advanced* profile for installations that genuinely need
-`SAPQuery`; it is the less restrictive choice and subjects callers to the strict static-SQL subset.
+freestyle SQL; it is the less restrictive choice and subjects callers to the strict static-SQL subset.
 Either way, apply **SAP Note 3772411** independently — this feature is default-off and remediates
 nothing, and `SAP_ALLOW_WRITES=false` does not neutralize a database-side mutation reached through a
 vulnerable SQL Console host expression.

@@ -1441,7 +1441,7 @@ Read **saved SO10 and business-document SAPscript texts** through ADT, with Type
 and no RFC or installed ABAP helper. Enable `SAP_ALLOW_DATA_PREVIEW=true`; authenticated callers
 also need `data` scope and SAP access to `STXH`, `STXL`, `TTXOB`, `TTXID`, and `T002`.
 Table blocklists and response limits still apply.
-This action is unavailable on BTP and systems without the required data-preview endpoint.
+This action is unavailable on BTP ABAP targets and systems without the required data-preview endpoint.
 
 **1. Discover a key** when you know the text object and name prefix:
 

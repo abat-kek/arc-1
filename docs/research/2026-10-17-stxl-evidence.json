@@ -1,0 +1,199 @@
+{
+  "date": "2026-10-17",
+  "baseCommit": "041a9e48",
+  "node": "24.19.0",
+  "profile": "FF06 / byte order 02 / code page 4103 / flat TLINE",
+  "systems": [
+    {
+      "basis": "750",
+      "components": [
+        {
+          "name": "SAP_ABA",
+          "release": "750",
+          "spLevel": "0002"
+        },
+        {
+          "name": "SAP_BASIS",
+          "release": "750",
+          "spLevel": "0002"
+        },
+        {
+          "name": "SAP_GWFND",
+          "release": "750",
+          "spLevel": "0002"
+        },
+        {
+          "name": "SAP_UI",
+          "release": "750",
+          "spLevel": "0002"
+        }
+      ],
+      "checks": {
+        "kernel-fixtures": {
+          "counts": {
+            "pass": 18
+          },
+          "maxLines": 2000,
+          "maxChunks": 0
+        },
+        "legacy-corpus": {
+          "counts": {
+            "pass": 58,
+            "excluded": 2
+          },
+          "maxLines": 129,
+          "maxChunks": 1
+        }
+      },
+      "cleanup": {
+        "helperCount": 5,
+        "allAbsent": true
+      }
+    },
+    {
+      "basis": "758",
+      "components": [
+        {
+          "name": "SAP_ABA",
+          "release": "75I",
+          "spLevel": "0002"
+        },
+        {
+          "name": "SAP_BASIS",
+          "release": "758",
+          "spLevel": "0002"
+        },
+        {
+          "name": "SAP_GWFND",
+          "release": "758",
+          "spLevel": "0002"
+        },
+        {
+          "name": "SAP_UI",
+          "release": "758",
+          "spLevel": "0002"
+        }
+      ],
+      "checks": {
+        "kernel-fixtures": {
+          "counts": {
+            "pass": 18
+          },
+          "maxLines": 2000,
+          "maxChunks": 0
+        },
+        "corpus": {
+          "counts": {
+            "pass": 35,
+            "excluded": 5
+          },
+          "maxLines": 1596,
+          "maxChunks": 9
+        },
+        "corpus-E": {
+          "counts": {
+            "pass": 42
+          },
+          "maxLines": 988,
+          "maxChunks": 3
+        },
+        "roundtrip": {
+          "label": "758",
+          "status": "pass",
+          "chunks": 37,
+          "lines": 2000,
+          "compressedBytes": 292119,
+          "outputBytes": 548081,
+          "sha256": "f0634bd8f9c3d542b633e3179ed544b634c2b36f7a24e38b515be00fef253d7d"
+        },
+        "sql-key": {
+          "status": "pass",
+          "lines": 1,
+          "chunks": 1,
+          "route": "explicit-free-sql-concat-with-space"
+        }
+      },
+      "cleanup": {
+        "helperCount": 6,
+        "allAbsent": true,
+        "syntheticStoredText": "deleted-and-absence-verified"
+      }
+    },
+    {
+      "basis": "816",
+      "components": [
+        {
+          "name": "SAP_ABA",
+          "release": "816",
+          "spLevel": "0001"
+        },
+        {
+          "name": "SAP_BASIS",
+          "release": "816",
+          "spLevel": "0001"
+        },
+        {
+          "name": "SAP_GWFND",
+          "release": "816",
+          "spLevel": "0001"
+        },
+        {
+          "name": "SAP_UI",
+          "release": "816",
+          "spLevel": "0001"
+        }
+      ],
+      "checks": {
+        "kernel-fixtures": {
+          "counts": {
+            "pass": 18
+          },
+          "maxLines": 2000,
+          "maxChunks": 0
+        },
+        "corpus": {
+          "counts": {
+            "pass": 34,
+            "fail": 1,
+            "excluded": 5
+          },
+          "maxLines": 1596,
+          "maxChunks": 9
+        },
+        "corpus-E": {
+          "counts": {
+            "pass": 42
+          },
+          "maxLines": 988,
+          "maxChunks": 3
+        },
+        "roundtrip": {
+          "label": "816",
+          "status": "pass",
+          "chunks": 37,
+          "lines": 2000,
+          "compressedBytes": 292119,
+          "outputBytes": 548081,
+          "sha256": "f0634bd8f9c3d542b633e3179ed544b634c2b36f7a24e38b515be00fef253d7d"
+        },
+        "sql-key": {
+          "status": "pass",
+          "lines": 1,
+          "chunks": 1,
+          "route": "explicit-free-sql-concat-with-space"
+        }
+      },
+      "cleanup": {
+        "helperCount": 6,
+        "allAbsent": true,
+        "syntheticStoredText": "deleted-and-absence-verified"
+      }
+    }
+  ],
+  "exclusions": "Existing corpus oracle excludes texts over 3000 lines. 816 ordinary exact-key query missed one repeated-space key; explicit SQL route subsequently passed.",
+  "privateCorpusReplay": {
+    "pass": 211,
+    "failed": 0
+  },
+  "rfcCalls": 0
+}

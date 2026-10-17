@@ -103,6 +103,7 @@ sequence.
 | [FEAT-74](#feat-74) | Dump feed attribute filters | P3 | S | Ready | Diagnostics |
 | [FEAT-50](#feat-50) | ADT type-probe fixture coverage | P3 | XS each | Contributor-driven | Diagnostics |
 | [FEAT-32](#feat-32) | Stable data-preview pagination | P3 | M | Needs research | Data access |
+| [FEAT-86](#feat-86) | Stored SAPscript long-text reads without RFC | P2 | M | Needs research | Data access |
 | [FEAT-36](#feat-36) | Type information | P3 | S | Blocked | Code intelligence |
 | [FEAT-79](#feat-79) | DDIC-aware dependency context | P2 | M | Needs research | Code intelligence |
 | [FEAT-42](#feat-42) | Additional CI output formats | P3 | XS | Revisit on trigger | CI |
@@ -803,6 +804,27 @@ ordering key.
 **Resume with.** Design keyset pagination for named-table preview where a unique ordering can be
 proven. Refuse ambiguous tables, preserve all data-preview gates, and include a schema-only mode if
 it can reuse the same safe contract.
+
+<a id="feat-86"></a>
+### FEAT-86 — Stored SAPscript long-text reads without RFC
+
+- **Priority / effort / status:** P2 / M / Needs research
+- **Category:** Data access
+
+**Remaining gap.** [#1000](https://github.com/arc-mcp/arc-1/issues/1000) includes SO10 reads alongside
+SAPscript/SmartForm APIs. A [TypeScript spike](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-17-stxl-typescript-spike.md)
+decodes the verified FF06/4103 TLINE profile using Node zlib and guarded ADT STXL extraction.
+Kernel comparisons pass on 750/758/816; direct preview and persisted 37-chunk round trips pass on
+758/816. It is not exposed as an MCP feature and does not implement READ_TEXT reference, memory,
+archive, alternate-persistence, or form-layout semantics. The explicit free-SQL route recovers a
+repeated-space key lost by 816's ordinary table query; tested 750 preview routes return 404.
+
+**Resume with.** Agree an exact-key stored-text contract, then qualify a literal-preserving read
+path, capability detection, STXH/reference behavior, multi-request consistency, and compressor
+trailer handling. Preserve data scope, both table blocklists, per-user SAP identity, and cumulative
+response/time budgets. Require independent SAP fixtures before supporting other versions or code
+pages. Keep #1000's broader companion-service option and FEAT-76's parameterized-service work
+separate; no RFC or dynamically executed ABAP fallback belongs in the native reader.
 
 <a id="feat-36"></a>
 ### FEAT-36 — Type information

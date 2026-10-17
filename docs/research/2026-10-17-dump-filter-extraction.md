@@ -42,13 +42,15 @@ The optional unknown-datatype message improvement is deferred; unsupported types
 files, typecheck, lint, policy, budgets and strict docs. It reproduced the two fail-before cases
 and verified all outer/inner hashes and 24 manual classifications. The full-suite caveat remains.
 
-Review of the review: the optional claim that Llama "earlier" used `MESSAGE_TYPE_X` as an attribute
-is not supported by these two archived runs: the exploratory trace uses `runtimeError`, the
-corrected trace `MESSAGE_TYPE`. We retain the raw observations and do not adopt that extra claim.
+Review of the review: Llama's earlier use of `MESSAGE_TYPE_X` as an attribute belongs to the
+[older #1011 evaluation](https://github.com/arc-mcp/arc-1/blob/5725fab6515f7a410e3e488003ae1a7aa3d8c249/docs/research/2026-10-17-diagnostic-value-evaluation.md),
+not these two runs. Claude supplied that missing citation during the merge review; we verified it
+in the older adjudication. Here the exploratory trace uses `runtimeError`, the corrected trace
+`MESSAGE_TYPE`. Keep those observations separate rather than treating them as one trial history.
 
 ## Live qualification
 
-The [final-code probe](dump-filter-extraction/evidence/live-290622c8.json) used `290622c8`,
+The [pre-merge probe](dump-filter-extraction/evidence/live-290622c8.json) used `290622c8`,
 A4H/001 over HTTPS 443, the local real dispatcher and the existing Basic identity. A positive
 runtime-error predicate returned the same existing dump ID/error; the negative predicate returned
 no rows. Five GETs, zero mutations; writes, SQL and data preview stayed disabled.
@@ -136,7 +138,8 @@ condition to close it only after no useful work remains. No transport/notebook d
 
 Main merged stored-text support (#1012, `37fece94`) while #1020's first CI run was in progress.
 That earlier head passed all 9,003 tests on Node 22/24, including coverage runs; SAP integration
-passed 260 tests with 97 skips. These are earlier-head results, not verification of the merge.
+passed 260 tests with 97 skips, and end-to-end passed 143 with four skips. These are earlier-head
+results, not verification of the merge. Skips are not live coverage.
 
 Merge conflicts affected only the file-size and description-count ratchets. The resolution combines
 LONG_TEXT's eight descriptions with the filter's one, and retains the extracted query schema's lower
@@ -148,3 +151,17 @@ bytes / approximately 18,623 tokens; BTP: 69,596 / 17,399.
 The 24 model trials remain historical comparisons against main `498c12bb`. Neither the new main's
 stored-text surface nor this final wording trim was model-evaluated. No new reliability claim or
 success-driven model rerun is made. Focused tests cover both dump and stored-text routes after the merge.
+
+At merge commit `5af87695`, **all 9,289 local tests / 329 files pass**, as do build, all three
+TypeScript projects, lint (two infos), policy, schema/file budgets and strict docs. The earlier
+timeout failures are retained above; they did not recur in this run. All 470 focused checks and
+13 snapshot checks pass. The [new live probe](dump-filter-extraction/evidence/merge-5af87695/live.json)
+again passes both positive and negative controls through the real dispatcher (five GETs, zero
+mutations). [Merged-head checks](dump-filter-extraction/evidence/merge-5af87695/checks.json).
+
+[Claude's merge review](dump-filter-extraction/claude-merge-review.md), again Opus 5.5 Max in the
+GUI, found no must-fix defects. It independently passed 1,204 tests in 20 files and the static
+gates, verified preservation of main and the exact 100-byte trim. Its pending-validation caveat
+is resolved by the merged-head checks above. The older-example citation is clarified above.
+The new PR head's CI is a separate run; its current status is recorded on
+[draft #1020](https://github.com/arc-mcp/arc-1/pull/1020).

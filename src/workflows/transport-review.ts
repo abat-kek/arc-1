@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { type ReviewMode, reviewCoverage, type TransportObjectDiff } from '../adt/transport-diff.js';
 import { artifactHtml, callJson, callText, type ToolInvoker, WorkflowCallError } from './artifact.js';
-import { type ReviewPage, reviewPageSchema } from './review-schema.js';
+import { type ReviewPage, type ReviewPageEvidence, reviewPageSchema } from './review-schema.js';
 export interface TransportReviewArtifact {
   schemaVersion: 1;
   kind: 'arc1-transport-review';
@@ -9,7 +9,7 @@ export interface TransportReviewArtifact {
   mode: ReviewMode;
   collectedAt: string;
   status: 'complete' | 'partial' | 'stale' | 'error';
-  pages: Array<Omit<ReviewPage, 'continuation'>>;
+  pages: ReviewPageEvidence[];
   checks: Array<Record<string, unknown>>;
   observations: string[];
   gaps: string[];
@@ -44,6 +44,7 @@ export async function collectTransportReview(
       const page = reviewPageSchema.parse(
         await callJson(call, 'SAPTransport', {
           action: 'diff',
+          resultFormat: 'structured',
           id: request,
           reviewMode: mode,
           offset,
@@ -85,6 +86,7 @@ export async function collectTransportReview(
         const final = reviewPageSchema.parse(
           await callJson(call, 'SAPTransport', {
             action: 'diff',
+            resultFormat: 'structured',
             id: request,
             reviewMode: mode,
             offset: 0,

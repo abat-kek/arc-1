@@ -7,6 +7,7 @@ import {
   type LogicalTransportObject,
   selectTransportRevisionPair,
 } from '../../../src/adt/transport-diff.js';
+import { ReviewBudget } from '../../../src/adt/transport-review-budget.js';
 import type { RevisionInfo } from '../../../src/adt/types.js';
 import { parseRevisionFeed } from '../../../src/adt/xml-parser.js';
 
@@ -49,6 +50,16 @@ function client(missing: string[] = []) {
 }
 
 describe('transport review evidence regressions', () => {
+  it('keeps local budget exhaustion intelligible with minimal SAP errors', async () => {
+    const budget = new ReviewBudget();
+    budget.reads = 180;
+    const result = await diffTransportObject(client(), { ...object([]), type: 'PROG' }, ids, {
+      budget,
+      minimalErrors: true,
+    });
+    expect(result.parts[0].note).toContain('ARC-1 review page budget exhausted');
+    expect(result.parts[0].statisticsComplete).toBe(false);
+  });
   it('does not certify a newer-numbered undated snapshot as the predecessor', () => {
     const feed = [rev('00002', request), rev('00003', 'DEVK900003', '')];
     const pair = selectTransportRevisionPair(feed, ids, 'released');
@@ -107,6 +118,7 @@ describe('transport review evidence regressions', () => {
       ids,
     );
     expect(result.parts).toHaveLength(2);
+    expect(result.scopeNote).toContain('whole source part');
     expect(result.parts[0].diff).toContain('+WRITE 2.');
     expect(result.parts[1]).toMatchObject({ part: 'implementations', baselineStatus: 'baseline-unavailable' });
     expect(result.parts[1].note).toContain('absence or deletion is not established');
@@ -132,9 +144,11 @@ describe('transport review evidence regressions', () => {
     vi.mocked(c.getRevisionSource).mockResolvedValue('WRITE text-001.');
     const input = { ...object([component('REPT', 'CP')]), type: 'PROG' };
     const result = await diffTransportObject(c, input, ids);
-    expect(result.parts[0].diff).toBe('');
+    expect(result.parts).toEqual([]);
+    expect(c.getRevisions).not.toHaveBeenCalled();
     expect(result.components).toEqual(input.components);
-    expect(result.coverageGaps?.[0]).toContain('historical');
+    expect(result.inventoryReason).toContain('historical');
+    expect(result.coverageGaps).toBeUndefined();
   });
 
   it.each(['00000', '99999'])(

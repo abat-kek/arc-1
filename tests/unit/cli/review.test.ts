@@ -20,6 +20,7 @@ async function outputDirectory() {
 function dependencies(invalid = false) {
   const page = {
     schemaVersion: 1,
+    resultFormat: 'structured',
     target: 'TEST/001',
     client: '001',
     transport: { id: 'DEVK900001', status: 'R' },

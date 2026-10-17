@@ -1583,7 +1583,7 @@ export function getToolDefinitions(
             enum: sapTransportActions,
             description:
               'list: current user, modifiable requests; summary=true (default) returns headers/counts. get: tasks and objects. ' +
-              'diff: source revision under request/task vs predecessor, with CTS rollup and coverage gaps. reviewMode defaults legacy; released requires attributable numbered snapshots; active/draft select saved work state. Return continuation with offset to detect inventory drift. Read baselineStatus: prior-revision = attributed pair; prior-revision-unverified = candidate pair; no-prior-snapshot/ambiguous = missing or uncertain baseline, never proof of creation; unavailable = failed read. ' +
+              'diff: source revision under request/task vs predecessor, with CTS rollup and coverage gaps. reviewMode defaults legacy; released requires attributable numbered snapshots; active/draft select saved work state. Pass continuation with offset to detect inventory drift. Read baselineStatus: prior-revision = attributed pair; prior-revision-unverified = candidate pair; no-prior-snapshot/ambiguous = missing or uncertain baseline, never proof of creation; unavailable = missing readable evidence. ' +
               'create: Workbench request; needs description. Optional package determines routing; target overrides TR_TARGET. Discover with targets/layers; empty resolved target is local. ' +
               'release: single task/request; release_recursive: unreleased tasks then request. delete: recursive deletes tasks; removeLockedObjects strips locks. ' +
               'remove_object: full pgmid+type+name key. reassign: owner, recursive for tasks. ' +
@@ -1668,7 +1668,7 @@ export function getToolDefinitions(
           resultFormat: {
             type: 'string',
             enum: ['legacy', 'structured'],
-            description: 'release actions: legacy (default) or structured JSON.',
+            description: 'diff: legacy (compact) or structured (full). release: legacy text or structured JSON.',
           },
           timeoutSeconds: {
             type: 'number',

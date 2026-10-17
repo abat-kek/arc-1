@@ -33,7 +33,8 @@ import type { RevisionInfo, TransportObject } from './types.js';
  * Under `ARC1_MINIMAL_ERRORS` the SAP diagnostic and the ADT path must still be withheld —
  * the status code alone is enough for a reviewer to see that something failed.
  */
-function describeError(err: unknown, minimalErrors?: boolean): string {
+function describeError(err: unknown, minimalErrors?: boolean, budget?: ReviewBudget): string {
+  if (budget?.exhausted) return 'ARC-1 review page budget exhausted; remaining source evidence was not collected.';
   if (!minimalErrors) return err instanceof Error ? err.message : String(err);
   if (err instanceof AdtApiError) return `SAP request failed (status ${err.statusCode})`;
   return 'request failed';
@@ -213,9 +214,20 @@ export function selectTransportRevisionPair(
   }
 
   const previous = previousIndex < sorted.length ? sorted[previousIndex] : null;
-  // Missing dates sort last, but that cannot make a newer numbered snapshot a proven baseline.
+  // Missing dates sort last, so date order cannot prove the pair: a predecessor numbered at or
+  // after `current`, or a foreign snapshot numbered between the two, leaves chronology open.
+  const [before, after] = [previous ? revisionNumber(previous) : '', revisionNumber(current)];
+  const currentIsWorkState = WORK_STATE_VERSIONS.has(after);
   const conflictingOrder =
-    previous && revisionSourceState(current) === 'released' && revisionNumber(previous) >= revisionNumber(current);
+    previous &&
+    ((revisionSourceState(current) === 'released' && before >= after) ||
+      sorted.some(
+        (r) =>
+          revisionSourceState(r) === 'released' &&
+          !belongsToTransport(r) &&
+          revisionNumber(r) > before &&
+          (currentIsWorkState || revisionNumber(r) < after),
+      ));
   return {
     current,
     previous,
@@ -551,7 +563,10 @@ async function diffPart(
     if (type === 'CLAS' && part !== 'main' && isNotFoundError(err)) {
       return unavailablePart(part, 'revision history returned 404; absence or deletion is not established');
     }
-    return unavailablePart(part, `revision history unavailable: ${describeError(err, opts.minimalErrors)}`);
+    return unavailablePart(
+      part,
+      `revision history unavailable: ${describeError(err, opts.minimalErrors, opts.budget)}`,
+    );
   }
 
   const pair = selectTransportRevisionPair(revisions, transportIds, opts.mode);
@@ -586,7 +601,7 @@ async function diffPart(
     after = await read(pair.current.uri);
     before = pair.previous ? await read(pair.previous.uri) : '';
   } catch (err) {
-    return unavailablePart(part, `source read failed: ${describeError(err, opts.minimalErrors)}`, base);
+    return unavailablePart(part, `source read failed: ${describeError(err, opts.minimalErrors, opts.budget)}`, base);
   }
 
   const sourceEvidence = {
@@ -602,8 +617,11 @@ async function diffPart(
       timeout: 100,
       maxEditLength: 20_000,
     });
-  } catch (error) {
-    return unavailablePart(part, describeError(error, opts.minimalErrors), { ...base, ...sourceEvidence });
+  } catch {
+    return unavailablePart(part, 'Diff calculation failed or exceeded its work budget; statistics are unavailable.', {
+      ...base,
+      ...sourceEvidence,
+    });
   }
   const capped = capDiff(result.diff);
   const note = result.cosmeticOnly
@@ -635,6 +653,14 @@ export async function diffTransportObject(
 ): Promise<TransportObjectDiff> {
   opts = { ...opts, budget: opts.budget ?? new ReviewBudget() };
   const { type, name, taskIds } = object;
+  const textGap =
+    'Text-pool components are in scope; historical symbols, selection texts and headings were not compared.';
+  // A text-only CTS key names no source part; diffing main would review something CTS never selected.
+  if (object.components.length && object.components.every((c) => c.type === 'REPT')) {
+    return { type, name, taskIds, components: object.components, parts: [], inventoryReason: textGap };
+  }
+  // A whole-object entry also carries the text pool (and, for programs, screens and GUI status).
+  const wholeObject = (type === 'PROG' || type === 'CLAS') && object.components.some((c) => c.pgmid === 'R3TR');
   const head = {
     type,
     name,
@@ -646,10 +672,12 @@ export async function diffTransportObject(
             'Method CTS keys select class source. Hunks compare the whole source part; individual method attribution across requests is not established.',
         }
       : {}),
-    ...(object.components.some((c) => c.type === 'REPT')
+    ...(wholeObject || object.components.some((c) => c.type === 'REPT')
       ? {
           coverageGaps: [
-            'Text-pool components are in scope; historical symbols, selection texts and headings were not compared.',
+            wholeObject
+              ? 'Whole-object entry: text pool (and for programs, screens and GUI status) was not compared; only source parts were.'
+              : textGap,
           ],
         }
       : {}),
@@ -685,7 +713,7 @@ export async function diffTransportObject(
       return {
         ...head,
         parts: [],
-        inventoryReason: `function group lookup failed: ${describeError(err, opts.minimalErrors)}`,
+        inventoryReason: `function group lookup failed: ${describeError(err, opts.minimalErrors, opts.budget)}`,
       };
     }
     if (!group) {
@@ -702,7 +730,7 @@ export async function diffTransportObject(
       const result = await diffPart(client, type, name, part, transportIds, { ...opts, group });
       parts.push({ ...result, selectionOrigin: selection.fromComponents ? 'cts' : 'speculative' });
     } catch (err) {
-      parts.push(unavailablePart(part, `source read failed: ${describeError(err, opts.minimalErrors)}`));
+      parts.push(unavailablePart(part, `source read failed: ${describeError(err, opts.minimalErrors, opts.budget)}`));
     }
   }
   return { ...head, parts };

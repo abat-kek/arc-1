@@ -110,5 +110,40 @@ part of this change. The adoption index retains the other conditional ideas and 
 
 ## External review
 
-Claude Code Opus 5.5 Max GUI review: pending draft PR and exact revision.
-Record each actionable finding, its disposition, tests and final review revision here.
+Claude Code Opus 5.5 Max reviewed `0244d4cc1ff13038f3c9be3677f4dcf1e6647732` through the GUI.
+Its [full report](adt-vscode-1.2/evidence/claude-review-1.md) and reproduction files were evaluated,
+not applied without review. Claude independently passed all 8,920 tests on Node 22.21.1.
+
+| Finding | Disposition |
+|---|---|
+| F1: budget cut an object short and paging skipped it | Fixed: retry on a fresh page; first-object failure remains visible so collection progresses. Read-cap and deadline continuation regressions. |
+| F2: whole-object non-source scope disappeared | Fixed: whole PROG/CLAS entries retain text/screen/GUI coverage gaps; whole INCL stays source-only. |
+| F3: inventory limit produced SQL advice | Fixed in the existing family-specific error formatter; real HTTP/dispatch regression and documented inventory ceiling. |
+| F4: continuation failed across processes | Fixed with a deterministic digest. It grants no authority; every call still authorizes and compares the current binding. Restart, caller, client, target and drift tests. |
+| F5: text-only CTS scope read unrelated source | Fixed: one inventory gap, no source reads and no double count. |
+| F6: normal replies paid full provenance cost | Fixed: compact default; existing `resultFormat="structured"` opts into full provenance, which the CLI always requests. Same hunks/components/coverage, over 35% smaller in the test fixture. |
+| F7: intervening undated snapshot | Fixed conservatively for released and active/draft comparisons; stable dated history and same-request siblings remain valid. |
+| F8: minimal mode hid local limits | Fixed: local collection/CPU limit notes remain intelligible without SAP diagnostics. |
+| F9: speculative 404 makes review partial | Retained deliberately. A 404 cannot prove absence; future verified include metadata may improve classification (FEAT-86). |
+| F10: out-of-range page looked complete | Fixed: reject invalid offsets; document page-scoped status and collector aggregation. |
+| F11: routing/documentation drift | Fixed: one AGENTS row, restored dev-guide wire evidence, updated parameters, version wording and demo formatting/default path. |
+| F12: overstated test coverage | Added the actual 180-send HTTP cap including CSRF/retry, 30-second boundary, deadline continuation and METH scope assertions. |
+
+Six imported regressions failed on the reviewed head before their fixes. An additional active-state
+chronology regression also failed before its correction. Follow-up focused/full checks and final
+Claude review are recorded below when complete.
+
+Optional suggestions remain deferred: verified absence metadata, active-review/check hash correlation,
+additional per-state hint wording and bidi visualization. They do not change the supported-evidence
+contract. Original archive paths are retained for exact provenance as requested; no credentials are included.
+
+
+### Follow-up verification
+
+- Full unit suite: **8,933 tests passed in 316 files**, 60.24 s, Node 24.11.1.
+- Focused follow-up: 79 tests passed; final compact-reply/tool-snapshot checks: 21 passed.
+- Typecheck, build, lint, policy, file/schema budgets and strict docs build passed.
+- Read-only 758 replay after fixes: partial evidence for two objects; both current syntax
+  checks passed and both contexts returned. The collector explicitly received structured provenance.
+- Source manifest SHA-256: `c42b9495db0dc2ee77f19464308d4bb592f2ec43433e547953b024accc8670b5`.
+- Final Claude pass: pending the pushed follow-up revision.

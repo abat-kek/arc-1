@@ -38,8 +38,8 @@ Optional checks reuse existing single-object syntax and context. ATC/Unit remain
 - [x] Add regressions for newly discovered failures; simplify avoidable abstractions.
 - [x] Run bounded live read-only spikes and inspect complete/partial/stale reports.
 - [x] Run focused tests, full unit suite and repository gates; record exact results.
-- [ ] Final diff/documentation/roadmap review; create a draft PR.
-- [ ] Ask Claude Code Opus 5.5 Max in the GUI to review the exact PR revision.
+- [x] Final diff/documentation/roadmap review; create draft PR #1008.
+- [x] Ask Claude Code Opus 5.5 Max in the GUI to review the exact PR revision.
 - [ ] Evaluate each Claude finding, fix valid issues, retest, and request a final Claude pass if changed.
 
 ## Spike protocol

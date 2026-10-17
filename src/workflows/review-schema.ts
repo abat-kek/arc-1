@@ -41,15 +41,15 @@ const part = z
   })
   .passthrough();
 
-export const reviewPageSchema = z
+const reviewEvidenceSchema = z
   .object({
     schemaVersion: z.literal(1),
+    resultFormat: z.literal('structured'),
     target: z.string(),
     client: z.string(),
     transport: z.object({ id: z.string(), status: z.string() }).passthrough(),
     reviewMode: z.enum(['legacy', 'released', 'active', 'draft']),
     inventoryFingerprint: z.string(),
-    continuation: z.string(),
     offset: z.number().int().nonnegative(),
     shown: z.number().int().nonnegative(),
     totalObjects: z.number().int().nonnegative(),
@@ -76,4 +76,6 @@ export const reviewPageSchema = z
     ),
   })
   .passthrough();
+export const reviewPageSchema = reviewEvidenceSchema.extend({ continuation: z.string() });
+export type ReviewPageEvidence = z.infer<typeof reviewEvidenceSchema>;
 export type ReviewPage = z.infer<typeof reviewPageSchema>;

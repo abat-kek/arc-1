@@ -488,6 +488,10 @@ representative live fixtures.
 ownership/language/operation semantics and supported releases. Keep unsupported scope visible until
 proven. [Evidence and stop conditions](https://github.com/arc-mcp/arc-1/blob/main/docs/research/adt-vscode-1.2/README.md#historical-coverage-research-queue).
 
+Verified include-existence metadata could distinguish truly absent speculative class parts from
+unavailable evidence. Whole-object PROG/CLAS reviews also retain non-source scope gaps until those
+historical adapters are verified; a 404 alone remains insufficient.
+
 <a id="feat-87"></a>
 ### FEAT-87 — Reusable SQL notebook runner
 

@@ -1524,9 +1524,9 @@ source modes, JSON/HTML reports, bounds and continuation.
 | `owner` | string | No | New owner SAP username (required for reassign) |
 | `recursive` | boolean | No | Apply recursively to child tasks (for delete/reassign). `release_recursive` always recurses. |
 | `removeLockedObjects` | boolean | No | For delete: remove locked object entries from each task before deleting when SAP would otherwise reject the request as containing locked objects. This mutates request contents. |
-| `summary` | boolean | No | For `list` only. **Default `true`** — headers-only: omits each transport's (and task's) `objects[]`, keeping `id`/`description`/`owner`/`status`/`target` plus an `objectCount`. Pass `false` for full object lists (~5x larger). |
+| `summary` | boolean | No | For `diff`, true omits hunks. For `list`, **Default `true`** — headers-only: omits each transport's (and task's) `objects[]`, keeping `id`/`description`/`owner`/`status`/`target` plus an `objectCount`. Pass `false` for full object lists (~5x larger). |
 | `maxResults` | number | No | Maximum list rows or check/history assignment candidates (defaults: list/history 50, check 10; max 1000). |
-| `resultFormat` | string | No | For `release`/`release_recursive`: `legacy` text (default) or `structured` JSON with outcome, per-ID confirmation evidence, polls, elapsed time, and SAP reports. |
+| `resultFormat` | string | No | For `diff`: `legacy` compact JSON (default) or `structured` full provenance. For `release`/`release_recursive`: `legacy` text (default) or `structured` JSON with outcome, per-ID confirmation evidence, polls, elapsed time, and SAP reports. |
 | `timeoutSeconds` | number | No | For `release`/`release_recursive`: terminal-state verification budget; default `300`, range `1..1800`. |
 
 **Actions:**
@@ -1588,6 +1588,12 @@ one parent request, and `candidateTransports` is empty.
 **Note:** Transport mutations (`create`, `release`, `release_recursive`, `reassign`, `delete`, `remove_object`) require `write` + `transports` scopes and both `SAP_ALLOW_WRITES=true` and `SAP_ALLOW_TRANSPORT_WRITES=true`. `list`, `get`, `diff`, `check`, `history`, `layers`, and `targets` are read actions and work without `--allow-transport-writes`.
 
 ---
+
+Diff `status` and `coverage` describe the returned page; the review CLI reconciles all pages.
+An out-of-range offset is an error. `resultFormat="structured"` adds full revision records and source hashes;
+normal replies retain hunks, raw CTS components and coverage gaps with a smaller payload.
+Malformed or empty revision-feed responses now fail explicitly in both transport review and `SAPRead VERSIONS`;
+a valid empty Atom feed still returns empty history.
 
 ## SAPGit
 

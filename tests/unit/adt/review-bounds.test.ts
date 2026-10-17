@@ -41,3 +41,19 @@ it('does not enqueue further reads after inherited cancellation', async () => {
   });
   expect(read).not.toHaveBeenCalled();
 });
+
+it('propagates the 30-second deadline and refuses the next read at its boundary', async () => {
+  let now = 1000;
+  const clock = vi.spyOn(Date, 'now').mockImplementation(() => now);
+  try {
+    const budget = new ReviewBudget();
+    await budget.read(async (request) => expect(request.deadline).toBe(31000));
+    now = 31000;
+    const next = vi.fn();
+    await expect(budget.read(next)).rejects.toThrow(/deadline/);
+    expect(next).not.toHaveBeenCalled();
+    expect(budget.exhausted).toBe(true);
+  } finally {
+    clock.mockRestore();
+  }
+});

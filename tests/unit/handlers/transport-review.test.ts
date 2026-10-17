@@ -119,5 +119,39 @@ it('bounds a page of whole classes and keeps unfinished work visible', async () 
   expect(page.metrics.reads).toBeLessThanOrEqual(180);
   expect(page.shown).toBeLessThan(40);
   expect(page.nextOffset).toBe(page.shown);
+  expect(
+    page.objects
+      .flatMap((o: { parts: Array<{ note?: string }> }) => o.parts)
+      .some((p: { note?: string }) => p.note?.includes('budget')),
+  ).toBe(false);
   expect(Buffer.byteLength(JSON.stringify(page))).toBeLessThanOrEqual(512 * 1024);
+});
+
+it('rejects an offset outside the inventory instead of returning an empty complete page', async () => {
+  const first = JSON.parse((await run('alice', { limit: 1 })).content[0]!.text);
+  const result = await run('alice', { offset: 2, continuation: first.continuation });
+  expect(result.isError).toBe(true);
+  expect(result.content[0]!.text).toContain('outside this transport inventory');
+});
+
+it('keeps normal replies compact while full evidence retains hashes and revision records', async () => {
+  const inventory = transport(Array.from({ length: 20 }, (_, i) => `ZCL_${i}`));
+  for (const object of inventory.tasks[0]!.objects) {
+    object.pgmid = 'LIMU';
+    object.type = 'METH';
+    object.wbtype = 'CLAS/OM';
+    object.name = `${object.name.padEnd(30)}RUN`;
+  }
+  vi.mocked(getTransport).mockResolvedValue(inventory);
+  const compactText = (await run('alice', {})).content[0]!.text;
+  const fullText = (await run('alice', { resultFormat: 'structured' })).content[0]!.text;
+  const compact = JSON.parse(compactText),
+    full = JSON.parse(fullText);
+  expect(Buffer.byteLength(compactText)).toBeLessThan(Buffer.byteLength(fullText) * 0.65);
+  expect(compact.scopeNotes).toHaveLength(1);
+  expect(compact.coverage).toEqual(full.coverage);
+  expect(compact.objects[0].components).toEqual(full.objects[0].components);
+  expect(compact.objects[0].parts[0].diff).toEqual(full.objects[0].parts[0].diff);
+  expect(compact.objects[0].parts[0]).not.toHaveProperty('revisions');
+  expect(full.objects[0].parts[0].sourceHashes.after).toMatch(/^[a-f0-9]{64}$/);
 });

@@ -1,4 +1,4 @@
-import { createHash, createHmac, randomBytes } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import { type AdtClient, clampSearchResults } from '../adt/client.js';
 import { getTransport } from '../adt/transport.js';
 import {
@@ -13,8 +13,24 @@ import { getCurrentContext } from '../server/context.js';
 import type { ServerConfig } from '../server/types.js';
 import { errorResult, textResult, toolJson } from './shared.js';
 
-const continuationKey = randomBytes(32);
 export const REVIEW_OUTPUT_BYTES = 512 * 1024;
+
+/** Keep normal tool replies compact; the report collector explicitly requests full provenance. */
+function compactObjects(objects: TransportObjectDiff[]): TransportObjectDiff[] {
+  return objects.map(({ scopeNote: _scope, ...object }) => ({
+    ...object,
+    parts: object.parts.map(
+      ({
+        revisions: _revisions,
+        sourceHashes: _hashes,
+        retrievedAt: _time,
+        comparisonMode: _mode,
+        activationStatus: _activation,
+        ...part
+      }) => part,
+    ),
+  }));
+}
 
 export async function handleTransportReview(client: AdtClient, args: Record<string, unknown>, config: ServerConfig) {
   const id = String(args.id ?? '')
@@ -59,13 +75,16 @@ export async function handleTransportReview(client: AdtClient, args: Record<stri
     mode,
     inventoryFingerprint,
   ]);
-  const continuation = createHmac('sha256', continuationKey).update(binding).digest('hex');
+  // A plain hash: the token gates no access, so it must survive restarts and other instances.
+  const continuation = createHash('sha256').update(binding).digest('hex');
   if (args.continuation !== undefined && args.continuation !== continuation) {
     return errorResult(
-      'Review continuation is stale or belongs to a different caller, target, request, mode or server process. Restart at offset 0.',
+      'Review continuation is stale or belongs to a different caller, target, request or mode. Restart at offset 0.',
     );
   }
   const offset = Math.max(0, Math.floor(Number(args.offset) || 0));
+  if (offset > 0 && offset >= inventory.length)
+    return errorResult(`Review offset is outside this transport inventory (${inventory.length} objects).`);
   const limit = Math.min(clampSearchResults(args.limit as number | undefined, 20), 40);
   const ids = new Set([transport.id, ...transport.tasks.map((t) => t.id)]);
   const objects: TransportObjectDiff[] = [];
@@ -78,6 +97,9 @@ export async function handleTransportReview(client: AdtClient, args: Record<stri
       summary: args.summary === true,
       minimalErrors: config.minimalErrors,
     });
+    // The page budget ran out inside this object: retry it on the next page instead of
+    // recording ARC-1's own limit as missing SAP evidence. The first object always lands.
+    if (budget.exhausted && objects.length) break;
     if (Buffer.byteLength(JSON.stringify([...objects, diff])) > REVIEW_OUTPUT_BYTES - 8192) {
       outputTruncated = true;
       // Keep exact hashes/statistics; declare omitted hunks. A follow-up can ask for one object.
@@ -108,6 +130,7 @@ export async function handleTransportReview(client: AdtClient, args: Record<stri
     coverage.uncertain + coverage.unavailable + coverage.unsupported > 0;
   const payload = {
     schemaVersion: 1,
+    resultFormat: args.resultFormat === 'structured' ? 'structured' : 'legacy',
     transport: {
       id: transport.id,
       description: transport.description,
@@ -137,7 +160,8 @@ export async function handleTransportReview(client: AdtClient, args: Record<stri
       ? { note: 'This transport records no reviewable objects; this is not a release verdict.' }
       : {}),
     metrics: budget.metrics(),
-    objects,
+    scopeNotes: [...new Set(objects.flatMap((object) => (object.scopeNote ? [object.scopeNote] : [])))],
+    objects: args.resultFormat === 'structured' ? objects : compactObjects(objects),
   };
   const output = toolJson(payload);
   if (Buffer.byteLength(output) > REVIEW_OUTPUT_BYTES)

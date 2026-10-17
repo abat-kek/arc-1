@@ -23,6 +23,7 @@ const part = {
 const object = { type: 'PROG', name: 'ZDEMO', taskIds: [], components: [], parts: [part] };
 const page = {
   schemaVersion: 1,
+  resultFormat: 'structured',
   target: 'A4H/001',
   client: '001',
   transport: { id: 'A4HK900001', status: 'R' },

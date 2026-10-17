@@ -35,8 +35,8 @@ Interpret creation as native `.abapsql` authoring unless the user clarifies othe
 - Check the example with the installed extension's actual serializer: Markdown/SQL
   order, text and row limits survive round-trip, including exact saved bytes.
   Editor open/save is optional; record whether it was actually verified.
-- Test the existing SAPQuery result path with zero/nonzero scalar counts and exact
-  strings. Reuse existing whitespace, aggregate-error and query policy tests.
+- Test the existing SAPQuery result path with a zero-match scalar count and its
+  exact string. Reuse existing whitespace, aggregate-error and query policy tests.
 - Run typecheck, build, lint, size/policy checks and strict docs. Run full unit CI
   before merge; record any failures, retries or skips accurately.
 - If a fresh live query is useful, use only existing demo data on authorized

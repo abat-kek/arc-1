@@ -51,40 +51,65 @@ this extraction; the PR contains no object-creation improvement.
 
 ## Validation
 
-Results and independent review are recorded here before merge. Native editor
-execution and ARC-1 query execution are different routes and are qualified separately.
+| Check | Result |
+|---|---|
+| Frozen candidate | `7387683f4fb5c29f6147a890f9d149bc973da585`; subsequent changes only record review/results and qualify documentation |
+| [CI](https://github.com/arc-mcp/arc-1/actions/runs/39073805807) | **9,234/9,234 tests, 327 files**, on both Node 22 and 24, in normal and coverage runs; all applicable checks pass |
+| Local focused checks | **372/372** across public dispatcher, XML parser, whitespace and grouped-count errors |
+| Build, typecheck, lint, policy, size/schema budgets, strict docs | Pass; production files and tool snapshots unchanged |
+| Final local full run | **9,230/9,234 passed**; four existing subprocess startup failures, not a green run |
+| Local control | Candidate and clean main `37fece94` both pass **50/54** in the same CLI/runtime and shutdown files, failing the same four startup cases; no timeout changes |
+| Earlier local full run | Before simplification (`92aa167e`), **9,235/9,235 passed**, Node 24.11.1 / four workers |
+| [Native serializer](notebook-extraction/serializer.json) | Installed 1.2.0 serializer round-trips the example byte-for-byte with minimal VS Code data/cell stubs; three ordered cells, no destination, unknown fields dropped |
+| Native editor open/save | Unverified: the shared VS Code window changed during selection. No notebook cell was executed there. |
 
-- Installed 1.2.0 serializer: the example round-trips byte-for-byte unchanged, with
-  three ordered Markdown/SQL cells and no destination binding. The actual serializer
-  was evaluated locally with minimal VS Code cell/data stubs; no extension code
-  is checked in. Bundle and example hashes are in `notebook-extraction/serializer.json`.
-- Initial focused query/parser/aggregate tests: 197 passed. The first run had one
-  test-fixture error (unescaped `<` in reconstructed XML); escaping it fixed the
-  fixture. No production defect or fail-before product regression is claimed.
-- Before review simplification: **9,235 local tests passed** (Node 24.11.1, four workers). Build,
-  all TypeScript projects, lint, policy, size/schema budgets and strict docs pass.
-  Existing production files and tool snapshots are unchanged.
-- Fresh live probe: the example returned six airline rows and `"40 "` in one count
-  row; the negative predicate returned `"0 "` in one row with `totalRows=0`.
-  Three freestyle query POSTs, zero mutations. Free SQL disabled was refused
-  before another POST. A4H/001, HTTPS 443, local dispatcher, existing Basic identity;
-  previously recorded release 758 SP02, not queried again. An initial probe setup
-  typo left free SQL disabled and was refused before SAP; corrected locally.
-  [Aggregate evidence](notebook-extraction/live-summary.json).
-- Editor rendering/open-save validation remains unconfirmed: the shared VS Code
-  window changed during file selection. No notebook cell was executed there.
-  Serializer round-trip and ARC-1 live queries do not establish an editor run or
-  compatibility with other extension versions, 750, 816 or BTP.
-- [Claude Opus 5.5 Max plan review](notebook-extraction/claude-plan-review.md):
-  scope approved; no further extraction needed. Applied the useful refinements:
-  one missing case through `handleToolCall`, synthesized XML clearly labeled,
-  explicit extension/ARC-1 control and row-limit separation, canonical sample bytes,
-  and preservation of today's roadmap IDs. The initial direct-handler test did
-  exercise serialization, but the public dispatcher is the stronger coverage.
-  The short guide stays separate to keep the already large tool reference concise.
-- Final focused checks: **372 passed** across four files, including the public
-  dispatcher case, XML parser, whitespace and grouped-count errors. Typecheck and
-  strict docs pass after the simplification. Frozen-diff review is pending.
+The isolated main control explains why the four local startup failures are not
+attributed to this docs/test change. CI supplies passing whole-suite validation
+on the reviewed code. The first exploratory test run also had one malformed
+synthesized-XML fixture (unescaped `<`); it was corrected, then replaced by the
+smaller public-dispatcher case. No fail-before product bug is claimed.
+
+### Fresh SAP check
+
+[Aggregate evidence](notebook-extraction/live-summary.json): A4H/001, HTTPS 443,
+local real dispatcher, existing Basic identity. Previously recorded SAP_BASIS
+758 SP02; release not queried again. The unchanged production source is `37fece94`.
+
+- Airline query: six output rows and `totalRows=6`.
+- Count query: one row containing `"40 "`, with `totalRows=40`.
+- Zero-match predicate: one row containing `"0 "`, with `totalRows=0`.
+- Three query POSTs, zero mutations; free SQL disabled refused before another POST.
+
+An initial probe setup typo left SQL disabled and was refused before SAP, then
+corrected locally. The only subsequent example change removed its final newline;
+SQL hashes are unchanged. These calls are not an editor run and do not qualify
+other extension versions, 750, 816 or BTP.
+
+### Independent review and disposition
+
+[Claude Opus 5.5 Max plan review](notebook-extraction/claude-plan-review.md) approved
+the scope and found no further extraction. Applied its useful refinements: one
+missing case through `handleToolCall`, labeled synthesized XML, explicit separate
+controls/row limits, canonical sample bytes and untouched roadmap IDs. The initial
+direct-handler test also exercised serialization; public dispatch is stronger.
+The short guide remains separate from the large tools reference.
+
+[Final review of `7387683f`](notebook-extraction/claude-final-review.md): **no must-fix
+defects; ready to merge and close #1009 afterward**, subject to final checks. Claude
+independently passed 372 focused tests, 72 docs/snapshot tests and all static gates.
+In separate private copies, dropping zero-count rows or deriving a `truncated`
+flag from unequal counts made only the new regression fail (371/372 still passed).
+This substantiates its value without claiming a production bug was fixed.
+
+The review predated the full-suite results above. Its local-green condition needs
+to be read with the unchanged-main reproduction and green CI, not treated as a
+claim that the local full run passed. Optional doc refinements now name 758,
+record the grouped count, correct the plan's test scope and enumerate runner
+plumbing. GUI open/save remains an optional, explicitly unverified check.
+
+The reviewer corrected its earlier statement about an unbound cell: Run and Check
+Cell Syntax first prompt for a system. The guide never relied on the earlier
+"only an error" claim. The initial plan report remains verbatim as historical evidence.
 
 Raw local outputs remain private. Only count-only fixtures, aggregate summaries
 and review reports belong in the repository. The original 67-file working tree,

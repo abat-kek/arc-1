@@ -63,8 +63,8 @@ Use ABAP SQL (`alias~field`, `DESCENDING`), and a row cap rather than SQL `LIMIT
 See [SAPQuery syntax and backend limits](tools.md#freestyle-sql-behavior).
 
 For ARC-1 query responses, `rowsReturned` counts output rows. SAP's `totalRows`
-can describe matching input records: a scalar `COUNT` can return one row containing
-`"0 "` while `totalRows` is `0`. Read the aggregate value from its result column.
+can describe matching input records. Observed on SAP_BASIS 758: a scalar `COUNT`
+returns one row containing `"0 "` while `totalRows` is `0`. Read the aggregate value from its result column.
 Values remain strings, including padding, leading zeros and decimal precision.
 Separate cell executions are not an atomic snapshot.
 

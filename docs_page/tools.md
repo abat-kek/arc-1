@@ -1528,8 +1528,8 @@ selected columns, or a restrictive, non-overlapping key-range `WHERE` clause.
 JOINs, aggregates, and subqueries are supported. For a plain projection `SELECT`, ARC-1 automatically chunks the longest literal `IN (...)` list—even when the query has several `IN` clauses—and merges the rows. Queries with `ORDER BY`, `GROUP BY`, `HAVING`, `DISTINCT`, `UNION`, or aggregates are sent whole because concatenating per-chunk results would change their semantics. If a backend rejects a long list in one of those queries, split the list manually, union the results, and re-sort client-side when needed.
 
 `rowsReturned` counts output rows; SAP's `totalRows` can count matching input records.
-A scalar `COUNT` may return one row even when `totalRows=0`; read the count from its
-result column. Cell values remain strings, including padding and leading zeros.
+Observed on SAP_BASIS 758: a scalar `COUNT` returns one row even when `totalRows=0`;
+read the count from its result column. Cell values remain strings, including padding and leading zeros.
 Do not infer aggregate completeness by comparing these two metadata counts.
 
 See: [SAPQuery Freestyle Capability Matrix](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-04-21-sapquery-freestyle-capability-matrix.md)

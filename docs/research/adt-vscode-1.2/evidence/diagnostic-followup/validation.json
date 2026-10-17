@@ -1,0 +1,36 @@
+{
+  "productHead": "b5f441da07024366b7dc18af917b0940df5460f6",
+  "currentMain": "498c12bbab1b4c6337e01e3451c5811ba8b8aa97",
+  "modelTrials": 10,
+  "workflowSpike": {
+    "tests": 1,
+    "scenarios": 3,
+    "arms": 2
+  },
+  "existingGraderTests": 26,
+  "typecheck": "passed",
+  "strictDocs": "passed",
+  "productSourceChanged": false,
+  "logs": {
+    "arc1-diagnostic-followup-typecheck.log": {
+      "sha256": "c70d78135d6fb7358b349ef78fa0bba647122295c10fc75aea4e0834b67f5066",
+      "bytes": 121
+    },
+    "arc1-review-batch-spike.log": {
+      "sha256": "cd06a4ab7fa42f17652cb62c5c6bb0cd53a2f16e50187d6ee72db0aeb20afe3b",
+      "bytes": 24846
+    },
+    "arc1-diagnostic-followup-unit.log": {
+      "sha256": "1cf2b35d87fc096b5a054488ff95960b202ab249ee4a930a0750a4f862ecbf0d",
+      "bytes": 8498
+    },
+    "arc1-diagnostic-followup-docs.log": {
+      "sha256": "d77ab51af5732d6832ff3ace2e7c7a3e952328a8235d371b93df119dc7155c49",
+      "bytes": 2273
+    }
+  },
+  "sourceFiles": {
+    "tests/evals/diagnostic-workflow-spike.test.ts": "db11bc884c1f68c7a150b3c4a7bf2da7bc5709620403602eb298e99d0ac18c4c",
+    "scripts/probe-diagnostic-filter.ts": "37b68b2c28c9173773bba63ada62b1fddd4ed3ad857d5a220d62e3c2d1fe52c0"
+  }
+}

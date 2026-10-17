@@ -1,5 +1,9 @@
 # Does #1011 add enough value?
 
+**Follow-up:** [Further research](2026-10-17-diagnostic-main-decision.md) adds ten Qwen 3.6 trials,
+a workflow spike and a positive A4H filter match. Filtering and batching now have concrete value
+as separate candidates; the bundle remains on hold. The 48-trial results below remain unchanged.
+
 **Decision — keep #1011 as a draft; do not make the whole bundle the next release priority.**
 The evaluation observed specific benefits from batching and saved-log retrieval, but does
 not establish reliable model use of the three additions. Transport review (#1008) remains first.

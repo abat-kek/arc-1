@@ -106,7 +106,7 @@ sequence.
 | [FEAT-09](#feat-09) | Cross Trace result reader | P2 | M | Needs research | Diagnostics |
 | [FEAT-69](#feat-69) | Batch syntax in transport review | P2 | S | Needs validation | Diagnostics |
 | [FEAT-71](#feat-71) | Reliable saved-log interpretation | P3 | M | Needs validation | Diagnostics |
-| [FEAT-74](#feat-74) | Model-usable dump filters | P3 | S | Needs validation | Diagnostics |
+| [FEAT-74](#feat-74) | Model-usable dump filters | P2 | S | Needs qualification | Diagnostics |
 | [FEAT-50](#feat-50) | ADT type-probe fixture coverage | P3 | XS each | Contributor-driven | Diagnostics |
 | [FEAT-89](#feat-89) | Validate the legacy dump user filter | P2 | S | Needs research | Diagnostics |
 | [FEAT-32](#feat-32) | Stable data-preview pagination | P3 | M | Needs research | Data access |
@@ -519,14 +519,15 @@ and never execute a mutation as a permission probe.
 - **Category:** Diagnostics
 
 **Remaining gap.** Draft [#1011](https://github.com/arc-mcp/arc-1/pull/1011) implements bounded native
-batch checks. The transport-review runner still checks objects individually and reconciles source
-state before and after each check. Local model trials show a specific call-count benefit, not an
-end-to-end review improvement or lower token cost.
+batch checks. Qwen 3.6 completed four checks in one call without regressing its single-object control.
+A synthetic review spike retained source reconciliation and reduced diagnostic HTTP calls 21 → 18,
+while increasing tool-result bytes. The production runner still checks objects individually.
 
-**Resume with.** Integrate one bounded batch into a representative transport review while preserving
-source-state reconciliation and explicit missing evidence. Compare correctness, calls and total
-result size against the existing runner before prioritizing rollout.
-[Evaluation and limitations](https://github.com/arc-mcp/arc-1/blob/codex/verified-diagnostics/docs/research/2026-10-17-diagnostic-value-evaluation.md).
+**Resume with.** Extract explicit batch checks separately; validate supported targets and old
+single-object routes. Review integration must preserve dispatcher policy, source reconciliation,
+unsupported-type handling and failure isolation. Do not add a hidden raw-HTTP path merely to avoid
+schema changes. Measure a real workflow before claiming latency/token savings.
+[Spike and limitations](https://github.com/arc-mcp/arc-1/blob/codex/verified-diagnostics/docs/research/2026-10-17-diagnostic-main-decision.md).
 
 <a id="feat-71"></a>
 ### FEAT-71 — Reliable saved-log interpretation
@@ -542,23 +543,25 @@ claimed that correlation despite explicit unknown time and absent correlation ev
 **Resume with.** Qualify a concrete diagnosis workflow that preserves uncertainty, including stale,
 unavailable and unrelated logs. Keep latest-attempt attribution unavailable unless a native SAP
 correlation contract is independently established; qualify other releases and object types before
-expanding coverage. [Failed control and evidence](https://github.com/arc-mcp/arc-1/blob/codex/verified-diagnostics/docs/research/2026-10-17-diagnostic-value-evaluation.md#the-failed-freshness-control).
+expanding coverage. A follow-up Qwen 3.6 answer also mixed a failure verdict with non-correlation
+caveats. [Failed controls and evidence](https://github.com/arc-mcp/arc-1/blob/codex/verified-diagnostics/docs/research/2026-10-17-diagnostic-main-decision.md).
 
 <a id="feat-74"></a>
 ### FEAT-74 — Model-usable dump filters
 
-- **Priority / effort / status:** P3 / S / Needs validation
+- **Priority / effort / status:** P2 / S / Needs qualification
 - **Category:** Diagnostics
 
 **Remaining gap.** Draft [#1011](https://github.com/arc-mcp/arc-1/pull/1011) exposes advertised typed
-filters, but neither tested local model completed the rare-error retrieval task, including a
-follow-up with concise calling guidance. Smaller direct fixture responses do not establish model
-benefit. A positive live match on the final implementation is also still missing.
+filters. After earlier model failures, Qwen 3.6 completed the same rare-error task in three calls
+versus six and reduced returned bytes 32,958 → 2,565. A real-dispatch A4H positive/negative match
+passed. The generic interface still confused smaller models; other targets and mixed-day controls
+are unqualified. These observations establish a useful extraction, not universal model reliability.
 
-**Resume with.** Improve the smallest interface or error-recovery issue demonstrated by the saved
-traces, then rerun the same task and ordinary unfiltered controls. Keep schema discovery optional;
-do not require a preflight for known filters. Verify positive filtered matches on supported targets.
-[Evaluation and raw traces](https://github.com/arc-mcp/arc-1/blob/codex/verified-diagnostics/docs/research/2026-10-17-diagnostic-value-evaluation.md).
+**Resume with.** Extract only bounded dump filtering, optional recovery discovery and its tests
+onto main. Cover runtime-error equality first, mixed days, invalid-operator recovery and existing
+unfiltered calls. Qualify claimed target support. Keep schema discovery optional and retain the
+earlier model failures as controls. [Evidence and extraction boundary](https://github.com/arc-mcp/arc-1/blob/codex/verified-diagnostics/docs/research/2026-10-17-diagnostic-main-decision.md).
 
 <a id="feat-89"></a>
 ### FEAT-89 — Validate the legacy dump user filter

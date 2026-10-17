@@ -5,6 +5,10 @@ the notebook runner and diagnostics in separate draft PRs. Policy explanations a
 ordinary denial feedback comes first; see FEAT-88 and the extraction in #1016.
 This is the durable index for the research, including ideas we deliberately defer.
 
+**Latest diagnostic decision:** [Keep filtering and batching as separate candidates](../2026-10-17-diagnostic-main-decision.md),
+supported by ten additional model trials, a source-safe review spike and a positive A4H filter match.
+Defer saved-log interpretation. #1016 and #1019 are merged; #1011 remains draft for extraction.
+
 ## Read in this order
 
 1. This backlog: what is useful, what exists, and the next evidence needed.

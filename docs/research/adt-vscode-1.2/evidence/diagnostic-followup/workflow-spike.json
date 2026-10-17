@@ -1,0 +1,1073 @@
+{
+  "scope": "Synthetic four-program check phase. Transport pages are fixed; all diagnostic calls use real dispatch and parsers. No SAP timing claim.",
+  "evidence": [
+    {
+      "scenario": "stable",
+      "arm": "current-runner",
+      "statuses": [
+        "passed",
+        "failed",
+        "passed",
+        "passed"
+      ],
+      "calls": [
+        {
+          "tool": "SAPTransport",
+          "action": "diff",
+          "bytes": 2625
+        },
+        {
+          "tool": "SAPTransport",
+          "action": "diff",
+          "bytes": 2625
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "syntax",
+          "bytes": 48
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "syntax",
+          "bytes": 118
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "syntax",
+          "bytes": 48
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "syntax",
+          "bytes": 48
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        }
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "HEAD",
+          "path": "/sap/bc/adt/core/discovery?sap-client=100&sap-language=EN",
+          "bytes": 10
+        },
+        {
+          "method": "POST",
+          "path": "/sap/bc/adt/checkruns?sap-client=100&sap-language=EN",
+          "bytes": 159
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "POST",
+          "path": "/sap/bc/adt/checkruns?sap-client=100&sap-language=EN",
+          "bytes": 217
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "POST",
+          "path": "/sap/bc/adt/checkruns?sap-client=100&sap-language=EN",
+          "bytes": 159
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "POST",
+          "path": "/sap/bc/adt/checkruns?sap-client=100&sap-language=EN",
+          "bytes": 159
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        }
+      ],
+      "checkPhaseCalls": 12,
+      "checkPhaseResultBytes": 4142,
+      "backendCalls": 21,
+      "backendResponseBytes": 1204
+    },
+    {
+      "scenario": "stable",
+      "arm": "batch-prototype",
+      "statuses": [
+        "passed",
+        "failed",
+        "passed",
+        "passed"
+      ],
+      "calls": [
+        {
+          "tool": "SAPTransport",
+          "action": "diff",
+          "bytes": 2625
+        },
+        {
+          "tool": "SAPTransport",
+          "action": "diff",
+          "bytes": 2625
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "syntax",
+          "bytes": 1143
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        }
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "HEAD",
+          "path": "/sap/bc/adt/core/discovery?sap-client=100&sap-language=EN",
+          "bytes": 10
+        },
+        {
+          "method": "POST",
+          "path": "/sap/bc/adt/checkruns?sap-client=100&sap-language=EN",
+          "bytes": 589
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        }
+      ],
+      "checkPhaseCalls": 9,
+      "checkPhaseResultBytes": 5023,
+      "backendCalls": 18,
+      "backendResponseBytes": 1099
+    },
+    {
+      "scenario": "drift",
+      "arm": "current-runner",
+      "statuses": [
+        "stale",
+        "failed",
+        "passed",
+        "passed"
+      ],
+      "calls": [
+        {
+          "tool": "SAPTransport",
+          "action": "diff",
+          "bytes": 2625
+        },
+        {
+          "tool": "SAPTransport",
+          "action": "diff",
+          "bytes": 2625
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "syntax",
+          "bytes": 48
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 483
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "syntax",
+          "bytes": 118
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "syntax",
+          "bytes": 48
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "syntax",
+          "bytes": 48
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        }
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "HEAD",
+          "path": "/sap/bc/adt/core/discovery?sap-client=100&sap-language=EN",
+          "bytes": 10
+        },
+        {
+          "method": "POST",
+          "path": "/sap/bc/adt/checkruns?sap-client=100&sap-language=EN",
+          "bytes": 159
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 43
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "POST",
+          "path": "/sap/bc/adt/checkruns?sap-client=100&sap-language=EN",
+          "bytes": 217
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "POST",
+          "path": "/sap/bc/adt/checkruns?sap-client=100&sap-language=EN",
+          "bytes": 159
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "POST",
+          "path": "/sap/bc/adt/checkruns?sap-client=100&sap-language=EN",
+          "bytes": 159
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        }
+      ],
+      "checkPhaseCalls": 12,
+      "checkPhaseResultBytes": 4140,
+      "backendCalls": 21,
+      "backendResponseBytes": 1215
+    },
+    {
+      "scenario": "drift",
+      "arm": "batch-prototype",
+      "statuses": [
+        "stale",
+        "failed",
+        "passed",
+        "passed"
+      ],
+      "calls": [
+        {
+          "tool": "SAPTransport",
+          "action": "diff",
+          "bytes": 2625
+        },
+        {
+          "tool": "SAPTransport",
+          "action": "diff",
+          "bytes": 2625
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "syntax",
+          "bytes": 1143
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 483
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        }
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "HEAD",
+          "path": "/sap/bc/adt/core/discovery?sap-client=100&sap-language=EN",
+          "bytes": 10
+        },
+        {
+          "method": "POST",
+          "path": "/sap/bc/adt/checkruns?sap-client=100&sap-language=EN",
+          "bytes": 589
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 43
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        }
+      ],
+      "checkPhaseCalls": 9,
+      "checkPhaseResultBytes": 5021,
+      "backendCalls": 18,
+      "backendResponseBytes": 1110
+    },
+    {
+      "scenario": "missing",
+      "arm": "current-runner",
+      "statuses": [
+        "passed",
+        "failed",
+        "passed",
+        "not-run"
+      ],
+      "calls": [
+        {
+          "tool": "SAPTransport",
+          "action": "diff",
+          "bytes": 2625
+        },
+        {
+          "tool": "SAPTransport",
+          "action": "diff",
+          "bytes": 2625
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "syntax",
+          "bytes": 48
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "syntax",
+          "bytes": 118
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "syntax",
+          "bytes": 48
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "syntax",
+          "bytes": 393
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        }
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "HEAD",
+          "path": "/sap/bc/adt/core/discovery?sap-client=100&sap-language=EN",
+          "bytes": 10
+        },
+        {
+          "method": "POST",
+          "path": "/sap/bc/adt/checkruns?sap-client=100&sap-language=EN",
+          "bytes": 159
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "POST",
+          "path": "/sap/bc/adt/checkruns?sap-client=100&sap-language=EN",
+          "bytes": 217
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "POST",
+          "path": "/sap/bc/adt/checkruns?sap-client=100&sap-language=EN",
+          "bytes": 159
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "POST",
+          "path": "/sap/bc/adt/checkruns?sap-client=100&sap-language=EN",
+          "bytes": 35
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        }
+      ],
+      "checkPhaseCalls": 12,
+      "checkPhaseResultBytes": 4487,
+      "backendCalls": 21,
+      "backendResponseBytes": 1080
+    },
+    {
+      "scenario": "missing",
+      "arm": "batch-prototype",
+      "statuses": [
+        "passed",
+        "failed",
+        "passed",
+        "not-run"
+      ],
+      "calls": [
+        {
+          "tool": "SAPTransport",
+          "action": "diff",
+          "bytes": 2625
+        },
+        {
+          "tool": "SAPTransport",
+          "action": "diff",
+          "bytes": 2625
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "syntax",
+          "bytes": 1166
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        },
+        {
+          "tool": "SAPDiagnose",
+          "action": "object_state",
+          "bytes": 485
+        }
+      ],
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "HEAD",
+          "path": "/sap/bc/adt/core/discovery?sap-client=100&sap-language=EN",
+          "bytes": 10
+        },
+        {
+          "method": "POST",
+          "path": "/sap/bc/adt/checkruns?sap-client=100&sap-language=EN",
+          "bytes": 465
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_A/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_B/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 29
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_C/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=active&sap-client=100&sap-language=EN",
+          "bytes": 32
+        },
+        {
+          "method": "GET",
+          "path": "/sap/bc/adt/programs/programs/ZEVAL_D/source/main?version=inactive&sap-client=100&sap-language=EN",
+          "bytes": 32
+        }
+      ],
+      "checkPhaseCalls": 9,
+      "checkPhaseResultBytes": 5046,
+      "backendCalls": 18,
+      "backendResponseBytes": 975
+    }
+  ]
+}

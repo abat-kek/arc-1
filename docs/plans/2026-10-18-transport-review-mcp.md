@@ -48,6 +48,13 @@ exit, and shared-identity/target-grant regression tests. We retain existing back
 rather than adding an unverified BTP-ABAP ban: a tool registry omission is not evidence that
 all native history endpoints fail. Backend qualification remains explicit and incomplete.
 
+Implementation review found a live active-baseline defect: `00000` can be older than the latest
+snapshot. Active reviews now select from all historical snapshots, independently of that work-state
+timestamp; conflicting historical dates/numbers remain uncertain. Pending drafts are explicit.
+Safe parser errors survive minimal mode; speculative missing attribution has its own note.
+Unused metrics and feed flags were removed. The research index stays because it preserves the
+requested adoption inventory; schema-budget headroom was trimmed rather than raising the ceiling.
+
 ## Read-only spike
 
 Use existing authorized systems and transports. Keep writes disabled; no creation, activation,

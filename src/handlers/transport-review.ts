@@ -16,7 +16,8 @@ export async function handleTransportReview(client: AdtClient, args: Record<stri
   if (!id) return errorResult('Transport ID is required for "diff" action.');
   const budget = new ReviewBudget();
   const transport = await budget.read((request) => getTransport(client.http, client.safety, id, request));
-  if (!transport) return errorResult(`Transport ${id.slice(0, 40)} not found.`);
+  if (!transport)
+    return errorResult(`Transport ${id.slice(0, 40)} not found. If this is a task, use its parent request.`);
   // TRSTATUS: R/N are released; D/L are modifiable. O/P are transitional.
   const mode = ['R', 'N'].includes(transport.status)
     ? 'released'

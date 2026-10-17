@@ -555,6 +555,25 @@ live pair in one call on both releases; the integration suite uses it for cleanu
 (`tests/integration/crud-harness.ts`). Enforce the package gate for every object before sending,
 report SAP's per-object `isDeleted` result, gate on discovery, and stop suggesting circular orders.
 
+<a id="feat-90"></a>
+### FEAT-90 — Historical transport scope beyond source
+
+- **Priority / effort / status:** P2 / M / Needs research
+- **Category:** Developer workflow
+
+**Remaining gap.** Source diffs leave Dictionary objects, text pools, function-group sources, metadata,
+deletions and Customizing keys unreviewed. Keep these gaps explicit; current metadata is not
+historical evidence.
+
+**Evidence.** [#1008](https://github.com/arc-mcp/arc-1/pull/1008) narrows the implementation to
+bounded MCP source review. Fresh A4H/001 probes found DOMA/DTEL/TTYP history feeds, but their
+advertised content URIs returned HTTP 403 “Request version … is not supported”, including
+with the exact advertised media types. [Research and family matrix](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-18-transport-review-mcp.md).
+
+**Resume with.** A real review needs one specific missing family and a read-only probe returns
+two retrievable historical payloads, transport attribution and the native content contract.
+Start with that family; no generic serializer, guessed URL or ABAP/RFC helper fallback.
+
 ## Integration and localization
 
 <a id="feat-76"></a>
@@ -1001,22 +1020,3 @@ second deployment runbook.
 **Resume with.** Build a role-based index and checklist from the canonical pages, then have an
 independent Basis administrator validate terminology and handoff steps. Keep configuration details
 in their existing single sources of truth.
-
-
-<a id="feat-90"></a>
-### FEAT-90 — Historical transport scope beyond source
-
-**P2 · M · Needs research · Developer workflow**
-
-**Gap.** Source diffs leave Dictionary objects, text pools, function-group sources, metadata,
-deletions and Customizing keys unreviewed. Keep these gaps explicit; current metadata is not
-historical evidence.
-
-**Evidence.** [#1008](https://github.com/arc-mcp/arc-1/pull/1008) narrows the implementation to
-bounded MCP source review. Fresh A4H/001 probes found DOMA/DTEL/TTYP history feeds, but their
-advertised content URIs returned HTTP 403 “Request version … is not supported”, including
-with the exact advertised media types. [Research and family matrix](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-18-transport-review-mcp.md).
-
-**Resume when.** A real review needs one specific missing family and a read-only probe returns
-two retrievable historical payloads, transport attribution and the native content contract.
-Start with that family; no generic serializer, guessed URL or ABAP/RFC helper fallback.

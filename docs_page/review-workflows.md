@@ -7,7 +7,7 @@ Administrators can disable these bounded reads with `SAP_DENY_ACTIONS=SAPTranspo
 
 ## Review a request
 
-1. Confirm the system/client and transport ID. On `/multi/mcp`, supply `target` on every call.
+1. Confirm the system/client and parent request ID. On `/multi/mcp`, supply `target` on every call.
 2. Call `SAPTransport` with `{"action":"diff","id":"A4HK906371"}`.
 3. Read `pageSummary`, `inventoryReason` and `notCompared` before interpreting the hunks.
 4. If `nextOffset` is present, repeat with that `offset`. Keep the same request and target.
@@ -26,6 +26,8 @@ objects and do not validate an old transported snapshot.
 | Releasing (`O`, `P`) or unknown | No comparison until a stable state can be selected |
 
 The predecessor skips active/inactive work states and earlier saves under the same request.
+Active source uses the latest retained snapshot outside the request; its own timestamp is not a
+historical boundary. An attributed inactive draft is reported as pending and is never compared.
 No retained predecessor does **not** prove creation. A missing part does **not** prove deletion
 or unchanged source. Read each part's [baselineStatus](tools.md#actiondiff-reviewing-what-a-transport-changed).
 Method keys select whole class source; they do not attribute individual hunks to methods.

@@ -50,14 +50,4 @@ export class ReviewBudget {
       this.bytes += responseBudget.consumedBytes;
     }
   }
-
-  metrics() {
-    return {
-      reads: this.reads,
-      backendAttempts: this.attempts.used,
-      responseBytes: this.bytes,
-      elapsedMs: Date.now() - this.started,
-      exhausted: this.exhausted,
-    };
-  }
 }

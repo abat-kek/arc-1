@@ -85,6 +85,22 @@ describe('selectTransportRevisionPair', () => {
     expect(pair.previous).toBeNull();
   });
 
+  it.each(['2026-06-23T11:22:09Z', '2026-06-23T11:23:41Z'])(
+    'compares active source to the latest snapshot even when its timestamp is %s',
+    (timestamp) => {
+      // A4HK906373: active bytes equal 00002; comparing to 00001 repeats an older change.
+      const feed = [
+        rev('99999', '2026-08-05T11:43:04Z', 'A4HK906373'),
+        ...A4H_CLASS_FEED.filter((r) => r.id !== '00000'),
+        rev('00000', timestamp, 'A4HK906373'),
+      ];
+      const pair = selectTransportRevisionPair(feed, ['A4HK906373'], 'active');
+      expect(pair.current?.id).toBe('00000');
+      expect(pair.previous?.id).toBe('00002');
+      expect(baselineStatusFor(pair, feed)).toBe('prior-revision');
+    },
+  );
+
   it('handles an empty feed', () => {
     const pair = selectTransportRevisionPair([], ['A4HK906291']);
     expect(pair).toMatchObject({ current: null, previous: null, selectionMethod: 'no-revisions' });
@@ -191,9 +207,11 @@ describe('baselineStatusFor', () => {
     expect(baselineStatusFor(selectTransportRevisionPair(feed, ['A4HK906289']))).toBe('no-prior-snapshot');
   });
 
-  it('calls a missing baseline ambiguous when the current revision was only guessed', () => {
+  it('labels the latest baseline unverified when active source has no attribution', () => {
     const feed = [rev('00001', '2026-06-23T09:34:43Z', 'A4HK900001'), rev('00000', '2026-06-23T09:34:04Z')];
-    expect(baselineStatusFor(selectTransportRevisionPair(feed, ['A4HK906289'], 'active'))).toBe('baseline-ambiguous');
+    expect(baselineStatusFor(selectTransportRevisionPair(feed, ['A4HK906289'], 'active'))).toBe(
+      'prior-revision-unverified',
+    );
   });
 
   it('reports baseline-unavailable for an empty feed', () => {

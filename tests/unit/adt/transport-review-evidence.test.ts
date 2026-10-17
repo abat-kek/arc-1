@@ -51,6 +51,30 @@ function client(missing: string[] = []) {
 }
 
 describe('transport review evidence regressions', () => {
+  it('keeps local invalid-history explanations under minimal errors', async () => {
+    const c = client();
+    vi.mocked(c.getRevisions).mockImplementation(async () => parseRevisionFeed('<html>PRIVATE</html>'));
+    const result = await diffTransportObject(c, { ...object([]), type: 'PROG' }, ids, { minimalErrors: true });
+    expect(result.parts[0].note).toContain('Invalid or unexpected revision history response');
+    expect(result.parts[0].note).not.toContain('PRIVATE');
+  });
+  it('distinguishes a speculative include without request attribution', async () => {
+    const result = await diffTransportObject(client(), object([]), ids);
+    const part = result.parts.find((part) => part.part === 'definitions');
+    expect(part?.baselineStatus).toBe('baseline-unavailable');
+    expect(part?.note).toContain('Speculative part: no snapshot attributed to this request');
+  });
+  it.each([false, true])('reports a pending draft even when the active read fails: %s', async (fails) => {
+    const c = client();
+    vi.mocked(c.getRevisions).mockResolvedValue({
+      object: { type: 'PROG', name: 'Z_DEMO' },
+      revisions: [rev('99999', request), rev('00000', request), ...history()],
+    });
+    if (fails) vi.mocked(c.getRevisionSource).mockRejectedValue(new AdtApiError('Denied', 403, '/sap/bc/adt/demo'));
+    const result = await diffTransportObject(c, { ...object([]), type: 'PROG' }, ids, { mode: 'active' });
+    expect(result.parts[0].note).toContain('Inactive draft pending for this request; not compared.');
+    expect(vi.mocked(c.getRevisionSource).mock.calls.every(([uri]) => !uri.includes('99999'))).toBe(true);
+  });
   it.each([false, true])('names an oversized response under minimalErrors=%s', async (minimalErrors) => {
     const c = client();
     vi.mocked(c.getRevisionSource).mockRejectedValue(new AdtResponseLimitError(1024, 1025, 'transport-review'));
@@ -125,15 +149,6 @@ describe('transport review evidence regressions', () => {
     'rejects a malformed entry instead of silently reporting empty history: %s',
     (xml) => expect(() => parseRevisionFeed(xml)).toThrow(/unexpected/),
   );
-  it('preserves flagged baselines until verified, and keeps the requested flagged task reviewable', () => {
-    const flagged = { ...rev('00002', ' devk900099 '), isTestTransport: true };
-    const feed = [rev('00003', request), flagged, rev('00001', 'DEVK900001')];
-    expect(selectTransportRevisionPair(feed, ids, 'released').previous?.isTestTransport).toBe(true);
-    const requested = selectTransportRevisionPair(feed, ['DEVK900098', 'DEVK900099'], 'released');
-    expect(requested.current?.id).toBe('00002');
-    expect(requested.previous?.id).toBe('00001');
-    expect(selectTransportRevisionPair(history(), ids, 'released').current?.isTestTransport).toBeUndefined();
-  });
   it('selects explicit source states without substituting current work for missing release history', () => {
     const feed = [rev('99999', request), rev('00000', request), ...history()];
     expect(selectTransportRevisionPair(feed, ids, 'active').current?.id).toBe('00000');
@@ -141,14 +156,13 @@ describe('transport review evidence regressions', () => {
     expect(selectTransportRevisionPair(feed.slice(0, 2), ids, 'released').current).toBeNull();
   });
 
-  it('retains test-transport flags and advertises incomplete history without following a guessed URL', () => {
+  it('advertises incomplete history without following a guessed URL', () => {
     const feed = parseRevisionFeed(
       '<feed><link rel="next" href="https://untrusted.test/"/><entry isTestTransport="true"><id>00002</id><content src="/sap/bc/adt/demo/versions/20261017120000/00002/content"/></entry></feed>',
     );
     expect(feed).toMatchObject({
       historyComplete: false,
-      continuationAdvertised: true,
-      revisions: [{ isTestTransport: true }],
+      revisions: [{ id: '00002' }],
     });
     expect(JSON.stringify(feed)).not.toContain('untrusted.test');
     expect(() => parseRevisionFeed('<html>Login</html>')).toThrow(/unexpected/);

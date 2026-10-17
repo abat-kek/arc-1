@@ -74,7 +74,7 @@ it('charges review CSRF and retry sends against the actual 180-send page cap', a
   );
   expect(methods).toHaveLength(180);
   expect(methods.slice(-3)).toEqual(['HEAD', 'POST', 'POST']);
-  expect(budget.metrics()).toMatchObject({ reads: 179, backendAttempts: 180, exhausted: true });
+  expect(budget).toMatchObject({ reads: 179, attempts: { used: 180 }, exhausted: true });
 });
 describe.each([false, true])('request attempt budget, Connectivity proxy=%s', (proxy) => {
   it.each(['GET', 'POST'] as const)('never hides an implicit 421 %s replay outside the allowance', async (method) => {

@@ -21,7 +21,7 @@ it('stops after an oversized response even when the HTTP reservation was release
   const next = vi.fn();
   await expect(budget.read(next)).rejects.toThrow(/exhausted/);
   expect(next).not.toHaveBeenCalled();
-  expect(budget.metrics()).toMatchObject({ exhausted: true, responseBytes: 1024 * 1024 + 1 });
+  expect(budget).toMatchObject({ exhausted: true, bytes: 1024 * 1024 + 1 });
 });
 it('bounds a large sequence of source reads by cumulative bytes', async () => {
   const budget = new ReviewBudget();

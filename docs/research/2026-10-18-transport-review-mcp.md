@@ -88,11 +88,25 @@ This is not a deployed CF/Cloud Connector or live principal-propagation qualific
 No BTP ABAP backend was tested. The existing source endpoints are attempted without inventing
 support or an unsupported-platform ban from missing registry entries alone.
 
+## Open-request baseline correction
+
+A fresh read-only probe of A4HK906373 found the active version of ZCL_ARC1_DEMO_CALC
+at 11:22:09, while snapshot 00002 was created at 11:23:41. Active source equals 00002;
+comparing it to 00001 incorrectly repeats an earlier transport's +1-line change.
+An attributed 99999 draft also exists; its changes are outside this active-source review.
+
+Two regression cases (older and tied active timestamps) failed before the fix. Active selection
+now examines all historical snapshots, skips same-request saves, and preserves uncertainty
+where their ordering conflicts. It never selects the draft. A real HTTP MCP replay preserved
+the three released changes and returned 00002 → 00000 with zero changes for the open request:
+14 GETs, zero mutations. [Sanitized evidence](transport-review-mcp/http-final-summary.json).
+
 ## Review and checks
 
 The design and [BTP follow-up](transport-review-mcp/claude-design-followup.md) were reviewed by
-Claude Code Opus 5.5 Max in the GUI. Detailed implementation review and full checks are in
-progress. Earlier #1008 approvals cover the superseded CLI/report implementation only.
+Claude Code Opus 5.5 Max in the GUI. The [implementation review](transport-review-mcp/claude-implementation-review.md) found the
+active-baseline defect above. Its documentation/test issues, safe local error notes, pending-draft
+visibility and catalog headroom have been addressed. Final review and checks are in progress. Earlier #1008 approvals cover the superseded CLI/report implementation only.
 
 The SAP Marketplace was re-opened on 18 October: its current feature list still includes
 Timeline, Transport Organizer, feeds, Dictionary logs and notebooks. SAP Help's MCP page

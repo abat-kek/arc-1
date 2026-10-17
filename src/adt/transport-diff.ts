@@ -24,6 +24,7 @@ import { type AdtClient, CLASS_REVISION_INCLUDES, REVISION_TYPES } from './clien
 import { AdtApiError, AdtNetworkError, AdtResponseLimitError, isNotFoundError } from './errors.js';
 import { throwIfRequestCancelled } from './http-deadline.js';
 import { AdtRequestBudgetError } from './request-attempt-budget.js';
+import { RevisionHistoryError } from './revision-feed.js';
 import { unifiedDiff } from './source-diff.js';
 import { ReviewBudget } from './transport-review-budget.js';
 import type { RevisionInfo, TransportObject } from './types.js';
@@ -41,6 +42,7 @@ function describeError(err: unknown, minimalErrors?: boolean): string {
   if (err instanceof AdtResponseLimitError)
     return `ARC-1 response exceeded its ${err.limitBytes}-byte review allowance; inspect this part in SAP.`;
   if (err instanceof AdtRequestBudgetError) return err.message;
+  if (err instanceof RevisionHistoryError) return err.message;
   if (err instanceof AdtNetworkError && err.cause?.name === 'TimeoutError')
     return 'ARC-1 review request time limit reached; source evidence was not collected.';
   if (err instanceof Error && err.message === 'Review collection budget exhausted.')
@@ -187,16 +189,13 @@ export function selectTransportRevisionPair(
 
   const skipped: SkippedRevision[] = [];
   const current = sorted[currentIndex];
-  // Work states are not numbered historical snapshots. In particular, undated 00000
-  // must not sort behind known history and turn that history into an empty baseline.
-  if (WORK_STATE_VERSIONS.has(revisionNumber(current)) && !Number.isFinite(Date.parse(current.timestamp))) {
-    const snapshots = sorted.filter((r) => !WORK_STATE_VERSIONS.has(revisionNumber(r)));
-    const previous = snapshots.find((r) => !belongsToTransport(r)) ?? null;
-    return { current, previous, selectionMethod, skipped, baselineAmbiguous: snapshots.length > 0 };
-  }
-  let previousIndex = currentIndex + 1;
-  while (previousIndex < sorted.length) {
-    const candidate = sorted[previousIndex];
+  // Active timestamps can predate the latest snapshot (verified on A4H). They are not
+  // historical boundaries: compare active source to the latest foreign snapshot.
+  const candidates =
+    mode === 'active' ? sorted.filter((r) => revisionSourceState(r) === 'released') : sorted.slice(currentIndex + 1);
+  let previousIndex = 0;
+  while (previousIndex < candidates.length) {
+    const candidate = candidates[previousIndex];
     const num = revisionNumber(candidate);
     if (WORK_STATE_VERSIONS.has(num)) {
       const kind = num === ACTIVE_VERSION ? 'active work state' : 'inactive draft';
@@ -209,11 +208,13 @@ export function selectTransportRevisionPair(
     previousIndex += 1;
   }
 
-  const previous = previousIndex < sorted.length ? sorted[previousIndex] : null;
+  const previous = candidates[previousIndex] ?? null;
   // Missing dates sort last, so date order cannot prove the pair: a predecessor numbered at or
   // after `current`, or a foreign snapshot numbered between the two, leaves chronology open.
   const [before, after] = [previous ? revisionNumber(previous) : '', revisionNumber(current)];
   const currentIsWorkState = WORK_STATE_VERSIONS.has(after);
+  const undatedWorkState =
+    currentIsWorkState && !Number.isFinite(Date.parse(current.timestamp)) && candidates.length > 0;
   const conflictingCurrent = sorted.some(
     (r) => belongsToTransport(r) && revisionSourceState(r) === mode && revisionNumber(r) > after,
   );
@@ -232,7 +233,7 @@ export function selectTransportRevisionPair(
     previous,
     selectionMethod,
     skipped,
-    ...(conflictingCurrent || conflictingOrder ? { baselineAmbiguous: true } : {}),
+    ...(undatedWorkState || conflictingCurrent || conflictingOrder ? { baselineAmbiguous: true } : {}),
   };
 }
 
@@ -518,7 +519,7 @@ function unavailablePart(part: string, note: string, resolved?: Partial<Transpor
     added: 0,
     removed: 0,
     diff: '',
-    note,
+    note: [resolved?.note, note].filter(Boolean).join(' '),
   };
 }
 
@@ -572,10 +573,22 @@ async function diffPart(
     selectionMethod: pair.selectionMethod,
     from: pair.previous ? revisionLabel(pair.previous) : null,
     to: pair.current ? revisionLabel(pair.current) : null,
+    ...(opts.mode === 'active' &&
+    revisions.some(
+      (r) => revisionSourceState(r) === 'draft' && transportIds.has((r.transport ?? '').trim().toUpperCase()),
+    )
+      ? { note: 'Inactive draft pending for this request; not compared.' }
+      : {}),
   };
 
   if (!pair.current) {
-    return unavailablePart(part, 'No revision satisfies the requested source state and attribution.', base);
+    return unavailablePart(
+      part,
+      opts.speculative && opts.mode !== 'active'
+        ? 'Speculative part: no snapshot attributed to this request; unchanged source is not established.'
+        : 'No revision satisfies the requested source state and attribution.',
+      base,
+    );
   }
 
   let after: string;
@@ -606,6 +619,7 @@ async function diffPart(
   }
   const capped = capDiff(result.diff);
   const note = [
+    base.note,
     historyIncomplete ? 'History advertises more revisions; the selected baseline is uncertain.' : '',
     pair.selectionMethod !== 'exact-transport'
       ? 'Active source is not attributed to this request; this is a candidate comparison.'

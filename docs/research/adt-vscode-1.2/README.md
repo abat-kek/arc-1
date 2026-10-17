@@ -70,7 +70,7 @@ server-driven engine only when the observed type follows that contract.
 | FUGR | Sample main history active-only; structural ownership incomplete | Two numbered include histories and owner mapping; whole main is not complete group coverage |
 | DOMA / DTEL / TABL | Feeds advertised, historical content refused for DOMA/DTEL/TTYP on A4H | Two retrievable differing historical payloads, stable field meaning and attribution |
 | METH across requests | Existing class sample proves main/CCIMP changes only | Different methods in two requests; retain whole-part scope warning until attribution proven |
-| Test transports | Client parses `isTestTransport`; none observed live | Intermediate flagged snapshot plus direct flagged-request/task review before filtering |
+| Test transports | Upstream flag found; none observed live, no filtering added | Verify an intermediate flagged snapshot and a directly requested flagged task before changing selection |
 | History continuation | Synthetic `rel=next`; none observed live | Actual continuation contract before following links; partial evidence meanwhile |
 | Deletion / Customizing keys | No representative before/after fixture | Capture operation/key metadata; a 404 never proves deletion |
 

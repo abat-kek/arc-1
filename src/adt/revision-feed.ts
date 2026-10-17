@@ -10,6 +10,13 @@ const TRANSPORT_RELS = new Set([
 /** CTS request/task id: 3-char system + K/T/… + 6 alphanumerics, e.g. A4HK906291. */
 const CTS_ID_RE = /^[A-Z0-9]{3}[A-Z][A-Z0-9]{6}$/;
 
+/** Fixed local explanation, safe to expose even when SAP diagnostics are hidden. */
+export class RevisionHistoryError extends Error {
+  constructor() {
+    super('Invalid or unexpected revision history response; this is not an empty history.');
+  }
+}
+
 /** Decode a URI component, returning the raw value rather than throwing on a malformed `%` escape. */
 function safeDecode(value: string): string {
   try {
@@ -56,7 +63,7 @@ function revisionTransportId(links: Record<string, unknown>[]): string {
 
 /** Parse source revision history feed from /source/main/versions */
 export function parseRevisionFeed(xml: string): RevisionListResult {
-  if (!xml.trim()) throw new Error('Empty revision history response.');
+  if (!xml.trim()) throw new RevisionHistoryError();
 
   try {
     if (XMLValidator.validate(xml) !== true) throw new Error('Invalid revision history XML.');
@@ -91,15 +98,12 @@ export function parseRevisionFeed(xml: string): RevisionListResult {
         timestamp: String(entry.updated ?? ''),
         ...(versionTitle ? { versionTitle } : {}),
         ...(transport ? { transport } : {}),
-        ...(entry['@_isTestTransport'] === 'true' || entry['@_isTestTransport'] === 'false'
-          ? { isTestTransport: entry['@_isTestTransport'] === 'true' }
-          : {}),
         uri: String(contentNode['@_src'] ?? ''),
       });
     }
     const next = toRecordArray(feed.link).find((link) => link['@_rel'] === 'next');
-    return { object, revisions, ...(next ? { historyComplete: false, continuationAdvertised: true } : {}) };
+    return { object, revisions, ...(next ? { historyComplete: false } : {}) };
   } catch {
-    throw new Error('Invalid or unexpected revision history response; this is not an empty history.');
+    throw new RevisionHistoryError();
   }
 }

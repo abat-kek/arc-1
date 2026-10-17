@@ -220,7 +220,32 @@ every constant to `CHAR(70)` instead produced a statement-count error in that ca
 `SUBSTRING` form also failed during 8.16 query formatting, while the public `LEFT` form passed.
 These backend parser limitations remain recorded, not regraded as successes. The runtime never
 uses this free-SQL oracle. This qualification does not cover every valid SAP text name or query
-layout, and the second review must assess the remaining risk before a merge recommendation.
+layout.
+
+A second Opus 5.5 Max review of `e9c7104c` accepted all fixes and found no remaining code blocker.
+It independently ran 296 focused tests and the size gate. It classified the expanded-constant
+oracle failure as a research-query limitation: the runtime applies LEFT/LENGTH to a field,
+not to a nested constant expression. Merge recommendation: ready once final CI is green and the
+PR discloses the schema compression and oracle failure. Opt-in pilot use on 758/816 is qualified;
+autonomous-model reliability is not.
+
+Follow-up live checks strengthen the field-form evidence: another 12 discovery requests with
+varying prefix lengths passed on 816. `prefix-existing-live.ts` then found the expected existing
+German text with two leading name spaces on **both 758 and 816**, using a shorter prefix and
+the oracle's exact object/ID/language. These are positive stored-field matches. Together, the
+new prefix checks total 26 public calls; all used no RFC, free SQL, helper or SAP mutation.
+The nine public read/discover/search/capability smoke calls were also rerun successfully at
+`e9c7104c` (750 correctly reports `UNSUPPORTED_PLATFORM`). Private names and bodies stay local.
+
+Final local validation: **326 files / 9,229 tests pass** in a fresh two-worker run without retries.
+An earlier four-worker run found three obsolete wording assertions (updated) and four CLI/shutdown
+startup timeouts under load. Typecheck, build, lint, policy, schema/file budgets, strict docs build,
+and package inspection pass. The distributed package contains the eight stored-text modules and
+handler. No schema budget was raised.
+
+The recorded 8/10 model run predates the description edits in `e9c7104c`; it is historical evidence,
+not a score for the final payload. Qualify the final payload with the actual deployment model
+before making an autonomous-workflow claim. Neither review certifies model answers.
 
 ## Pre-review SAPQuery integration checks
 

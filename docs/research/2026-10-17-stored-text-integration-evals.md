@@ -7,14 +7,15 @@ This follows the [codec investigation](2026-10-17-stxl-typescript-spike.md),
 
 ## Integration decision
 
-The production entry point is `SAPRead(type="LONG_TEXT", longText=...)`. The nested request has
+The production entry point is `SAPQuery(action="long_text", longText=...)`. Saved business text is
+data, so it belongs with query operations; SAPRead remains focused on development objects. The nested request has
 three modes: discover headers by known object/literal name prefix; read an ordered exact-key
 batch; or search a literal phrase within supplied keys. Discovery returns the same key shape
 accepted by reads, so the model can copy identities instead of constructing SAP composite names.
 The [usage guide](../../docs_page/tools.md#stored-sapscript-long-texts) provides concrete examples.
 
-One existing intent tool keeps the permission and key contract together. Separate SAPSearch and
-SAPRead routes or another standalone tool would duplicate the same fields and guidance. Raw table
+One existing intent tool keeps the permission and key contract together. Separate discovery/read
+tools would duplicate the same fields and guidance. Raw table
 queries plus model-side decoding would expose binary mechanics and encourage broader SQL access.
 These tradeoffs are recorded in the [design note](../plans/2026-10-17-stored-text-integration.md).
 
@@ -25,16 +26,20 @@ there is one codec to maintain. The MIT reference attribution remains in distrib
 
 ## Authorization and operational behavior
 
-`data` scope, data-preview opt-in, table blocklists, and the caller's SAP authorization all apply.
-No RFC, free SQL, helper installation, or SAP mutation is used. The complete type/property/guidance
-is removed when data access is unavailable, scope or deny rules prohibit it, or BTP is selected or
-discovered. Multitarget definitions follow the selected target's ceiling. Hyperfocused dispatch
-uses the same validated handler.
+`data` scope, `SAP_ALLOW_DATA_PREVIEW=true`, table blocklists, and the caller's SAP authorization all
+apply. The operation is disabled by default. `SAP_ALLOW_FREE_SQL` and `sql` scope govern the separate
+SQL action: long-text access does not require or grant either. Existing SQL calls may still omit
+`action`; they resolve to `sql`, including deny-rule enforcement.
+No RFC, free SQL, helper installation, or SAP mutation is used. The complete action/property/guidance
+is removed when data preview is disabled or BTP is selected/discovered. Authenticated listings also
+apply scope and deny-rule pruning. Multitarget definitions follow the selected target's ceiling.
+Hyperfocused dispatch uses the same validated handler. Runtime deny rules apply to every call,
+including stdio, where there are no user scopes.
 
 The request shares admission, cancellation, and cumulative response accounting through serialization.
 Limits are 25 keys, eight reference hops, 60 seconds/120 table queries, and 2 MiB/10,000 decoded
 lines per batch. Existing data response limits can stop a smaller request. Audit start events
-retain only mode and key count for this type; sink tests verify that keys, phrases, and returned
+retain only mode and key count for this action; sink tests verify that keys, phrases, and returned
 business text stay out of logs. The model still receives the requested text.
 
 Only classic persisted ITF/TLINE with the qualified FF06/4103 little-endian profile is supported.
@@ -44,7 +49,8 @@ cluster rereads detect observed changes without claiming snapshot consistency or
 
 ## Public-handler SAP verification
 
-The integration probe calls public `handleToolCall` with writes, helper writes, and free SQL disabled.
+After moving the route to SAPQuery, all nine integration calls below were rerun through public
+`handleToolCall` with writes, helper writes, and free SQL disabled.
 It uses existing authorized test texts, without installing or modifying SAP objects.
 
 | Target SAP_BASIS | Calls | Outcome |
@@ -88,9 +94,38 @@ support task-shaped contracts and whole-trajectory evaluation. The
 [MCP tools specification](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)
 defines the schema and read-only annotations exposed to clients.
 
-## Interpreting model results
+## Current SAPQuery model result
 
-These are single runs per local model configuration, not a model leaderboard or a statistical
+One fresh ten-case run used Qwen3.5 27.8B/Q4_K_M through Ollama with a temporary 32k-context,
+temperature-zero configuration. All cases used the final SAPQuery contract, the same production
+fixture dispatcher, and all 12 standard tools. Prompts, on-prem tool definitions, and grading were
+frozen throughout the run. The OpenAI tool payload is 74,053 bytes, SHA-256
+`4a70bbc33f4503b9c895ec5e6a44653a46b6639c248bc45947209fc06282701f`.
+The maximum reported individual prompt was 20,525 tokens, within the configured 32k context.
+
+The unchanged automated result is **8/10**. The purchase-order-number case guessed object/ID values
+instead of asking for a verified mapping, then made an invalid discovery call. The missing-key case
+used the correct tool/key and explicitly qualified absence, but Markdown bold markers interrupted
+the phrase expected by the answer regex. Its explanation also introduced unsupported archive-table
+and text-pool details. Neither result was regraded or dropped from the denominator.
+
+Manual review found errors beyond those two automated failures: the exact-space case preserved the
+key but changed literal `&amp;` to `&` in its body; the batch answer confused text name with text
+object in its suggested next step and called an ITF paragraph comment-style; the unsaved-editor
+answer refused retrieval correctly but overclaimed storage behavior and suggested an incorrect
+object example. Eight automated passes therefore do not mean eight fully correct answers.
+
+[Complete recorded evidence](2026-10-17-stored-text-sapquery-model-evidence.json) preserves the original
+report, all ten traces/answers, model settings, hashes, automated grades, and manual findings. The
+unique temporary alias was removed and the base model retained. This single run does not establish
+reliability or a causal improvement over the earlier routing. The draft remains pending actual
+client/model qualification; exact-content consumers should use returned line values directly.
+
+## Earlier SAPRead-surface model results
+
+The following three runs tested the **earlier SAPRead LONG_TEXT surface**, before the routing change.
+Their schema hash and outcomes remain historical evidence; they do not qualify the current SAPQuery
+contract. These are single runs per local model configuration, not a model leaderboard or a statistical
 reliability estimate. These fixed prompts were also used during development, not a blind holdout.
 All ten selected scenarios count in the denominator, including provider
 errors and timeouts. Scores require the complete expected workflow and asserted answer; they are
@@ -153,9 +188,23 @@ Keep the failing cases as regressions and qualify actual deployment clients/mode
 an autonomous-workflow reliability claim. The API returns the original line values; consumers
 requiring exact text should use those values rather than a model's paraphrase or rendering.
 
-## Implementation checks
+## Current SAPQuery integration checks
 
-The final full unit run passed **324 files / 9,166 tests** with four workers. This includes 64
+The migrated surface passes **324 files / 9,192 tests**, including 64 eval-harness/grader tests,
+57 public-handler tests, SQL backward compatibility, data-only visibility, BTP schema parity,
+per-target policy, hyperfocused delegator visibility, deny rules, and malformed-call audit redaction.
+Typecheck, build, lint, policy validation (132 entries/14 schemas), package inspection, and
+file/schema budgets pass. The full MCP wire surface is 74,468 bytes; existing wire/token ceilings
+were not raised. Six tool-definition snapshots were intentionally reviewed and updated.
+
+Review found and fixed stale hyperfocused query visibility and a malformed nested-call audit path.
+The full suite also caught a BTP runtime/wire-schema mismatch and an obsolete data-only visibility
+assertion; both were corrected before the passing full run. The old SAPRead route is rejected.
+The nine live SAPQuery calls above used no RFC, free SQL, installed helper, or SAP mutation.
+
+## Earlier integration checks
+
+Before the SAPQuery migration, the full unit run passed **324 files / 9,166 tests** with four workers. This includes 64
 eval-harness/grader tests, 46 public long-text handler tests, production codec/store tests, and
 scope, deny, target-selection, audit-redaction, cancellation, and schema-snapshot checks.
 Typecheck, build, lint, policy validation (131 policy entries/14 schemas), and the file/schema

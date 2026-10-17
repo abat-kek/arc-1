@@ -9,7 +9,7 @@ documented by SAP, traced through authorized source reads, or identified below a
 Proposed oracle cases remain separate from executed evidence. The companion spike report remains
 the authority for the earlier codec/corpus counts.
 
-The qualified subset is now integrated as [SAPRead LONG_TEXT](../../docs_page/tools.md#stored-sapscript-long-texts).
+The qualified subset is now integrated as [SAPQuery long_text](../../docs_page/tools.md#stored-sapscript-long-texts).
 See [integration and model evaluation](2026-10-17-stored-text-integration-evals.md) for public dispatch evidence.
 
 ## Decision and proposed contract

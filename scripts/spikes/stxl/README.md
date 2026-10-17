@@ -1,7 +1,7 @@
 # STXL TypeScript spike
 
 Research scripts and compatibility exports for the production reader in `src/adt/stored-text/`.
-The MCP entry point is [SAPRead LONG_TEXT](../../../docs_page/tools.md#stored-sapscript-long-texts).
+The MCP entry point is [SAPQuery `action="long_text"`](../../../docs_page/tools.md#sapquery).
 The reader uses guarded ADT table queries, then a bounded TypeScript parser and Node's built-in
 zlib. It requires no RFC, SAP SDK, Python, AMDP, or installed ABAP companion.
 
@@ -48,7 +48,8 @@ cap, and keeps the default 2 MiB cumulative response allowance. Those bounds may
 25 keys, particularly for large texts. Decoded batch output is also limited to 2 MiB/10,000 lines.
 Header and cluster rereads detect observed changes; `snapshotGuaranteed: false` remains explicit.
 
-The manual CLI remains useful for research; production MCP calls use `LONG_TEXT`. Both reject custom persistence,
+The manual CLI remains useful for research; production MCP calls use `SAPQuery(action="long_text")`.
+Both reject custom persistence,
 legacy ITCRF reference containers, and non-ITF/STXB text. Memory, archives, upgrade stores,
 SAPscript INCLUDE expansion, and rendering remain outside the contract.
 

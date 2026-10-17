@@ -35,7 +35,7 @@ npm run test:eval -- --provider ollama --model qwen3.6:35b-mlx --file stored-tex
 
 This bucket tests exact keys, discovery followed by reading, ambiguity, partial batch failures,
 bounded search, unsupported storage, and instructions embedded in returned text. It uses the real
-`SAPRead LONG_TEXT` dispatcher and decoder over synthetic SAP-generated table fixtures. It makes
+`SAPQuery(action="long_text")` dispatcher and decoder over synthetic SAP-generated table fixtures. It makes
 no SAP requests. Other tools remain visible as distractors, but cannot execute in this fixture
 backend. Use a locally installed model or the direct Anthropic provider with your configured key.
 

@@ -14,21 +14,21 @@ describe('Audit Events', () => {
       expect(sanitizeArgs(args)).toEqual({ type: 'FUNC', name: 'ZHELLO', includeSignature: true });
     });
 
-    it('audits LONG_TEXT mode and counts without keys, prefixes, phrases or extra business data', () => {
+    it('audits long_text mode and counts without keys, prefixes, phrases or extra business data', () => {
       const privateData = 'private-business-data-sentinel';
       const args = {
-        type: 'LONG_TEXT',
+        action: 'long_text',
         name: privateData,
         phrase: privateData,
         longText: { mode: 'search', namePrefix: privateData, keys: [{ name: privateData }], phrase: privateData },
       };
       const safe = sanitizeArgs(args);
-      expect(safe).toEqual({ type: 'LONG_TEXT', longText: { mode: 'search', keyCount: 1 } });
+      expect(safe).toEqual({ action: 'long_text', longText: { mode: 'search', keyCount: 1 } });
       const rawEvent: ToolCallStartEvent = {
         timestamp: '',
         level: 'info',
         event: 'tool_call_start',
-        tool: 'SAPRead',
+        tool: 'SAPQuery',
         args: safe,
       };
       const event = redactAuditEvent(rawEvent);
@@ -37,12 +37,23 @@ describe('Audit Events', () => {
       expect(JSON.stringify(redactAuditEvent({ ...rawEvent, args }))).not.toContain(privateData);
     });
 
-    it('protects hyperfocused nested and malformed LONG_TEXT parameters before validation', () => {
+    it('protects hyperfocused nested, malformed and former-route text parameters before validation', () => {
       const privateData = 'private-text-argument-sentinel';
       for (const args of [
         {
-          action: 'read',
-          params: { type: 'LONG_TEXT', name: privateData, longText: { mode: 'discover', namePrefix: privateData } },
+          action: 'query',
+          name: privateData,
+          params: { action: 'long_text', name: privateData, longText: { mode: 'discover', namePrefix: privateData } },
+        },
+        {
+          action: ['QUERY'],
+          name: privateData,
+          params: { action: ['LONG_TEXT'], longText: { mode: 'read', keys: [{ name: privateData }] } },
+        },
+        {
+          action: 'query',
+          name: privateData,
+          params: { action: ['long_text'], longText: { mode: 'read', keys: [{ name: privateData }] } },
         },
         {
           action: 'read',
@@ -50,6 +61,8 @@ describe('Audit Events', () => {
           params: { longText: { mode: 'search', phrase: privateData, keys: [{ name: privateData }] } },
         },
         { type: 'LONG_TEXT', longText: privateData },
+        { action: 'long_text', name: privateData, longText: privateData },
+        { action: ['long_text'], name: privateData, longText: { mode: 'read', keys: [{ name: privateData }] } },
         { type: ['LONG_TEXT'], name: privateData, longText: { mode: 'read', keys: [{ name: privateData }] } },
         { type: 'LONG_TEXT', longText: { mode: privateData, keys: [{ name: privateData }] } },
         { long_text: { mode: 'read', keys: [{ name: privateData }] } },

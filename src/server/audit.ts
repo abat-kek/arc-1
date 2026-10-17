@@ -608,15 +608,25 @@ function redactValue(key: string, value: unknown, state: RedactionState, depth: 
   if (value && typeof value === 'object') {
     const input = value as Record<string, unknown>;
     const inputType = Array.isArray(input.type) && input.type.length === 1 ? input.type[0] : input.type;
-    if (typeof inputType === 'string' && /^LONG_TEXT$/iu.test(inputType)) {
+    const inputAction = Array.isArray(input.action) && input.action.length === 1 ? input.action[0] : input.action;
+    const params =
+      input.params && typeof input.params === 'object' ? (input.params as Record<string, unknown>) : undefined;
+    const paramsAction =
+      Array.isArray(params?.action) && params.action.length === 1 ? params.action[0] : params?.action;
+    const textAction = typeof inputAction === 'string' && /^long_text$/iu.test(inputAction);
+    const nestedTextAction =
+      typeof inputAction === 'string' &&
+      /^query$/iu.test(inputAction) &&
+      typeof paramsAction === 'string' &&
+      /^long_text$/iu.test(paramsAction);
+    if (textAction || nestedTextAction || (typeof inputType === 'string' && /^LONG_TEXT$/iu.test(inputType))) {
       // Include malformed invocations too: old-style top-level name/phrase fields must not
-      // become a business-data logging path before LONG_TEXT validation rejects them.
-      const params =
-        input.params && typeof input.params === 'object' ? (input.params as Record<string, unknown>) : undefined;
+      // become a business-data logging path before long-text validation rejects them.
+      const summary = summarizeLongTextArgs(input.longText ?? params?.longText);
+      if (nestedTextAction) return { action: 'query', params: { action: 'long_text', longText: summary } };
       return {
-        type: 'LONG_TEXT',
-        ...(input.action === 'read' ? { action: 'read' } : {}),
-        longText: summarizeLongTextArgs(input.longText ?? params?.longText),
+        ...(textAction ? { action: 'long_text' } : { type: 'LONG_TEXT' }),
+        longText: summary,
       };
     }
     if (state.seen.has(value)) return REDACTION_LIMIT_MARKER;

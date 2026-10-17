@@ -13,9 +13,6 @@
  *   - Wrong tool / forbidden tool: 0.0
  */
 
-import { stripLlmEmptyValues } from '../../src/handlers/object-types.js';
-import { getToolSchema } from '../../src/handlers/schemas.js';
-import { formatZodError } from '../../src/handlers/zod-errors.js';
 import { matchesExpectedToolCall, scenarioPasses, scoreExpectedToolCallParameters } from './expected-call.js';
 import type { LiveExecutor } from './live-backend.js';
 import type {
@@ -258,8 +255,8 @@ export async function runScenario(
       let toolContent: string;
       if (scenario.mockToolExecutor) {
         toolContent = await scenario.mockToolExecutor(toolCall.name, toolCall.arguments);
-        if (toolCall.name === 'SAPRead' && toolContent.startsWith('Invalid arguments for SAPRead:')) {
-          validationFailure ??= `SAPRead arguments failed production schema validation on turn ${turn}`;
+        if (toolContent.startsWith(`Invalid arguments for ${toolCall.name}:`)) {
+          validationFailure ??= `${toolCall.name} arguments failed production schema validation on turn ${turn}`;
         }
       } else if (liveExecutor) {
         try {
@@ -268,18 +265,7 @@ export async function runScenario(
           toolContent = `[tool error] ${err instanceof Error ? err.message : String(err)}`;
         }
       } else {
-        let mockCall = toolCall;
-        if (scenario.validateSapReadCalls && toolCall.name === 'SAPRead') {
-          const parsed = getToolSchema('SAPRead', false)?.safeParse(stripLlmEmptyValues(toolCall.arguments));
-          if (parsed && !parsed.success) {
-            toolContent = formatZodError(parsed.error, 'SAPRead');
-            validationFailure ??= `SAPRead arguments failed production schema validation on turn ${turn}`;
-            messages.push({ role: 'tool', content: toolContent, toolCallId: toolCall.id, toolName: toolCall.name });
-            continue;
-          }
-          if (parsed?.success) mockCall = { ...toolCall, arguments: parsed.data as Record<string, unknown> };
-        }
-        toolContent = getMockResponse(scenario, mockCall, turn);
+        toolContent = getMockResponse(scenario, toolCall, turn);
       }
 
       signal?.throwIfAborted();

@@ -16,9 +16,8 @@ import * as DtelFields from './data-element-fields.js';
 import { SAPDIAGNOSE_ADDITIONAL_INPUTS } from './diagnose-fields.js';
 import * as FuncProcessing from './function-processing.js';
 import { getHyperfocusedToolDefinition } from './hyperfocused.js';
-import { LONG_TEXT_DESCRIPTION, LONG_TEXT_PROPERTY } from './long-text-input.js';
-import { pruneLongTextDefinition } from './long-text-tool.js';
 import { CLASS_WRITE_INCLUDES } from './object-types.js';
+import { createQueryDefinition } from './query-tool.js';
 import { addLiveRelationsDefinition } from './relation-tool.js';
 import {
   TABLE_TYPE_BATCH_TOOL_PROPERTIES,
@@ -91,8 +90,7 @@ function isBtpMode(config: ServerConfig): boolean {
 }
 
 const SAPREAD_DESC_ONPREM =
-  'Read SAP ABAP source, metadata, syntax results or stored business long texts. ' +
-  LONG_TEXT_DESCRIPTION +
+  'Read SAP ABAP source, metadata and syntax results. ' +
   'For source purpose, explanations, specs, reviews or pre-change context, prefer SAPContext first. DDIC metadata: omit format (default text); structured is CLAS-only for ordinary reads. ' +
   'TABLE_QUERY: structured multi-column filters; needs data preview. TABLE_CONTENTS supports a single-column filter. ' +
   'SYNTAX: read-only SAP check (objectType+name, optional source for unsaved text). CLAS: method="*" for signatures, method="NAME" for one body, or grep. Global class declaration/implementation: MAIN (omit include). definitions/implementations contain local helpers.';
@@ -128,22 +126,6 @@ const SAPCONTEXT_DESC_BTP =
   'deps: target KTD when available + selected dependency contracts, derived from source (not SAP-native relationships or a complete inventory). Counts distinguish root candidates from recursive attempts. On BTP, CL_ABAP_*/IF_ABAP_* and custom Z/Y are included.\n' +
   'structure (TABL only): the DDIC include/append tree.\n\n' +
   'Full detail: docs_page SAPContext.';
-
-// ─── SAPQuery ───────────────────────────────────────────────────────
-
-const SAPQUERY_DIALECT_GUIDE =
-  'ADT freestyle ABAP SQL: one read-only SELECT. Use AS aliases, alias~field/alias~*, ASCENDING/DESCENDING, single-quoted literals (no @/:/? parameters), and maxRows (not TOP/LIMIT/OFFSET/FETCH). JOINs, GROUP BY, aggregates, UNION and subqueries work. CTEs, FULL JOIN, derived/window tables, INTERSECT/EXCEPT, comments, semicolons and schema prefixes do not. ARC-1 auto-chunks long literal IN-lists in plain projection SELECTs. ';
-
-const SAPQUERY_DESC_ONPREM =
-  'Query SAP tables with ABAP SQL; returns columns + rows. For reverse-engineering metadata: DD02L, DD03L, TADIR, TFDIR, SWOTLV. Unknown tables get suggestions. ' +
-  SAPQUERY_DIALECT_GUIDE +
-  'For CDS consumers, do not scan DDDDLSRC/ACMDCLSRC/DDLXSRC_SRC; use SAPContext(action="impact", type="DDLS").';
-
-const SAPQUERY_DESC_BTP =
-  'Query BTP ABAP Environment with ABAP SQL; returns columns + rows. ' +
-  SAPQUERY_DIALECT_GUIDE +
-  'BTP permits custom Z/Y tables and released CDS entities; standard tables are blocked. ' +
-  'Use released views such as I_LANGUAGE. Unknown tables get suggestions.';
 
 // ─── SAPSearch ──────────────────────────────────────────────────────
 
@@ -414,12 +396,11 @@ export function getToolDefinitions(
             enum: btp ? SAPREAD_TYPES_BTP : SAPREAD_TYPES_ONPREM,
             description:
               'Repository or metadata type. TABL includes structures. KTD aliases SKTD; MESSAGES aliases MSAG. ' +
-              (btp ? '' : 'LONG_TEXT uses longText, not name. FTG2 aliases FEATURE_TOGGLE. ') +
+              (btp ? '' : 'FTG2 aliases FEATURE_TOGGLE. ') +
               'SYNTAX requires objectType+name. Server-driven objects are discovery-gated. TABL/DTI index names use TABLE~INDEX. ' +
               'DESD external schema; EVTB/EVTO event binding/object; CSNM CSN model; COTA communication target; DTSC/DTDC static/dynamic cache; DSFD scalar function; UIAD launchpad descriptor; DRTY CDS type; APLO log object; SAJC/SAJT job catalog/template.',
           },
           name: { type: 'string', description: 'Object name (e.g., ZTEST_PROGRAM, ZCL_ORDER, MARA)' },
-          ...(btp ? {} : { longText: LONG_TEXT_PROPERTY }),
           action: {
             type: 'string',
             enum: ['diff'],
@@ -1070,24 +1051,8 @@ export function getToolDefinitions(
   const navigation = tools.find((tool) => tool.name === 'SAPNavigate')!;
   addLiveRelationsDefinition(navigation, config, options.discoveryMap ?? resolvedFeatures?.discoveryMap);
 
-  // SAPQuery — only registered when free SQL is allowed
-  if (config.allowFreeSQL) {
-    tools.push({
-      name: 'SAPQuery',
-      description: btp ? SAPQUERY_DESC_BTP : SAPQUERY_DESC_ONPREM,
-      inputSchema: {
-        type: 'object',
-        properties: {
-          sql: { type: 'string', description: 'ABAP SQL SELECT statement' },
-          maxRows: {
-            type: 'number',
-            description: 'Rows (default 100, max 10,000; byte limit may apply sooner).',
-          },
-        },
-        required: ['sql'],
-      },
-    });
-  }
+  const query = createQueryDefinition(config, resolvedFeatures);
+  if (query) tools.push(query);
 
   tools.push(
     {
@@ -1775,9 +1740,5 @@ export function getToolDefinitions(
     if (annotations) tool.annotations = { ...annotations };
   }
 
-  return withStrictSchemas(
-    config.allowDataPreview && resolvedFeatures?.systemType !== 'btp'
-      ? tools
-      : tools.map((tool) => pruneLongTextDefinition(tool)),
-  );
+  return withStrictSchemas(tools);
 }

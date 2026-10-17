@@ -42,7 +42,7 @@ const config = {
   allowFreeSQL: false,
 };
 const auth = (scopes: string[]) => ({ token: 'test', clientId: 'test', scopes, expiresAt: 9_999_999_999 });
-const readArgs = (keys: FixtureTextKey[]) => ({ type: 'LONG_TEXT', longText: { mode: 'read', keys } });
+const readArgs = (keys: FixtureTextKey[]) => ({ action: 'long_text', longText: { mode: 'read', keys } });
 function setup(safety = { ...defaultSafetyConfig(), allowDataPreview: true }) {
   const fixture = createLongTextFixture();
   const client = new AdtClient({ baseUrl: 'https://sap.invalid', client: '001', safety });
@@ -64,7 +64,7 @@ afterEach(() => {
   resetCachedFeatures();
 });
 
-describe('LONG_TEXT nested input contract', () => {
+describe('SAPQuery long_text nested input contract', () => {
   const key = { object: 'TEXT', name: '  ZÄ  Hinweis', id: 'ST', language: 'E' };
   it('accepts strict-client null padding only in optional control fields', () => {
     expect(
@@ -109,15 +109,15 @@ describe('LONG_TEXT nested input contract', () => {
   });
 });
 
-describe('LONG_TEXT public dispatch with real source orchestration and decoder', () => {
+describe('SAPQuery long_text public dispatch with real source orchestration and decoder', () => {
   it('discovers reusable lower-case keys and reads the selected key without guessing', async () => {
     const { client, fixture } = setup();
     const found = await payload(
       await handleToolCall(
         client,
         config,
-        'SAPRead',
-        { type: 'LONG_TEXT', longText: { mode: 'discover', object: 'TEXT', namePrefix: 'Z_PAYMENT', limit: 20 } },
+        'SAPQuery',
+        { action: 'long_text', longText: { mode: 'discover', object: 'TEXT', namePrefix: 'Z_PAYMENT', limit: 20 } },
         auth(['read', 'data']),
       ),
     );
@@ -130,7 +130,7 @@ describe('LONG_TEXT public dispatch with real source orchestration and decoder',
     const selected = found.candidates.find(
       (item) => item.key.name === fixture.keys.invoice.name && item.key.language === 'E',
     )!.key;
-    const read = await payload(await handleToolCall(client, config, 'SAPRead', readArgs([selected]), auth(['data'])));
+    const read = await payload(await handleToolCall(client, config, 'SAPQuery', readArgs([selected]), auth(['data'])));
     expect(read.items).toHaveLength(1);
     expect(read.items[0]).toMatchObject({
       index: 0,
@@ -153,7 +153,7 @@ describe('LONG_TEXT public dispatch with real source orchestration and decoder',
       fixture.keys.broken,
       fixture.keys.invoice,
     ];
-    const read = await payload(await handleToolCall(client, config, 'SAPRead', readArgs(inputs)));
+    const read = await payload(await handleToolCall(client, config, 'SAPQuery', readArgs(inputs)));
     expect(read.items.map((item) => [item.index, item.key])).toEqual(inputs.map((key, index) => [index, key]));
     expect(read.items.map((item) => item.status)).toEqual(['ok', 'error', 'error', 'error', 'ok']);
     expect(read.items.slice(1, 4).map((item) => item.error!.code)).toEqual([
@@ -168,7 +168,7 @@ describe('LONG_TEXT public dispatch with real source orchestration and decoder',
       await handleToolCall(
         client,
         config,
-        'SAPRead',
+        'SAPQuery',
         readArgs([fixture.keys.empty, fixture.keys.headerOnly, fixture.keys.blank]),
       ),
     );
@@ -178,7 +178,7 @@ describe('LONG_TEXT public dispatch with real source orchestration and decoder',
   });
   it('reads names and text containing Unicode, spaces, and literal entities unchanged', async () => {
     const { client, fixture } = setup();
-    const read = await payload(await handleToolCall(client, config, 'SAPRead', readArgs([fixture.keys.unicode])));
+    const read = await payload(await handleToolCall(client, config, 'SAPQuery', readArgs([fixture.keys.unicode])));
     expect(read.items[0]).toMatchObject({
       key: fixture.keys.unicode,
       lines: [{ format: '*', text: '  Leading  spaces &amp; <tag> 😀' }],
@@ -192,8 +192,8 @@ describe('LONG_TEXT public dispatch with real source orchestration and decoder',
   it('searches only supplied keys with literal case-sensitive matching and error coverage', async () => {
     const { client, fixture } = setup();
     const search = await payload(
-      await handleToolCall(client, config, 'SAPRead', {
-        type: 'LONG_TEXT',
+      await handleToolCall(client, config, 'SAPQuery', {
+        action: 'long_text',
         longText: { mode: 'search', keys: [fixture.keys.invoice, fixture.keys.missing], phrase: 'Payment' },
       }),
     );
@@ -208,8 +208,8 @@ describe('LONG_TEXT public dispatch with real source orchestration and decoder',
         .every(({ options }) => !options.where?.some((item) => item.op === 'STARTS_WITH')),
     ).toBe(true);
     const wrongCase = await payload(
-      await handleToolCall(client, config, 'SAPRead', {
-        type: 'LONG_TEXT',
+      await handleToolCall(client, config, 'SAPQuery', {
+        action: 'long_text',
         longText: { mode: 'search', keys: [fixture.keys.invoice], phrase: 'payment' },
       }),
     );
@@ -217,7 +217,7 @@ describe('LONG_TEXT public dispatch with real source orchestration and decoder',
   });
   it('returns ITF commands as source data instead of expanding their INCLUDE targets', async () => {
     const { client, fixture } = setup();
-    const read = await payload(await handleToolCall(client, config, 'SAPRead', readArgs([fixture.keys.command])));
+    const read = await payload(await handleToolCall(client, config, 'SAPQuery', readArgs([fixture.keys.command])));
     expect(read.items[0]).toMatchObject({
       lines: [{ format: '/:', text: 'INCLUDE Z_OTHER OBJECT TEXT ID ST' }],
       warnings: ['ITF_COMMANDS_PRESENT'],
@@ -227,8 +227,8 @@ describe('LONG_TEXT public dispatch with real source orchestration and decoder',
   it('makes bounded discovery truncation explicit and interprets wildcards literally', async () => {
     const { client } = setup();
     const limited = await payload(
-      await handleToolCall(client, config, 'SAPRead', {
-        type: 'LONG_TEXT',
+      await handleToolCall(client, config, 'SAPQuery', {
+        action: 'long_text',
         longText: { mode: 'discover', object: 'TEXT', namePrefix: 'Z_PAYMENT', limit: 1 },
       }),
     );
@@ -237,8 +237,8 @@ describe('LONG_TEXT public dispatch with real source orchestration and decoder',
     expect(limited.nextStep).toMatch(/Narrow namePrefix/);
     for (const namePrefix of ['Z_PAYMENT%', 'Z_PAYMENT*']) {
       const empty = await payload(
-        await handleToolCall(client, config, 'SAPRead', {
-          type: 'LONG_TEXT',
+        await handleToolCall(client, config, 'SAPQuery', {
+          action: 'long_text',
           longText: { mode: 'discover', object: 'TEXT', namePrefix },
         }),
       );
@@ -252,15 +252,103 @@ describe('LONG_TEXT public dispatch with real source orchestration and decoder',
         client,
         { ...config, toolMode: 'hyperfocused' },
         'SAP',
-        { action: 'read', type: 'LONG_TEXT', params: { longText: { mode: 'read', keys: [fixture.keys.invoice] } } },
-        auth(['read', 'data']),
+        { action: 'query', params: { action: 'long_text', longText: { mode: 'read', keys: [fixture.keys.invoice] } } },
+        auth(['data']),
       ),
     );
     expect(result.items[0].status).toBe('ok');
   });
 });
 
-describe('LONG_TEXT policy and rejection behavior', () => {
+describe('SAPQuery long_text policy and rejection behavior', () => {
+  it('rejects the unreleased former SAPRead LONG_TEXT API without any table query', async () => {
+    const { client, fixture, query } = setup();
+    const result = await handleToolCall(
+      client,
+      config,
+      'SAPRead',
+      { type: 'LONG_TEXT', longText: { mode: 'read', keys: [fixture.keys.invoice] } },
+      auth(['admin']),
+    );
+    expect(result.isError).toBe(true);
+    expect(query).not.toHaveBeenCalled();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+  it.each([{}, { allowFreeSQL: true }])(
+    'keeps long_text disabled for admin when data preview is off: %j',
+    async (flags) => {
+      const safety = { ...defaultSafetyConfig(), ...flags };
+      const { client, fixture, query } = setup(safety);
+      const result = await handleToolCall(
+        client,
+        { ...config, allowDataPreview: false, ...flags },
+        'SAPQuery',
+        readArgs([fixture.keys.invoice]),
+        auth(['admin']),
+      );
+      expect(result.isError).toBe(true);
+      expect(result.content[0]!.text).toMatch(/allowDataPreview=false|data preview/i);
+      expect(query).not.toHaveBeenCalled();
+    },
+  );
+  it('reads with data preview enabled and free SQL disabled without invoking the SQL handler', async () => {
+    const { client, fixture } = setup();
+    const sql = vi.spyOn(client, 'runQueryBatch');
+    const result = await payload(
+      await handleToolCall(client, config, 'SAPQuery', readArgs([fixture.keys.invoice]), auth(['data'])),
+    );
+    expect(result.items[0].status).toBe('ok');
+    expect(sql).not.toHaveBeenCalled();
+  });
+  it.each([{}, { action: 'sql' }])('preserves existing SQL payload behavior: %j', async (selector) => {
+    const safety = { ...defaultSafetyConfig(), allowFreeSQL: true };
+    const { client, query } = setup(safety);
+    const runSql = vi.spyOn(client, 'runQueryBatch').mockResolvedValue({ columns: ['VALUE'], rows: [{ VALUE: '1' }] });
+    const result = await handleToolCall(
+      client,
+      { ...config, allowDataPreview: false, allowFreeSQL: true },
+      'SAPQuery',
+      { ...selector, sql: 'SELECT value FROM ztest', maxRows: 7 },
+      auth(['sql']),
+    );
+    expect(result.isError).not.toBe(true);
+    expect(JSON.parse(result.content[0]!.text)).toMatchObject({ rowsReturned: 1, rows: [{ VALUE: '1' }] });
+    expect(runSql).toHaveBeenCalledWith(['SELECT value FROM ztest'], 7);
+    expect(query).not.toHaveBeenCalled();
+  });
+  it('keeps legacy SQL disabled even when data-preview permission exists', async () => {
+    const { client } = setup();
+    const result = await handleToolCall(
+      client,
+      config,
+      'SAPQuery',
+      { sql: 'SELECT value FROM ztest' },
+      auth(['admin']),
+    );
+    expect(result.isError).toBe(true);
+    expect(result.content[0]!.text).toMatch(/allowFreeSQL=false|free.?SQL/i);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+  it.each([
+    { action: 'long_text' },
+    { action: 'long_text', longText: null },
+    {
+      action: 'long_text',
+      longText: { mode: 'read', keys: [{ object: 'TEXT', name: 'Z', id: 'ST', language: 'E' }] },
+      sql: 'SELECT * FROM stxl',
+    },
+    { action: 'long_text', longText: { mode: 'discover', object: 'TEXT', namePrefix: 'Z' }, maxRows: 10 },
+    { action: 'sql', longText: { mode: 'discover', object: 'TEXT', namePrefix: 'Z' }, sql: 'SELECT * FROM stxh' },
+    { longText: { mode: 'discover', object: 'TEXT', namePrefix: 'Z' } },
+  ])('rejects missing or mixed action payloads before querying SAP: %j', async (args) => {
+    const { client, query } = setup();
+    const runSql = vi.spyOn(client, 'runQueryBatch');
+    const result = await handleToolCall(client, { ...config, allowFreeSQL: true }, 'SAPQuery', args, auth(['admin']));
+    expect(result.isError).toBe(true);
+    expect(query).not.toHaveBeenCalled();
+    expect(runSql).not.toHaveBeenCalled();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
   it('shares one cumulative data-response budget across configuration and text reads', async () => {
     const { client, fixture, query } = setup();
     const budgets = new Set();
@@ -272,21 +360,15 @@ describe('LONG_TEXT policy and rejection behavior', () => {
       reservation.commit();
       return fixture.query(table, options);
     });
-    const result = await handleToolCall(client, config, 'SAPRead', readArgs([fixture.keys.invoice]));
+    const result = await handleToolCall(client, config, 'SAPQuery', readArgs([fixture.keys.invoice]));
     expect(result.isError).toBe(true);
     expect(JSON.parse(result.content[0]!.text)).toMatchObject({ error: 'DATA_RESPONSE_TOO_LARGE', retryable: false });
     expect(budgets.size).toBe(1);
     expect(query).toHaveBeenCalledTimes(3);
   });
-  it.each(['LONG_TEXT', 'long_text', ['LONG_TEXT']])('requires data scope before any query for %j', async (type) => {
+  it('requires data scope before any table query', async () => {
     const { client, fixture, query } = setup();
-    const result = await handleToolCall(
-      client,
-      config,
-      'SAPRead',
-      { ...readArgs([fixture.keys.invoice]), type },
-      auth(['read']),
-    );
+    const result = await handleToolCall(client, config, 'SAPQuery', readArgs([fixture.keys.invoice]), auth(['read']));
     expect(result.isError).toBe(true);
     expect(result.content[0]!.text).toMatch(/Insufficient scope: 'data'/);
     expect(query).not.toHaveBeenCalled();
@@ -296,7 +378,7 @@ describe('LONG_TEXT policy and rejection behavior', () => {
     const result = await handleToolCall(
       client,
       { ...config, allowDataPreview: false },
-      'SAPRead',
+      'SAPQuery',
       readArgs([fixture.keys.invoice]),
       auth(['data']),
     );
@@ -308,8 +390,8 @@ describe('LONG_TEXT policy and rejection behavior', () => {
     const { client, fixture, query } = setup();
     const result = await handleToolCall(
       client,
-      { ...config, denyActions: ['SAPRead.LONG_TEXT'] },
-      'SAPRead',
+      { ...config, denyActions: ['SAPQuery.long_text'] },
+      'SAPQuery',
       readArgs([fixture.keys.invoice]),
       auth(['data']),
     );
@@ -326,7 +408,7 @@ describe('LONG_TEXT policy and rejection behavior', () => {
     const result = await handleToolCall(
       client,
       { ...config, blockedDataSources: [table] },
-      'SAPRead',
+      'SAPQuery',
       readArgs([fixture.keys.invoice]),
     );
     expect(result.isError).toBe(true);
@@ -336,11 +418,11 @@ describe('LONG_TEXT policy and rejection behavior', () => {
   it('rejects BTP at the public schema boundary and cached BTP detection', async () => {
     const { client, fixture, query } = setup();
     const args = readArgs([fixture.keys.invoice]);
-    const publicBtp = await handleToolCall(client, { ...config, systemType: 'btp' }, 'SAPRead', args);
+    const publicBtp = await handleToolCall(client, { ...config, systemType: 'btp' }, 'SAPQuery', args);
     expect(publicBtp.isError).toBe(true);
     expect(query).not.toHaveBeenCalled();
     setCachedFeatures({ systemType: 'btp' });
-    const detectedBtp = await handleToolCall(client, config, 'SAPRead', args);
+    const detectedBtp = await handleToolCall(client, config, 'SAPQuery', args);
     expect(detectedBtp.isError).toBe(true);
     expect(detectedBtp.content[0]!.text).toMatch(/BTP|UNSUPPORTED_PLATFORM/);
     expect(query).not.toHaveBeenCalled();
@@ -348,7 +430,7 @@ describe('LONG_TEXT policy and rejection behavior', () => {
   it('classifies a missing preview capability without claiming the text is missing', async () => {
     const { client, fixture, query } = setup();
     query.mockRejectedValue(new AdtApiError('not found', 404, '/sap/bc/adt/datapreview/freestyle?rowNumber=2'));
-    const result = await handleToolCall(client, config, 'SAPRead', readArgs([fixture.keys.invoice]));
+    const result = await handleToolCall(client, config, 'SAPQuery', readArgs([fixture.keys.invoice]));
     expect(result.isError).toBe(true);
     expect(JSON.parse(result.content[0]!.text)).toMatchObject({ code: 'UNSUPPORTED_PLATFORM' });
   });
@@ -365,36 +447,37 @@ describe('LONG_TEXT policy and rejection behavior', () => {
     { where: [{ field: 'TDNAME', op: '=', value: 'Z' }] },
   ])('rejects source/data query options before SAP access: %j', async (extra) => {
     const { client, fixture, query } = setup();
-    const result = await handleToolCall(client, config, 'SAPRead', { ...readArgs([fixture.keys.invoice]), ...extra });
+    const result = await handleToolCall(client, config, 'SAPQuery', { ...readArgs([fixture.keys.invoice]), ...extra });
     expect(result.isError).toBe(true);
     expect(query).not.toHaveBeenCalled();
   });
-  it('accepts harmless strict-client root defaults without changing the operation', async () => {
+  it('accepts omitted SQL fields represented by strict-client null fillers', async () => {
     const { client, fixture } = setup();
     const result = await payload(
-      await handleToolCall(client, config, 'SAPRead', {
+      await handleToolCall(client, config, 'SAPQuery', {
         ...readArgs([fixture.keys.invoice]),
-        format: 'text',
-        version: 'active',
-        force_refresh: false,
-        expand_includes: false,
-        includeSignature: false,
+        sql: null,
+        maxRows: null,
       }),
     );
     expect(result.items[0].status).toBe('ok');
   });
-  it('hides the type from BTP and read-only-scoped tool surfaces', () => {
+  it('hides text queries from read-only scopes and BTP while preserving data-only tool visibility', () => {
     const definitions = getToolDefinitions(config);
     const visible = filterToolsByAuthScope(definitions, ['read']);
-    const read = visible.find((tool) => tool.name === 'SAPRead')!;
-    expect((read.inputSchema as { properties: { type: { enum: string[] } } }).properties.type.enum).not.toContain(
-      'LONG_TEXT',
-    );
-    expect((read.inputSchema as { properties: Record<string, unknown> }).properties.longText).toBeUndefined();
-    const btp = getToolDefinitions({ ...config, systemType: 'btp' }).find((tool) => tool.name === 'SAPRead')!;
-    expect((btp.inputSchema as { properties: { type: { enum: string[] } } }).properties.type.enum).not.toContain(
-      'LONG_TEXT',
-    );
+    expect(visible.find((tool) => tool.name === 'SAPQuery')).toBeUndefined();
+    const dataOnly = filterToolsByAuthScope(definitions, ['data']).find((tool) => tool.name === 'SAPQuery')!;
+    expect(dataOnly).toBeDefined();
+    expect((dataOnly.inputSchema as { properties: { action: { enum: string[] } } }).properties.action.enum).toEqual([
+      'long_text',
+    ]);
+    expect((dataOnly.inputSchema as { properties: Record<string, unknown> }).properties.longText).toBeDefined();
+    const btp = getToolDefinitions({ ...config, allowFreeSQL: true, systemType: 'btp' }).find(
+      (tool) => tool.name === 'SAPQuery',
+    )!;
     expect((btp.inputSchema as { properties: Record<string, unknown> }).properties.longText).toBeUndefined();
+    expect(
+      (btp.inputSchema as { properties: { action?: { enum: string[] } } }).properties.action?.enum ?? [],
+    ).not.toContain('long_text');
   });
 });

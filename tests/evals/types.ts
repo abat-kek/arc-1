@@ -117,9 +117,6 @@ export interface EvalScenario {
   /** Synthetic fixture-only scenario; do not route its generated calls to a real SAP system. */
   mockOnly?: boolean;
 
-  /** Run SAPRead arguments through the production on-prem Zod schema before a mock response is selected. */
-  validateSapReadCalls?: boolean;
-
   /**
    * For multi-turn scenarios, each entry is one model turn and each inner
    * entry is an expected tool call in that turn's order. The whole trace must

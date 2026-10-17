@@ -7,7 +7,7 @@ import { SCENARIOS as STORED_TEXT_SCENARIOS, storedTextFixtureExecutor } from '.
 import type { LLMProvider } from '../../evals/types.js';
 
 describe('eval harness scenario pass requirements', () => {
-  it('exposes the on-prem LONG_TEXT schema together with realistic distractor tools', () => {
+  it('exposes the on-prem long_text schema together with realistic distractor tools', () => {
     const definitions = getToolDefinitions({
       ...DEFAULT_CONFIG,
       systemType: 'onprem',
@@ -15,22 +15,22 @@ describe('eval harness scenario pass requirements', () => {
       allowWrites: true,
       allowFreeSQL: true,
     });
-    const read = definitions.find((tool) => tool.name === 'SAPRead');
-    const properties = read?.inputSchema.properties as Record<string, unknown>;
-    expect((properties.type as { enum: string[] }).enum).toContain('LONG_TEXT');
+    const query = definitions.find((tool) => tool.name === 'SAPQuery');
+    const properties = query?.inputSchema.properties as Record<string, unknown>;
+    expect((properties.action as { enum: string[] }).enum).toContain('long_text');
     expect(properties.longText).toBeDefined();
     expect(definitions.map((tool) => tool.name)).toEqual(expect.arrayContaining(['SAPQuery', 'SAPWrite', 'SAPSearch']));
   });
 
   it('replays stored-text scenarios through the public dispatcher using synthetic SAP tables', async () => {
-    const invalid = await storedTextFixtureExecutor('SAPRead', {
-      type: 'LONG_TEXT',
+    const invalid = await storedTextFixtureExecutor('SAPQuery', {
+      action: 'long_text',
       longText: { mode: 'read', keys: [{ object: 'TEXT', name: 'Z_PAYMENT_NOTICE', id: 'ST', language: 'EN' }] },
     });
-    expect(invalid).toContain('Invalid arguments for SAPRead');
+    expect(invalid).toContain('Invalid arguments for SAPQuery');
 
-    const missing = await storedTextFixtureExecutor('SAPRead', {
-      type: 'LONG_TEXT',
+    const missing = await storedTextFixtureExecutor('SAPQuery', {
+      action: 'long_text',
       longText: { mode: 'read', keys: [{ object: 'TEXT', name: 'Z_MISSING', id: 'ST', language: 'E' }] },
     });
     expect(JSON.parse(missing)).toMatchObject({
@@ -105,23 +105,23 @@ describe('eval harness scenario pass requirements', () => {
       description: 'Discover then read an exact text key',
       category: 'read',
       prompt: 'Find the PO header note and read it.',
-      optimal: [{ tool: 'SAPRead', requiredArgs: { type: 'LONG_TEXT' } }],
+      optimal: [{ tool: 'SAPQuery', requiredArgs: { action: 'long_text' } }],
       expectedTrace: [
-        [{ tool: 'SAPRead', requiredArgs: { type: 'LONG_TEXT', longText: { mode: 'discover' } } }],
-        [{ tool: 'SAPRead', requiredArgs: { type: 'LONG_TEXT', longText: { mode: 'read' } } }],
+        [{ tool: 'SAPQuery', requiredArgs: { action: 'long_text', longText: { mode: 'discover' } } }],
+        [{ tool: 'SAPQuery', requiredArgs: { action: 'long_text', longText: { mode: 'read' } } }],
       ],
       mockResponseRules: [
         {
-          tool: 'SAPRead',
+          tool: 'SAPQuery',
           turn: 1,
-          requiredArgs: { type: 'LONG_TEXT', longText: { mode: 'discover' } },
+          requiredArgs: { action: 'long_text', longText: { mode: 'discover' } },
           response: 'discovery fixture',
         },
         {
-          tool: 'SAPRead',
+          tool: 'SAPQuery',
           turn: 2,
           requiredArgs: {
-            type: 'LONG_TEXT',
+            action: 'long_text',
             longText: { mode: 'read', keys: [readKey] },
           },
           response: 'read fixture',
@@ -138,13 +138,13 @@ describe('eval harness scenario pass requirements', () => {
         .mockResolvedValueOnce({
           done: false,
           toolCalls: [
-            { name: 'SAPRead', arguments: { type: 'LONG_TEXT', longText: { mode: 'discover', object: 'EKKO' } } },
+            { name: 'SAPQuery', arguments: { action: 'long_text', longText: { mode: 'discover', object: 'EKKO' } } },
           ],
         })
         .mockResolvedValueOnce({
           done: false,
           toolCalls: [
-            { name: 'SAPRead', arguments: { type: 'LONG_TEXT', longText: { mode: 'read', keys: [readKey] } } },
+            { name: 'SAPQuery', arguments: { action: 'long_text', longText: { mode: 'read', keys: [readKey] } } },
           ],
         })
         .mockResolvedValueOnce({ done: true, content: 'I read fixture and found the requested note.' }),
@@ -284,7 +284,7 @@ describe('eval harness scenario pass requirements', () => {
           .fn()
           .mockResolvedValueOnce({
             done: false,
-            toolCalls: [{ name: 'SAPRead', arguments: { type: 'LONG_TEXT', longText, ...topLevel } }],
+            toolCalls: [{ name: 'SAPQuery', arguments: { action: 'long_text', longText, ...topLevel } }],
           })
           .mockResolvedValueOnce({ done: true, content: 'The request needs correction.' }),
       };
@@ -297,8 +297,8 @@ describe('eval harness scenario pass requirements', () => {
           prompt: 'Read the text.',
           optimal: [
             {
-              tool: 'SAPRead',
-              requiredArgs: { type: 'LONG_TEXT' },
+              tool: 'SAPQuery',
+              requiredArgs: { action: 'long_text' },
               exactArgs: {
                 longText: {
                   mode: 'read',
@@ -310,8 +310,8 @@ describe('eval harness scenario pass requirements', () => {
           expectedTrace: [
             [
               {
-                tool: 'SAPRead',
-                requiredArgs: { type: 'LONG_TEXT' },
+                tool: 'SAPQuery',
+                requiredArgs: { action: 'long_text' },
                 exactArgs: {
                   longText: {
                     mode: 'read',
@@ -321,14 +321,13 @@ describe('eval harness scenario pass requirements', () => {
               },
             ],
           ],
-          validateSapReadCalls: true,
-          mockResponseRules: [{ tool: 'SAPRead', response: 'SYNTHETIC SUCCESS FIXTURE' }],
+          mockToolExecutor: storedTextFixtureExecutor,
         },
         [],
       );
       const messages = (provider.chat as ReturnType<typeof vi.fn>).mock.calls[1]![0];
       const toolOutput = messages.find((message: { role: string }) => message.role === 'tool')?.content;
-      expect(toolOutput).toContain('Invalid arguments for SAPRead');
+      expect(toolOutput).toContain('Invalid arguments for SAPQuery');
       expect(toolOutput).not.toContain('SYNTHETIC SUCCESS FIXTURE');
       expect(score.tracePassed).toBe(false);
     },
@@ -340,7 +339,7 @@ describe('eval harness scenario pass requirements', () => {
       model: 'fixture',
       chat: vi
         .fn()
-        .mockResolvedValueOnce({ done: false, toolCalls: [{ name: 'SAPRead', arguments: { type: 'LONG_TEXT' } }] })
+        .mockResolvedValueOnce({ done: false, toolCalls: [{ name: 'SAPQuery', arguments: { action: 'long_text' } }] })
         .mockResolvedValueOnce({ done: true, content: 'I assumed English.' }),
     };
     const score = await runScenario(

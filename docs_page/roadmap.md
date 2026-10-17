@@ -811,7 +811,7 @@ it can reuse the same safe contract.
 - **Priority / effort / status:** P3 / M / Needs research
 - **Category:** Data access
 
-**Remaining gap.** `SAPRead LONG_TEXT` now covers guarded discovery, ordered reads, stored header
+**Remaining gap.** `SAPQuery(action="long_text")` covers guarded discovery, ordered reads, stored header
 references, and bounded phrase search for the qualified FF06/4103 classic ITF profile
 ([implementation and evidence](https://github.com/arc-mcp/arc-1/pull/1012)). Other container/code-page
 profiles, legacy ITCRF references, and non-ITF/STXB text remain unsupported. The tested 750 system

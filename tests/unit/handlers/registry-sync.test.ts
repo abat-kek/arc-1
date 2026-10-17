@@ -33,7 +33,6 @@ import { AdtClient, mockFetch } from './setup-undici-mock.js';
 function readArgs(type: string): Record<string, unknown> {
   const base: Record<string, unknown> = { type, name: 'ZARC1_X' };
   if (type === 'SYNTAX') return { type, objectType: 'CLAS', name: 'ZCL_TEST' };
-  if (type === 'LONG_TEXT') return { type, longText: { mode: 'discover', object: 'TEXT', namePrefix: 'Z_' } };
   if (type === 'VERSION_SOURCE') {
     base.versionUri = '/sap/bc/adt/programs/programs/ZTEST/source/main/versions/1/00000/content';
   }

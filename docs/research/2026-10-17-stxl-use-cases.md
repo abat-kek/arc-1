@@ -123,7 +123,7 @@ system-wide full-text index from a single read call.
 
 ## ARC-1 workflow recommendation
 
-The integrated [SAPRead LONG_TEXT](../../docs_page/tools.md#stored-sapscript-long-texts) implements
+The integrated [SAPQuery long_text](../../docs_page/tools.md#stored-sapscript-long-texts) implements
 discovery, ordered reads, and bounded phrase search. The broader business-oriented prompt
 examples use placeholders deliberately; they do not assume a customer PO text ID or universal
 TDNAME layout:
@@ -136,7 +136,7 @@ TDNAME layout:
    append a guessed item number.
 2. **Read**: “Read the selected text for PO `<PO_NUMBER>` item `<ITEM_NUMBER>` in `<LANGUAGE>`.”
    Pass the exact discovered tuple to
-   `SAPRead(type="LONG_TEXT", longText={mode:"read",keys:[{object,name,id,language}]})`. Require the exact tuple;
+   `SAPQuery(action="long_text", longText={mode:"read",keys:[{object,name,id,language}]})`. Require the exact tuple;
    return an explicit unsupported profile/format status. Label it as stored text, not
    READ_TEXT-equivalent.
 3. **Batch**: “For these `<N>` PO keys, discover item text candidates in `<LANGUAGE>`, then read
@@ -151,7 +151,7 @@ TDNAME layout:
 
 For a classic ABAP caller, `SELECT_TEXT` returns matching `THEAD` headers and `READ_TEXT` reads a
 selected tuple with SAP's broader semantics. ARC-1's native stored reader can mirror the staged
-workflow over its guarded data path. The final MCP contract uses `LONG_TEXT` with `discover`,
+workflow over its guarded data path. The final MCP contract uses `SAPQuery action=long_text` with `discover`,
 `read`, or `search` modes; the earlier `TEXT_HEADERS`/`STORED_TEXT` names were proposals only.
 Target-specific business-key presets, customizing descriptions, and search context windows remain
 proposals; the current search returns matching ITF lines and exact keys.

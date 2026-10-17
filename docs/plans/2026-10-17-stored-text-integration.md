@@ -2,11 +2,13 @@
 
 ## Decision
 
-Expose one on-prem `SAPRead(type="LONG_TEXT")` operation with a nested `longText` request.
-Its required `mode` is `discover`, `read`, or `search`. Read and search share one exact-key list
-(1–25 entries); discovery returns the same `{object,name,id,language}` objects for direct reuse.
-The connected client is trusted configuration, never an argument. Scope is `data` and the existing
-server data-preview gate/blocklist still applies. No RFC, installed companion, or free SQL is used.
+Expose stored classic SAPscript access as the semantic `SAPQuery(action="long_text")` route with a
+nested `longText` request. Its required `mode` is `discover`, `read`, or `search`. Read and search
+share one exact-key list (1–25 entries); discovery returns the same `{object,name,id,language}`
+objects for direct reuse. The connected client is trusted configuration, never an argument. This
+route is authorized by `data` scope and the server data-preview gate/blocklist; it does not accept
+SQL. Arbitrary freestyle SQL remains a separate SAPQuery action requiring the `sql` scope and
+`SAP_ALLOW_FREE_SQL`. No RFC or installed companion is used.
 
 Options considered:
 
@@ -15,8 +17,8 @@ Options considered:
 | New standalone MCP tool | Adds another tool and duplicates existing intent routing; unnecessary. |
 | SAPSearch discovery/content + SAPRead reads | Natural naming, but duplicates the key schema, adds search-specific policy routing and normalizer exceptions, and splits model context. |
 | Two SAPRead types for headers and bodies | Viable, but still duplicates fields and needs a separate content-search selector. |
-| One SAPRead type with a nested mode | Selected: one data policy, one namespace, one reusable key shape, explicit bounded workflow. SAPRead already supports metadata/list operations. |
-| Raw TABLE_QUERY/SAPQuery + model-side decoding | Makes every model reproduce binary and application semantics and can accidentally require broader SQL access. Rejected. |
+| One SAPQuery semantic action with nested mode | Selected: the SAPQuery family represents data access, while `long_text` keeps SAP text semantics bounded and separate from model-authored SQL. It reuses one exact-key shape and preserves distinct `data`/preview versus `sql`/free-SQL gates. |
+| Raw SQL against STXH/STXL + model-side decoding | Makes every model reproduce binary and application semantics and can accidentally require broader SQL access. Rejected. |
 
 Discovery requires a known text object and literal stored-name prefix. It does not invent
 business-key mappings. SO10 uses TEXT, but configured document text IDs and composite names must
@@ -31,7 +33,7 @@ research wrappers and independent synthetic SAP fixtures. Keep handler projectio
 keys, lines, metadata needed to interpret them, typed failures and recovery hints. Do not return
 binary payloads or internal compression details to an LLM.
 
-The request shares the existing admission/response scope through serialization/audit. Session
+The request shares the existing data-preview admission/response scope through serialization/audit. Session
 limits: 60 seconds, 120 table queries, eight reference hops; batches: 25 keys, 10,000 lines, 2 MiB
 of decoded JSON; discovery: 50 headers; phrase search: 50 literal matches within supplied keys.
 Headers and terminal bytes are reread for change detection. This is not a transactional snapshot.
@@ -40,8 +42,9 @@ assumption turns the observed 750 failure into a claim about every 750 system.
 
 ## Model evaluation
 
-Existing evals scored only the first call despite an `expectedTrace` type. Extend them to score
-ordered multi-turn traces, exact nested arguments, all forbidden calls, and final-answer assertions.
+Initial prototype evals used the former `SAPRead(type="LONG_TEXT")` surface; they did not test the
+final `SAPQuery(action="long_text")` schema/router. The current evals score ordered multi-turn traces,
+exact nested arguments, all forbidden calls, and final-answer assertions.
 Use actual handler output produced from sanitized SAP-generated synthetic fixtures. Models receive
 the real tool definitions, including distractors. No LLM receives private existing-business captures.
 

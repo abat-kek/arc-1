@@ -15,13 +15,13 @@ const scenario: EvalScenario = {
   description: 'Check contract support',
   category: 'stored-text',
   prompt: 'Read a text.',
-  optimal: [{ tool: 'SAPRead', requiredArgs: { type: 'LONG_TEXT' } }],
+  optimal: [{ tool: 'SAPQuery', requiredArgs: { action: 'long_text' } }],
 };
 
 describe('CLI eval contract support', () => {
   it.each([
     { expectedTrace: [] },
-    { expectedTrace: [[{ tool: 'SAPRead' }]] },
+    { expectedTrace: [[{ tool: 'SAPQuery' }]] },
     { finalAnswer: { required: [/answer/] } },
     { noFirstCall: true },
   ])('refuses unobservable contracts before starting either CLI: %j', async (expectation) => {
@@ -40,7 +40,7 @@ describe('CLI eval contract support', () => {
   it.each([scoreClaudeCalls, scoreCursorCalls])('rejects a forbidden tool after a valid first call', (score) => {
     const result = score(
       [
-        { name: 'SAPRead', arguments: { type: 'LONG_TEXT' } },
+        { name: 'SAPQuery', arguments: { action: 'long_text' } },
         { name: 'SAPWrite', arguments: { action: 'delete' } },
       ],
       { ...scenario, forbidden: ['SAPWrite'] },

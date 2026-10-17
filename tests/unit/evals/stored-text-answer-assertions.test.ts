@@ -22,7 +22,7 @@ describe('stored-text final-answer assertion regressions', () => {
     for (const language of ['E', 'D']) {
       expect(
         matchesExpectedToolCall(
-          { name: 'SAPRead', arguments: { type: 'LONG_TEXT', longText: { ...discovery, language } } },
+          { name: 'SAPQuery', arguments: { action: 'long_text', longText: { ...discovery, language } } },
           expected,
         ),
       ).toBe(false);
@@ -30,7 +30,7 @@ describe('stored-text final-answer assertion regressions', () => {
     for (const language of [undefined, null]) {
       expect(
         matchesExpectedToolCall(
-          { name: 'SAPRead', arguments: { type: 'LONG_TEXT', longText: { ...discovery, language } } },
+          { name: 'SAPQuery', arguments: { action: 'long_text', longText: { ...discovery, language } } },
           expected,
         ),
       ).toBe(true);

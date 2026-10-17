@@ -422,6 +422,129 @@
       "package": "pass",
       "toolWireBytesFull": 74456,
       "existingWireCeilingsUnchanged": true
+    },
+    "phase": "Earlier SAPRead integration; retained historical evidence."
+  },
+  "queryIntegration": {
+    "date": "2026-10-17",
+    "route": "SAPQuery action=long_text",
+    "systems": [
+      {
+        "label": "758",
+        "tool": "SAPQuery",
+        "action": "long_text",
+        "status": "pass",
+        "readonly": true,
+        "freeSqlEnabled": false,
+        "helperWritesEnabled": false,
+        "publicCalls": 4,
+        "stages": [
+          {
+            "stage": "read",
+            "status": "pass",
+            "count": 3
+          },
+          {
+            "stage": "discover",
+            "status": "pass",
+            "count": 1
+          },
+          {
+            "stage": "batch",
+            "status": "pass",
+            "count": 3
+          },
+          {
+            "stage": "search",
+            "status": "pass",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "label": "816",
+        "tool": "SAPQuery",
+        "action": "long_text",
+        "status": "pass",
+        "readonly": true,
+        "freeSqlEnabled": false,
+        "helperWritesEnabled": false,
+        "publicCalls": 4,
+        "stages": [
+          {
+            "stage": "read",
+            "status": "pass",
+            "count": 3
+          },
+          {
+            "stage": "discover",
+            "status": "pass",
+            "count": 1
+          },
+          {
+            "stage": "batch",
+            "status": "pass",
+            "count": 3
+          },
+          {
+            "stage": "search",
+            "status": "pass",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "label": "750",
+        "tool": "SAPQuery",
+        "action": "long_text",
+        "status": "pass",
+        "readonly": true,
+        "freeSqlEnabled": false,
+        "helperWritesEnabled": false,
+        "publicCalls": 1,
+        "stages": [
+          {
+            "stage": "capability",
+            "status": "unsupported-cleanly",
+            "code": "UNSUPPORTED_PLATFORM"
+          }
+        ]
+      }
+    ],
+    "notes": [
+      "Fresh public-dispatch rerun after moving stored text to SAPQuery.",
+      "Default disabled; data-preview/data scope only. SQL remains separately gated.",
+      "No RFC, free SQL, SAP writes, or helper installation.",
+      "No business text, names, hosts, credentials, or SAP standard source retained here."
+    ],
+    "nativeOracleLineComparison": {
+      "systems": [
+        "758",
+        "816"
+      ],
+      "matched": true,
+      "fields": [
+        "TDFORMAT",
+        "TDLINE"
+      ],
+      "source": "Previously captured private READ_TEXT oracle; exact comparison after fixed-width ASCII-space unpadding."
+    },
+    "localValidation": {
+      "unitFiles": 324,
+      "unitTests": 9192,
+      "evalHarnessTests": 64,
+      "publicHandlerTests": 57,
+      "workers": 4,
+      "typecheck": "pass",
+      "build": "pass",
+      "lint": "pass",
+      "policy": "pass",
+      "policyEntries": 132,
+      "toolSchemas": 14,
+      "schemaAndFileBudgets": "pass",
+      "package": "pass",
+      "toolWireBytesFull": 74468,
+      "existingWireCeilingsUnchanged": true
     }
   }
 }

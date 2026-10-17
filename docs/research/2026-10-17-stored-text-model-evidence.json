@@ -1,6 +1,6 @@
 {
   "date": "2026-10-17",
-  "scope": "Local-model trajectory evaluation using synthetic text through the production LONG_TEXT dispatcher; no live SAP data.",
+  "scope": "Historical SAPRead LONG_TEXT model evaluation before migration to SAPQuery action=long_text; synthetic fixtures only, no live SAP data. These outcomes do not qualify the current tool contract.",
   "repetitionsPerConfiguration": 1,
   "passThreshold": 0.5,
   "gradingCorrection": "Independent assertion review corrected negation/cross-item false rejections, language word boundaries, and guessed-language filtering. Regraded the same saved traces; no model output changed. Schema-validation and provider failures remain failures.",

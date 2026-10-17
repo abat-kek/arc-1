@@ -50,7 +50,7 @@ type Payload = {
 };
 const stages: Array<{ stage: string; status: string; count?: number; code?: string }> = [];
 async function invoke(stage: string, longText: Record<string, unknown>, expectUnsupported = false) {
-  const result = await handleToolCall(context.client, config, 'SAPRead', { type: 'LONG_TEXT', longText }, auth);
+  const result = await handleToolCall(context.client, config, 'SAPQuery', { action: 'long_text', longText }, auth);
   await context.save(`${runId}-${stage}.json`, result);
   const payload = JSON.parse(result.content[0]!.text) as Payload;
   if (expectUnsupported) {
@@ -131,6 +131,8 @@ try {
   }
   const summary = {
     label: context.label,
+    tool: 'SAPQuery',
+    action: 'long_text',
     status: 'pass',
     readonly: true,
     freeSqlEnabled: false,
@@ -148,6 +150,8 @@ try {
   });
   await context.save('integration-latest-summary.json', {
     label: context.label,
+    tool: 'SAPQuery',
+    action: 'long_text',
     status: 'fail',
     readonly: true,
     freeSqlEnabled: false,

@@ -1,6 +1,6 @@
 # STXL long texts in TypeScript: feasibility spike
 
-Date: 2026-10-17. Base: ARC-1 1.6.0, `041a9e48`. Status: integrated as `SAPRead LONG_TEXT` in
+Date: 2026-10-17. Base: ARC-1 1.6.0, `041a9e48`. Status: integrated as `SAPQuery long_text` in
 PR #1012; see the [production contract](../../docs_page/tools.md#stored-sapscript-long-texts).
 Runtime implementation: TypeScript and Node's built-in zlib;
 no RFC, Python, SAP SDK, or ABAP companion is required by the candidate reader.
@@ -212,11 +212,11 @@ qualified for this classic-table path.
 
 ## Production integration
 
-The tested classic stored-text reader is exposed as `SAPRead(type="LONG_TEXT")`, with discovery,
+The tested classic stored-text reader is exposed as `SAPQuery(action="long_text")`, with discovery,
 ordered batch reads, and bounded phrase search. It requires `data` scope and `allowDataPreview`,
 checks every table against existing blocklists, uses the current SAP identity and cumulative
-request budgets, and redacts business content/keys from audit sinks. It is hidden when data is
-disabled, scope/deny rules prohibit it, or BTP is selected/discovered. The implementation remains
+request budgets, and redacts business content/keys from audit sinks. It is hidden when data preview is
+disabled or BTP is selected/discovered; authenticated listings also prune denied/scopeless actions. The implementation remains
 strict about its qualified profile and never falls back to RFC, free SQL, or helper installation.
 
 The manual adapter already shares the caller's cumulative response/admission scope, cancellation,
@@ -246,5 +246,5 @@ At the manual-spike checkpoint, typecheck, build, lint, policy validation, and s
 with four workers: **317 files / 9,054 tests**. The initial phase's unconstrained run had four timing failures
 in existing CLI/shutdown subprocess tests; all 54 tests in those two files passed when rerun alone,
 and the subsequent full runs passed. That checkpoint changed no MCP tool-schema snapshot and registered
-no new operation. The later production `LONG_TEXT` integration changes the exposed schema; its final
+no new operation. The later production `long_text` integration changes the exposed schema; its final
 validation and model evidence are recorded in the [integration report](2026-10-17-stored-text-integration-evals.md).

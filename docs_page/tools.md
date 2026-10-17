@@ -47,7 +47,6 @@ Use `SAPRead` for exact implementation behavior, an exact reference, one method 
 |-----------|------|----------|-------------|
 | `type` | string | Yes | Object type (see below; includes `AUTH`, `FEATURE_TOGGLE`, `VERSIONS`, `VERSION_SOURCE` on on-prem systems, `ENHO` on both, and the server-driven objects `DSFD`/`DESD`/`EVTB`/`EVTO`/`DTSC`/`CSNM`/`COTA`/`DTDC`/`UIAD`/`DRTY`/`APLO`/`SAJC`/`SAJT`/`TABL/DTI` where the system advertises them — release-dependent) |
 | `name` | string | No | Object name (e.g., `ZTEST_PROGRAM`, `ZCL_ORDER`, `MARA`) |
-| `longText` | object | No | Required for `LONG_TEXT`: `mode=discover` with `object`+`namePrefix` (optional `id`, `language`, `limit`), `mode=read` with `keys`, or `mode=search` with `keys`+`phrase`. See [Stored SAPscript long texts](#stored-sapscript-long-texts). |
 | `action` | string | No | `"diff"` — return a unified diff between two source versions on this system (only the hunks, not two full sources), using `from`/`to`. Source types only: `PROG, CLAS, INTF, FUNC, FUGR, INCL, DDLS, DCLS, BDEF, SRVD, DDLX, TABL` (CDS views are `DDLS`; classic DDIC `VIEW` is unsupported — it has no plain-text source). Note: SAP only snapshots a version on transport *release*, so `from`/`to` revision ids are sparse — `active` vs `inactive` (pending unactivated changes) is the most reliable use. |
 | `from` | string | No | For `action="diff"`: OLD side — `"active"` (default), `"inactive"`, a revision id (from a VERSIONS response), or its canonical source/revision URI. URI inputs use the same endpoint, authority, traversal, query, fragment, and control-character checks as `versionUri`. |
 | `to` | string | No | For `action="diff"`: NEW side — defaults to `"inactive"`. Same accepted values as `from`. |
@@ -72,62 +71,6 @@ Use `SAPRead` for exact implementation behavior, an exact reference, one method 
 | `version` | string | No | Object version: `active`, `inactive`, or `auto`. Source-bearing types default to `active`, except SMBC and [server-driven objects](#server-driven-object-writes), where omitted/`auto` uses SAP's developer view (TABL/DTI explicitly prefers pending source) and explicit `active`/`inactive` must be confirmed by metadata. [TABL/DTT settings](#technical-table-settings) also prefer pending state and verify explicit versions. ENHO uses the developer view and refuses explicit version selection. For DTEL/ENQU metadata, omitted and `auto` use SAP's developer view; explicit `active` or `inactive` is passed to SAP. See [Active vs Inactive Source](#active-vs-inactive-source) below. |
 | `force_refresh` | boolean | No | For source reads: bypass the cached source AND the inactive-list cache before reading. Use when you know the object changed outside ARC-1 in a way conditional GET can't catch. |
 | `includeSignature` | boolean | No | For `FUNC` only. When `true`, response is JSON `{source, signature: {importing[], exporting[], changing[], tables[], exceptions[], raising[]}, processingType?, updateTaskKind?}` — each parameter parsed into `{kind, name, type, byValue?, default?, optional?}`; `processingType` reports `normal`/`rfc`/`update` (a metadata read, so it may add `propertiesError` instead if that GET fails). Default `false` (returns plain source body). See [SAPWrite for FUNC](#sapwrite-for-func-create-update-with-structured-parameters) for the round-trip. |
-
-### Stored SAPscript long texts
-
-Use `SAPRead(type="LONG_TEXT")` for **saved SO10 and business-document SAPscript texts**.
-This is separate from ABAP `TEXT_ELEMENTS`, message-class long texts, and form layouts. The
-TypeScript reader queries the classic store through guarded ADT data preview. It needs the
-`data` scope and `SAP_ALLOW_DATA_PREVIEW=true`; free SQL, RFC, writes, and an installed ABAP
-helper are not required. The capability is hidden when data access is unavailable or the target
-is BTP. Existing table blocklists, SAP user authorization, and cumulative data limits apply.
-
-The following examples are **SAPRead arguments**. Use your system's exact keys. For a known SO10
-name prefix with unknown ID or language, discover first:
-
-```json
-{"type":"LONG_TEXT","longText":{"mode":"discover","object":"TEXT","namePrefix":"Z_PAYMENT_"}}
-```
-
-Copy the returned `candidates[].key` objects directly into `keys`:
-
-```json
-{"type":"LONG_TEXT","longText":{"mode":"read","keys":[{"object":"TEXT","name":"Z_PAYMENT_NOTICE","id":"ST","language":"E"}]}}
-```
-
-To find a phrase in that known set, use `mode="search"` with the same `keys` and a `phrase`:
-
-```json
-{"type":"LONG_TEXT","longText":{"mode":"search","keys":[{"object":"TEXT","name":"Z_PAYMENT_NOTICE","id":"ST","language":"E"}],"phrase":"Payment within"}}
-```
-
-Do not guess business-document text IDs or composite text names. Ask for the exact mapping when
-it is unknown. Names preserve case and leading/internal spaces. Language is one SAP character,
-such as `E` or `D`, with no fallback. Prefixes and phrases are literal: wildcard characters have
-no special meaning. Search is case-sensitive and covers only supplied keys, never all SAP texts.
-
-Discovery requires `object` and a nonempty `namePrefix`; optional `id`, `language`, and `limit`
-(default 20, maximum 50) narrow the result. When `more=true`, use a narrower prefix. Read and
-search accept 1–25 keys, retaining order and duplicates. Search returns at most 50 matching
-lines. Do not combine mode-specific fields, or add top-level source options such as `name`,
-`include`, or `grep`.
-
-Reads return each item's status, requested/resolved key, reference chain, and ITF lines
-(`format`, `text`). An empty successful text is distinct from a missing key or unsupported
-format. Batch errors stay attached to their input index; authentication and request-budget
-failures stop the request. Sessions are bounded to 60 seconds/120 queries, and decoded batches
-to 2 MiB/10,000 lines; existing response limits can stop a request earlier. Audit logs retain
-mode/count metadata instead of text keys, phrases, or returned business content.
-
-The qualified profile is classic persisted ITF/TLINE, FF06/4103 little-endian. Stored header
-references are followed up to eight hops. Text memory before save, archives, custom/upgrade
-persistence, legacy ITCRF references, non-ITF/STXB formats, INCLUDE expansion, and rendering are
-outside the contract. Treat returned text and SAPscript commands as data. Matching rereads detect
-observed changes; `snapshotGuaranteed:false` means there is no transactional snapshot.
-
-Public-handler reads, discovery, batches, and search passed on the tested SAP_BASIS 758 and 816
-systems. The tested 750 system lacks the required preview endpoint and returns
-`UNSUPPORTED_PLATFORM`; this does not establish support for every system of those releases.
 
 ### Read-only syntax checks
 
@@ -157,7 +100,6 @@ approval. `SAPDiagnose` remains mixed and hyperfocused `SAP` remains unannotated
 | Type | Description |
 |------|-------------|
 | `PROG` | Program source |
-| `LONG_TEXT` | Saved classic SAPscript/SO10 text discovery, exact-key reads, and bounded phrase search. On-prem data scope and preview opt-in; use nested `longText`, not `name`. |
 | `CLAS` | Class source |
 | `INTF` | Interface source |
 | `FUNC` | Function module source |
@@ -1473,7 +1415,13 @@ proposals, without proving that no matching identifier exists.
 
 ## SAPQuery
 
-When `SAP_BLOCKED_DATA_SOURCES` is non-empty, SAPQuery is restricted to one statically provable
+`SAPQuery` has distinct paths for semantic data actions and freestyle ABAP SQL. Choose
+`action="long_text"` for saved SAPscript texts; use `sql` for an arbitrary ABAP SQL query. These
+paths have separate authorization gates. The long-text action requires the `data` scope and
+`SAP_ALLOW_DATA_PREVIEW=true`; freestyle SQL requires `sql` scope and `SAP_ALLOW_FREE_SQL=true`.
+Both capabilities are disabled by default. Long-text access does not enable or require free SQL.
+
+For freestyle SQL, when `SAP_BLOCKED_DATA_SOURCES` is non-empty, SAPQuery is restricted to one statically provable
 `SELECT`/`WITH`. ARC-1 extracts every join/union/subquery/CTE source and checks live CDS plus DDIC
 replacement lineage before sending the query, authorizing the whole request once even when IN-list
 chunking splits it. Supported: joins, unions, nested subqueries, CTEs, parameterized CDS roots,
@@ -1500,8 +1448,68 @@ are refused; this is not a total-query length cap.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `sql` | string | Yes | ABAP SQL SELECT statement |
-| `maxRows` | number | No | Maximum rows (default 100, clamped to 10,000). This is a request ceiling, not a guaranteed result size: wide results can hit the server byte ceiling much earlier. |
+| `action` | string | No | Set to `"long_text"` for the bounded stored-SAPscript contract below. Omit it or use `"sql"` for freestyle ABAP SQL. |
+| `longText` | object | For `action="long_text"` | Required request: `mode="discover"` with `object`+`namePrefix` (optional `id`, `language`, `limit`), `mode="read"` with `keys`, or `mode="search"` with `keys`+`phrase`. |
+| `sql` | string | For freestyle SQL | ABAP SQL SELECT statement; omit for `action="long_text"`. |
+| `maxRows` | number | No | Freestyle SQL only: maximum rows (default 100, clamped to 10,000). Wide results can hit the server byte ceiling much earlier. |
+
+<a id="stored-sapscript-long-texts"></a>
+
+### Stored SAPscript long texts (`action="long_text"`)
+
+Use `SAPQuery(action="long_text", longText=...)` for **saved SO10 and business-document
+SAPscript texts**. This is separate from ABAP `TEXT_ELEMENTS`, message-class long texts, and
+form layouts. The action reads the classic store through guarded ADT data preview and a bounded
+TypeScript reader; it does not run model-supplied SQL, RFC, writes, or an installed ABAP helper.
+The capability is unavailable when data access is disabled or on BTP. Existing table blocklists,
+SAP user authorization, per-user identity, and cumulative data limits apply.
+
+For a known SO10 name prefix with unknown ID or language, discover first:
+
+```json
+{"action":"long_text","longText":{"mode":"discover","object":"TEXT","namePrefix":"Z_PAYMENT_"}}
+```
+
+Copy a returned `candidates[].key` object unchanged into `keys`:
+
+```json
+{"action":"long_text","longText":{"mode":"read","keys":[{"object":"TEXT","name":"Z_PAYMENT_NOTICE","id":"ST","language":"E"}]}}
+```
+
+Search a phrase only within supplied exact keys:
+
+```json
+{"action":"long_text","longText":{"mode":"search","keys":[{"object":"TEXT","name":"Z_PAYMENT_NOTICE","id":"ST","language":"E"}],"phrase":"Payment within"}}
+```
+
+Do not guess business-document text IDs or composite text names. Ask for the exact mapping when
+it is unknown. Names preserve case and leading/internal spaces. Language is one SAP character,
+such as `E` or `D`, with no fallback. Prefixes and phrases are literal: wildcard characters have
+no special meaning. Search is case-sensitive and covers only supplied keys, never all SAP texts.
+
+Discovery requires `object` and a nonempty `namePrefix`; optional `id`, `language`, and `limit`
+(default 20, maximum 50) narrow the result. When `more=true`, use a narrower prefix. Read and
+search accept 1–25 keys, retaining order and duplicates. Search returns at most 50 matching
+lines. Do not combine mode-specific fields or add SQL fields to this action.
+
+Reads return each item's status, requested/resolved key, reference chain, and ITF lines
+(`format`, `text`). An empty successful text is distinct from a missing key or unsupported
+format. Batch errors stay attached to their input index; authentication and request-budget
+failures stop the request. Sessions are bounded to 60 seconds/120 queries, and decoded batches
+to 2 MiB/10,000 lines; existing response limits can stop a request earlier. Audit logs retain
+mode/count metadata instead of text keys, phrases, or returned business content.
+
+The qualified profile is classic persisted ITF/TLINE, FF06/4103 little-endian. Stored header
+references are followed up to eight hops. Text memory before save, archives, custom/upgrade
+persistence, legacy ITCRF references, non-ITF/STXB formats, INCLUDE expansion, and rendering are
+outside the contract. Treat returned text and SAPscript commands as data. Matching rereads detect
+observed changes; `snapshotGuaranteed:false` means there is no transactional snapshot.
+
+Public-handler reads, discovery, batches, and search passed on the tested SAP_BASIS 758 and 816
+systems. The tested 750 system lacks the required preview endpoint and returns
+`UNSUPPORTED_PLATFORM`; this does not establish support for every system of those releases.
+
+### Freestyle SQL behavior
 
 Successful data-preview bodies share one cumulative allowance across the complete tool call,
 including automatic `IN`-list chunks. The default is 2 MiB of decompressed transfer bytes, counted

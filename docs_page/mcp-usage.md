@@ -43,12 +43,6 @@ SELECT carrid, COUNT(*) as cnt FROM sflight GROUP BY carrid ORDER BY cnt DESC
 
 ### Object Type Coverage (SAPRead)
 
-For saved SO10 or business-document long texts, use `SAPRead(type="LONG_TEXT", longText=...)`.
-Discover known object/name prefixes when ID or language is unknown, then reuse returned keys
-unchanged in `mode="read"`. Use `mode="search"` only for a supplied key list. Do not guess a
-document's configured text ID or composite name. Text memory, archives, and rendered forms are
-outside this capability. See [the contract and examples](tools.md#stored-sapscript-long-texts).
-
 | Object Type | Read | Notes |
 |-------------|:----:|-------|
 | PROG (Program) | **Y** | Full support |
@@ -69,8 +63,15 @@ outside this capability. See [the contract and examples](tools.md#stored-sapscri
 | COMPONENTS | **Y** | Installed software components |
 | MSAG | **Y** | Message class texts (canonical TADIR R3TR type; deprecated alias: `MESSAGES`) |
 | TEXT_ELEMENTS | **Y** | Program, class, or function-group text elements (`objectType`) |
-| LONG_TEXT | **Y** | Saved classic SAPscript texts, on-prem data-preview opt-in; distinct from TEXT_ELEMENTS |
 | VARIANTS | **Y** | Program variants |
+
+Saved SO10 and business-document SAPscript texts are a **SAPQuery action**, not a SAPRead object
+type: use `SAPQuery(action="long_text", longText=...)`. This is separate from `TEXT_ELEMENTS`,
+message-class texts, and form layouts. It requires `data` scope and `SAP_ALLOW_DATA_PREVIEW=true`;
+freestyle SQL remains a separate path requiring `sql` scope and `SAP_ALLOW_FREE_SQL=true`. Both
+are disabled by default. Discover by an object plus literal name prefix when the ID/language is
+unknown, then reuse returned exact keys. Ask for document-specific mappings you cannot identify;
+do not guess. See [the long-text contract and examples](tools.md#stored-sapscript-long-texts).
 
 ---
 
@@ -88,6 +89,7 @@ flowchart TD
     RTYPE -->|Table data| TD{Need SQL?}
     TD -->|Simple| SR2[SAPRead type=TABLE_CONTENTS]
     TD -->|Complex| SQ[SAPQuery]
+    RTYPE -->|Saved SAPscript long text| SLT[SAPQuery action=long_text]
     RTYPE -->|Find objects| SS[SAPSearch]
     RTYPE -->|System info| SR3[SAPRead type=SYSTEM]
 
@@ -120,6 +122,7 @@ flowchart TD
 | Read message class | `SAPRead` | `type=MSAG, name=ZMSG` (deprecated alias: `type=MESSAGES`) |
 | Read table structure | `SAPRead` | `type=TABL, name=MARA` |
 | Read table data | `SAPRead` | `type=TABLE_QUERY, name=MARA, columns=["MATNR"], maxRows=10` |
+| Read/discover/search a saved SAPscript text | `SAPQuery` | `action=long_text, longText={mode, ...}` |
 | **Read user's draft** | `SAPRead` | `type=CLAS, name=ZCL_TEST, version=inactive` |
 | **Show developer's view** (draft if exists, else active) | `SAPRead` | `type=CLAS, name=ZCL_TEST, version=auto` |
 | **Bypass cache for one read** | `SAPRead` | `type=PROG, name=ZTEST, force_refresh=true` |
@@ -154,6 +157,11 @@ flowchart TD
 | Simple query | `SAPQuery` | `sql="SELECT * FROM t000"` |
 | Filtered query | `SAPQuery` | `sql="SELECT * FROM sflight WHERE carrid = 'LH'"` |
 | Aggregation | `SAPQuery` | `sql="SELECT carrid, COUNT(*) as cnt FROM sflight GROUP BY carrid ORDER BY cnt DESCENDING"` |
+
+For saved SAPscript long texts, call `SAPQuery(action="long_text", longText=...)`; do not put
+the text request in `sql`. This semantic action uses the data-preview gate and `data` scope, not
+the freestyle SQL gate/scope. The exact-key, discovery, batching, search, response, and scope
+contract is documented in [SAPQuery](tools.md#sapquery).
 
 ---
 

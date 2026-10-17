@@ -152,7 +152,7 @@ describe('Audit Logging Integration', () => {
     expect((starts[0] as any).args.name).toBe('ZHELLO');
   });
 
-  it('keeps LONG_TEXT business keys, search phrases and returned text out of every audit sink', async () => {
+  it('keeps long_text business keys, search phrases and returned text out of every audit sink', async () => {
     const events: AuditEvent[] = [];
     const { logger } = await import('../../../src/server/logger.js');
     const fileSink = new FileSink(tmpFile);
@@ -163,8 +163,8 @@ describe('Audit Logging Integration', () => {
     vi.spyOn(client, 'runTableQuery').mockImplementation(fixture.query);
     const { resetCachedFeatures } = await import('../../../src/handlers/feature-cache.js');
     resetCachedFeatures();
-    const result = await handleToolCall(client, { ...DEFAULT_CONFIG, allowDataPreview: true }, 'SAPRead', {
-      type: 'LONG_TEXT',
+    const result = await handleToolCall(client, { ...DEFAULT_CONFIG, allowDataPreview: true }, 'SAPQuery', {
+      action: 'long_text',
       longText: { mode: 'search', keys: [fixture.keys.invoice], phrase: 'within 30' },
     });
     expect(result.isError).not.toBe(true);
@@ -179,7 +179,7 @@ describe('Audit Logging Integration', () => {
       expect(output).not.toContain('Payment within 30 days.');
     }
     expect(events.find((event) => event.event === 'tool_call_start')).toMatchObject({
-      args: { type: 'LONG_TEXT', longText: { mode: 'search', keyCount: 1 } },
+      args: { action: 'long_text', longText: { mode: 'search', keyCount: 1 } },
     });
     expect(events.find((event) => event.event === 'tool_call_end')).toMatchObject({
       status: 'success',

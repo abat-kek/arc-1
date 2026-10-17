@@ -61,6 +61,7 @@ describe('CLI runtime', () => {
   it.each(['text', 'json'] as const)(
     'keeps CLI source/search exports unchanged with IDE env opt-in (output=%s)',
     async (output) => {
+      vi.stubEnv('SAP_URL', 'https://sap.example.test');
       vi.stubEnv('ARC1_IDE_LINKS', 'vscode');
       vi.stubEnv('ARC1_IDE_DESTINATION', 'DEV');
       const configuration = resolveConfig([]);

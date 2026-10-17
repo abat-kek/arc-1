@@ -169,12 +169,20 @@ append Markdown to source/JSON output when `.env` enabled links. The CLI now exp
 decoration without mutating the resolved configuration, with source/search tests for text and JSON
 output. Smaller findings were addressed through trimmed-alias validation, include handling, and
 more precise provenance and qualification statements. The initial verdict was **approve after
-fixing the CLI regression**. Final verification after those fixes:
+fixing the CLI regression**. A focused Opus 5.5 Max follow-up confirmed the code fixes and all smaller findings. It found one
+remaining test-fixture issue: the new CLI test inherited `SAP_URL` from local `.env` and failed
+without it. Both failures were reproduced with `SAP_URL=`; the test now stubs its own inert URL.
+The follow-up recommendation was **approve once the URL stub lands**, with no other regressions
+found. The native resolver and unqualified include/alias workflows remain release checks, not
+claims of completed coverage.
+
+Final verification after those fixes:
 
 - `npm run typecheck`, `lint`, `validate:policy`, `check:sizes`, `build`, and `mkdocs build --strict`
   passed. Tool-definition snapshots and schemas were not changed.
 - The focused configuration, link generator, real dispatcher, and CLI regression run passed
-  **364 tests**. One existing CLI subprocess test was explicitly excluded from that focused run;
+  **364 tests**, including a rerun with `SAP_URL=` after fixing the fixture dependency.
+  One existing CLI subprocess test was explicitly excluded from that focused run;
   it was separately exercised and failed its startup deadline. No timeout or assertion was relaxed.
 - An earlier complete `npm test -- --maxWorkers=2` run passed **329 files / 9,286 tests**. Later
   full and isolated runs hit four pre-existing subprocess cases: the CLI source-entry test's

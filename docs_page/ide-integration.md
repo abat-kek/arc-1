@@ -21,7 +21,7 @@ for a **single-target local stdio server**.
 }
 ```
 
-Keep your existing SAP connection variables alongside these two entries. CLI equivalents are
+Keep your existing SAP connection variables alongside these two entries. Server startup flag equivalents are
 `--ide-links vscode --ide-destination DEV-001`. The destination must identify the **same SAP system
 and client** as ARC-1. It is a local IDE alias, not necessarily the SAP SID or BTP Destination name.
 ARC-1 cannot verify this local mapping. It never infers it from the MCP client's name or roots.
@@ -107,7 +107,7 @@ include. Follow the exposed schema rather than guessing tool arguments or locali
 
 This client-side composition is also a candidate for users of a shared ARC-1 HTTP service. It does
 not require ARC-1 to call SAP's local MCP server or handle its bearer token. Each server keeps its
-own identity and access restrictions. The resolver was verified in installed metadata, but was
+own identity and access restrictions. The resolver was inspected in the bundled language-server jars, but was
 unavailable in the Copilot session used for this run; its end-to-end workflow remains unqualified.
 Tool names and availability depend on SAP's installed version and configuration.
 

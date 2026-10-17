@@ -508,7 +508,7 @@
       "contextNearLimit": false,
       "supportedCompletion": false,
       "qualification": "conclusive",
-      "reviewNote": " Manually reviewed the final JSON after </think> against successful tool evidence. The original non-JSON response and strict grade are retained. Extra fields unrelated to this task are not evidence of its completion. Correct unavailability, but the message incorrectly reuses a prior argument-validation error instead of the unsupported-log reason.",
+      "reviewNote": " Manually reviewed the final JSON after </think> against successful tool evidence. The original non-JSON response and strict grade are retained. Extra fields unrelated to this task are not evidence of its completion. Unavailability was not established: every activation_log call failed argument validation. The answer incorrectly reuses a prior argument-validation error; this remains a failed task.",
       "outcome": "not-completed",
       "callsObserved": [
         {

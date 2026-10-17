@@ -1,7 +1,7 @@
 # Does #1011 add enough value?
 
 **Decision — keep #1011 as a draft; do not make the whole bundle the next release priority.**
-The evaluation demonstrates specific benefits from batching and saved-log retrieval, but does
+The evaluation observed specific benefits from batching and saved-log retrieval, but does
 not establish reliable model use of the three additions. Transport review (#1008) remains first.
 
 The useful #1010 documentation/test are isolated in [#1016](https://github.com/arc-mcp/arc-1/pull/1016),
@@ -79,6 +79,15 @@ The follow-up did improve ordinary log selection: `type` + `name` produced a val
 where the earlier model used `objectType`. It did not solve the harder correlation question or
 the generic filter grammar. Further catalog expansion is not justified by these results.
 
+### Existing tasks must keep working
+
+With the candidate catalog, Llama repeatedly blended `SAPRead` and the `syntax` action and failed
+the single-object task it passed in the baseline. This occurred in both passes; it is an observed
+regression for this model, not proof that catalog growth caused it. Future iterations must show
+no regression on existing routes. In the follow-up filter task, Llama also copied the description's
+example value `MESSAGE_TYPE_X` into the attribute field. The added example did not make the interface
+usable for that task; preserve this failure when considering any further description change.
+
 ## Evaluation corrections and limitations
 
 Independent Claude review found and helped correct baseline batch leakage, missing filter/search
@@ -116,6 +125,15 @@ sampled DTEL/TABL objects advertised no relation. Positive live filtered matches
 [Validation inputs and log hashes](adt-vscode-1.2/evidence/diagnostic-value-validation.json) ·
 [Evidence archives and reproduction](adt-vscode-1.2/evidence/diagnostic-value/README.md) ·
 [Decision plan and review corrections](../plans/2026-10-17-diagnostic-value-evals.md).
+
+Claude Code **Opus 5.5 Max** independently reviewed `5d5c7824` through the GUI:
+[final review](adt-vscode-1.2/evidence/diagnostics-review/claude-value-review-3.md).
+It found no blockers, verified all 131 archived file hashes and 57 recorded grades, and passed
+198 focused checks for #1011 plus 382 for #1019. It approved the standalone fix and agreed to hold
+the bundle. Its recommendations R1–R3 are incorporated above: existing-route regression, narrower
+benefit wording and the misused filter example. The unsupported-log row's misleading review note
+is corrected; raw trials, grades and product code are unchanged. Later edits update documentation
+and the roadmap only; this is not approval of general model reliability or rollout.
 
 Prioritize #1008, #1016 and the independent correctness fix. Resume #1011 by choosing one concrete
 workflow: measure batch checks inside transport review, demonstrate natural-language filtered

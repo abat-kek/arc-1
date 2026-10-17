@@ -3,6 +3,7 @@
 Use `SAPTransport` through your MCP client. The same workflow runs when ARC-1 is hosted
 on BTP Cloud Foundry, including pinned and aggregate read-only targets. No local files
 or report renderer are required. These improvements require a build newer than 1.6.0.
+Administrators can disable these bounded reads with `SAP_DENY_ACTIONS=SAPTransport.diff`.
 
 ## Review a request
 

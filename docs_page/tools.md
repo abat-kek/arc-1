@@ -1565,7 +1565,7 @@ Every part carries the evidence behind its diff — read `baselineStatus` before
 | `prior-revision-unverified` | A predecessor exists, but the "after" side was only guessed — it may belong to another change. |
 | `no-prior-snapshot` | No predecessor found; this does **not** prove creation in this transport. |
 | `baseline-ambiguous` | Missing or uncertain baseline chronology. Candidate hunks are **not** proof of creation. |
-| `baseline-unavailable` | The read failed. Never report this as unchanged. |
+| `baseline-unavailable` | No usable comparison: missing matching revision, failed read or work limit. Never report this as unchanged. |
 
 Objects without a verified historical adapter return an `inventoryReason`. Missing class parts
 stay visible; `notCompared` lists non-source scope such as text pools and metadata. Released
@@ -1601,7 +1601,7 @@ a valid empty Atom feed still returns empty history.
 | `removeLockedObjects` | boolean | No | For delete: remove locked object entries from each task before deleting when SAP would otherwise reject the request as containing locked objects. This mutates request contents. |
 | `summary` | boolean | No | For `diff`, true omits hunks. For `list`, **Default `true`** — headers-only: omits each transport's (and task's) `objects[]`, keeping `id`/`description`/`owner`/`status`/`target` plus an `objectCount`. Pass `false` for full object lists (~5x larger). |
 | `maxResults` | number | No | Maximum list rows or check/history assignment candidates (defaults: list/history 50, check 10; max 1000). |
-| `resultFormat` | string | No | For `diff`: `legacy` compact JSON (default) or `structured` full provenance. For `release`/`release_recursive`: `legacy` text (default) or `structured` JSON with outcome, per-ID confirmation evidence, polls, elapsed time, and SAP reports. |
+| `resultFormat` | string | No | For `release`/`release_recursive`: `legacy` text (default) or `structured` JSON with outcome, per-ID confirmation evidence, polls, elapsed time, and SAP reports. |
 | `timeoutSeconds` | number | No | For `release`/`release_recursive`: terminal-state verification budget; default `300`, range `1..1800`. |
 
 **Actions:**

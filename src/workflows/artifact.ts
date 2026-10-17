@@ -11,7 +11,8 @@ export class WorkflowCallError extends Error {
         message,
       )
         ? 'blocked'
-        : /^DATA_RESPONSE_TOO_LARGE\b/.test(message) || message === 'Tool output exceeds workflow input budget.'
+        : /^(?:\{"error":")?DATA_RESPONSE_TOO_LARGE\b/.test(message) ||
+            message === 'Tool output exceeds workflow input budget.'
           ? 'incomplete'
           : 'error';
   }

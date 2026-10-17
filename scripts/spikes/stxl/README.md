@@ -37,6 +37,7 @@ export STXL_OUTPUT_DIR="$(mktemp -d /tmp/arc1-stxl-XXXXXX)"
 npx tsx scripts/spikes/stxl/probe.ts
 STXL_ALLOW_HELPERS=true npx tsx scripts/spikes/stxl/kernel-fixtures.ts
 npx tsx scripts/spikes/stxl/check-kernel-fixtures.ts "$STXL_OUTPUT_DIR/$STXL_SYSTEM_LABEL-kernel-fixtures-output.txt"
+STXL_ALLOW_HELPERS=true npx tsx scripts/spikes/stxl/unicode-edges.ts
 STXL_ALLOW_HELPERS=true npx tsx scripts/spikes/stxl/corpus.ts
 STXL_ALLOW_HELPERS=true STXL_CORPUS_LANGUAGE=E npx tsx scripts/spikes/stxl/corpus.ts
 STXL_ALLOW_HELPERS=true npx tsx scripts/spikes/stxl/roundtrip.ts
@@ -82,11 +83,17 @@ oracle (`STXL_REUSE_ORACLE=true`) is an explicit test convenience, not a product
 ## Limits and unresolved integration work
 
 - 2 MiB compressed input, 4 MiB decompressed container, 10,000 lines; callers can only narrow limits.
-- At most nine bounded SRTF2 windows; each read preserves the ARC-1 table data safety gate.
+- At most eight bounded SRTF2 windows (INT1 counters 0–255); each read preserves the ARC-1 table data safety gate.
 - Requires full 7,902-byte CLUSTD hex cells and uses CLUSTR for meaningful lengths. Rejects mixed
   identities, missing/duplicate chunk numbers, malformed hex, and partial intermediate chunks.
 - Multiple requests do not establish a transactional snapshot. Compression has no verified
   integrity check; valid mutations or opaque trailing compressor bytes are not authenticated.
+  The decoder rejects compressed tails over six bytes, the maximum observed in this corpus;
+  shorter opaque tails are reported as `compressedTrailingBytes`, not semantically validated.
+- ABAP CHAR truncation can leave lone UTF-16 surrogates. Code units are preserved and reported
+  with `wellFormedUnicode: false`. Use JSON serialization to retain these units; ordinary UTF-8
+  encoding of the raw string would replace them. `unicode-edges.ts` checks raw TLINE bytes against
+  kernel IMPORT, including NUL, U+FFFF, trailing tabs and non-ASCII spaces.
 - SAP 816's SQL-line CONDENSE changes repeated spaces inside literal keys. Ordinary exact-key
   queries can therefore miss a stored text. The spike does not silently broaden its selection.
   `readStoredTextSql` in `sql-reader.ts` is an explicit alternative requiring the existing free-SQL

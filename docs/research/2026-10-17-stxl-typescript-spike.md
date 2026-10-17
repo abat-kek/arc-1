@@ -42,7 +42,7 @@ decoder plan. FEAT-86 tracks the remaining native-reader qualification separatel
 The implementation and runnable probes are in
 [`scripts/spikes/stxl`](../../scripts/spikes/stxl/README.md). Only synthetic fixtures are committed.
 Existing text bytes, standard source, identities, and raw live responses remain in private local
-artifacts. An independent Claude Code Opus 5.5 Max research/review was requested through the GUI.
+artifacts. An independent Claude Code Opus 5.5 Max research/review was completed through the GUI.
 The [sanitized evidence summary](2026-10-17-stxl-evidence.json) records counts, releases, and cleanup
 without existing text content or keys.
 
@@ -54,13 +54,14 @@ All evidence below was obtained on 2026-10-17. Native execution used Node 24.19.
 | Check | SAP_BASIS 750 SP02 | SAP_BASIS 758 SP02 | SAP_BASIS 816 SP01 |
 |---|---:|---:|---:|
 | Synthetic EXPORT cases, compressed + plain | 18/18 | 18/18 | 18/18 |
+| Raw Unicode edge cases, compressed + plain | 6/6 | 6/6 | 6/6 |
 | Existing stored-text comparisons passing | 58 | 77 | 76 |
 | Existing selections excluded by 3,000-line oracle budget | 2 | 5 | 5 |
 | Exact-key ADT query miss before decoding | n/a | 0 | 1 |
 | Direct ADT STXL extraction | 404 on both tested preview routes | yes | yes |
 | Persisted 2,000-line, 37-chunk synthetic round trip | not attempted without preview | pass | pass |
 
-That is **211 passing primary existing system/text comparisons**, plus 54 synthetic compressed/plain
+That is **211 passing primary existing system/text comparisons**, plus 72 synthetic compressed/plain
 comparisons and two persisted round trips. A separate, explicit SQL compatibility route also
 recovered the 816 text missed above, yielding 212 successfully decoded system/text pairs overall.
 These counts include the same standard texts on
@@ -80,7 +81,7 @@ TypeScript comparison -> DELETE_TEXT -> absence verification`. Both targets retu
 exercises the reader's second 32-row window against real SAP storage. The synthetic normalized
 line-array SHA-256 is `f0634bd8f9c3d542b633e3179ed544b634c2b36f7a24e38b515be00fef253d7d`.
 
-Temporary classes were deleted, and subsequent source reads verified their absence. Both
+All 20 temporary classes were deleted, and subsequent source reads verified their absence. Both
 synthetic stored texts were deleted and checked absent in STXH and STXL. No deployed MCP
 configuration, persistent service, or transport was changed.
 
@@ -97,15 +98,45 @@ configuration, persistent service, or transport was changed.
    `2 + (payload[0] & 3)` bits lets `inflateRaw` decode every tested compressed stream.
 4. Native decompression uses a 14-bit window and `maxOutputLength`, then requires exact declared
    output length. The parser requires one named TLINE table, exact fields, complete structure,
-   row/table terminators, matching row count, and valid UTF-16LE.
+   row/table terminators, matching row count, segment metadata, and UTF-16LE code-unit fidelity.
 5. zlib stops at the final compressed block. SAP samples include extra compressor trailer bytes,
    sometimes nonzero. Their complete meaning is not established here. This is **not** a checksum
    or authenticity verifier. Bounds and structural validation do not detect every valid mutation.
+   The consumed-input check rejects more than six residual bytes; six is an empirical profile
+   limit, not a fully reverse-engineered trailer grammar. Results expose the residual count.
 
-The implementation limits input to 2 MiB, output to 4 MiB, lines to 10,000, and requests to nine
+The implementation limits input to 2 MiB, output to 4 MiB, lines to 10,000, and requests to eight
 32-counter windows. Per-window ordering is irrelevant; the assembler sorts and rejects gaps,
 duplicates, mixed client/key/RELID identities, invalid lengths, and short intermediate chunks.
-Limits can only be narrowed, including at the JavaScript runtime boundary.
+SRTF2 is SYBIN1 (INT1), so valid counters are 0–255. Limits can only be narrowed, including at
+the JavaScript runtime boundary.
+
+## Independent review and counterexamples
+
+The independent review supported the SAP bit-prefix removal plus native-zlib approach and found
+useful edge cases. Its earlier snapshot also raised version/code-page and nested-container issues
+already addressed by narrowing support to FF06/4103 and enforcing a single-table state machine.
+
+The final follow-up added consumed-input accounting, a six-byte compressed-tail ceiling, initial
+block-type rejection, segment-header checks, and the 256-chunk bound. Native zlib accepts a broader
+set of streams than SAP's historical decompressor; a 14-bit window is not proof of strict SAP
+distance/block conformance on arbitrary malformed input. This remains a bounded parser for the
+tested SAP-produced profile, not a strict general-purpose CS_LZH validator.
+
+The review proposed allowing only one or two zero trailer bytes. **Live counterexamples rejected
+that proposal:** among 238 compressed buffers (211 corpus + 27 synthetic), residual lengths were
+1, 2, 5, or 6, with nonzero tails in valid kernel-produced streams. The six-byte ceiling preserves
+all these cases and rejects an appended 7,902-byte stale chunk. Trailer semantics remain open.
+
+All three kernels also confirmed that truncating `131 * 'A' + emoji` to CHAR132 leaves a lone high
+surrogate which EXPORT and IMPORT preserve. A manually introduced lone low surrogate also survives.
+Fatal TextDecoder handling was therefore lossy by rejection for valid ABAP data. The decoder now
+preserves UTF-16 code units, reports `wellFormedUnicode: false`, and relies on JSON escaping for
+lossless interchange. Independent raw 268-byte TLINE oracles additionally verify embedded NUL,
+U+FFFF, and trailing tab/NBSP/ideographic space. All 18 added comparisons pass.
+
+Reference/header semantics, multi-window consistency and cumulative MCP budgets remain production
+integration requirements below. No GPL source or fixtures from the review were copied.
 
 ## Compatibility findings
 
@@ -163,13 +194,14 @@ service option in #1000 for broader form/API semantics; the codec does not settl
 
 ## Local validation
 
-The focused suite has 57 tests: SAP golden fixtures, fixed-width text fidelity, malformed headers,
-unsupported profiles, truncation, output/line/input limits, decompression expansion, malformed
-UTF-16, structural state errors, 1,000 deterministic corruption probes, chunk-window boundaries,
-identity/sequence validation, literal quoting, and the existing data-preview/free-SQL safety gates. The stricter final parser
-was also replayed against all 211 successful private corpus captures.
+The focused suite has 78 tests: SAP golden fixtures, fixed-width text fidelity, malformed headers,
+unsupported profiles, truncation, output/line/input limits, decompression expansion, lone UTF-16
+surrogate preservation, structural state errors, trailer bounds, 1,000 deterministic corruption
+probes, chunk-window boundaries, identity/sequence validation, literal quoting, and the existing
+data-preview/free-SQL safety gates. The stricter final parser was also replayed against all 211
+successful private corpus captures.
 
 Typecheck, build, lint, policy validation, and size/schema-budget checks pass. The full suite passes
-with four workers: **312 files / 8,980 tests**. The first unconstrained run had four timing failures
+with four workers: **312 files / 9,001 tests**. The first unconstrained run had four timing failures
 in existing CLI/shutdown subprocess tests; all 54 tests in those two files passed when rerun alone,
 and the subsequent full run passed. No MCP tool-schema snapshot or production runtime code is changed.

@@ -27,8 +27,7 @@ export function keyFilters(key: TextKey) {
 export function assembleChunks(rows: Record<string, string>[], key: TextKey, client: string): Buffer {
   keyFilters(key);
   if (!/^\d{3}$/.test(client)) throw new Error('STXL: invalid client');
-  if (!rows.length || rows.length > Math.ceil(DEFAULT_LIMITS.maxInputBytes / 7902))
-    throw new Error('STXL: missing or excessive chunks');
+  if (!rows.length || rows.length > 256) throw new Error('STXL: missing or excessive chunks');
   const chunks = rows
     .map((row) => {
       if (
@@ -43,7 +42,7 @@ export function assembleChunks(rows: Record<string, string>[], key: TextKey, cli
       if (
         !Number.isSafeInteger(index) ||
         index < 0 ||
-        index > 265 ||
+        index > 255 ||
         length < 1 ||
         length > 7902 ||
         !/^[\da-f]{15804}$/iu.test(row.CLUSTD)
@@ -69,7 +68,7 @@ export async function readStoredText(client: Pick<AdtClient, 'runTableQuery'>, k
   const filters = [{ field: 'RELID', op: '=', value: 'TX' }, ...keyFilters(key)];
   const chunks: Record<string, string>[] = [];
   // A bounded SRTF2 window avoids response truncation and dependence on database ordering.
-  for (let start = 0; start < 288; start += 32) {
+  for (let start = 0; start < 256; start += 32) {
     const data = await client.runTableQuery('STXL', {
       columns: ['MANDT', 'RELID', 'TDOBJECT', 'TDNAME', 'TDID', 'TDSPRAS', 'SRTF2', 'CLUSTR', 'CLUSTD'],
       where: [
@@ -82,7 +81,7 @@ export async function readStoredText(client: Pick<AdtClient, 'runTableQuery'>, k
     if (data.rows.length > 32 || data.rows.some((row) => Number(row.SRTF2) < start || Number(row.SRTF2) >= start + 32))
       throw new Error('STXL: invalid chunk window');
     chunks.push(...data.rows);
-    if (data.rows.length < 32) {
+    if (data.rows.length < 32 || start === 224) {
       const bytes = assembleChunks(chunks, key, sapClient);
       return { ...(await decodeStxl(bytes)), chunks: chunks.length, compressedBytes: bytes.length, bytes };
     }

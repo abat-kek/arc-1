@@ -43,10 +43,17 @@
           },
           "maxLines": 129,
           "maxChunks": 1
+        },
+        "unicode-edges": {
+          "counts": {
+            "pass": 6
+          },
+          "rawTlineBytesCompared": true,
+          "loneSurrogatesPreserved": true
         }
       },
       "cleanup": {
-        "helperCount": 5,
+        "helperCount": 6,
         "allAbsent": true
       }
     },
@@ -111,10 +118,17 @@
           "lines": 1,
           "chunks": 1,
           "route": "explicit-free-sql-concat-with-space"
+        },
+        "unicode-edges": {
+          "counts": {
+            "pass": 6
+          },
+          "rawTlineBytesCompared": true,
+          "loneSurrogatesPreserved": true
         }
       },
       "cleanup": {
-        "helperCount": 6,
+        "helperCount": 7,
         "allAbsent": true,
         "syntheticStoredText": "deleted-and-absence-verified"
       }
@@ -181,10 +195,17 @@
           "lines": 1,
           "chunks": 1,
           "route": "explicit-free-sql-concat-with-space"
+        },
+        "unicode-edges": {
+          "counts": {
+            "pass": 6
+          },
+          "rawTlineBytesCompared": true,
+          "loneSurrogatesPreserved": true
         }
       },
       "cleanup": {
-        "helperCount": 6,
+        "helperCount": 7,
         "allAbsent": true,
         "syntheticStoredText": "deleted-and-absence-verified"
       }
@@ -195,5 +216,10 @@
     "pass": 211,
     "failed": 0
   },
-  "rfcCalls": 0
+  "rfcCalls": 0,
+  "independentReview": {
+    "reviewer": "Claude Code Opus 5.5 Max via GUI",
+    "completed": true,
+    "followup": "Trailer bound, raw Unicode oracles, segment guards and INT1 chunk limit; production integration gaps remain documented."
+  }
 }

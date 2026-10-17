@@ -34,6 +34,39 @@ const rowsFor = (bytes: Buffer) =>
   }));
 
 describe('STXL spike: independent SAP kernel fixtures', () => {
+  for (const basis of ['750', '758', '816']) {
+    const edgeCases = JSON.parse(
+      readFileSync(new URL(`../../fixtures/stxl/sap-${basis}-unicode.json`, import.meta.url), 'utf8'),
+    ) as { cases: Array<{ NAME: string; COMPRESSED: string; PLAIN: string; EXPECTED_RAW: string[] }> };
+    for (const sample of edgeCases.cases) {
+      for (const mode of ['COMPRESSED', 'PLAIN'] as const) {
+        it(`${basis} ${sample.NAME} ${mode}`, async () => {
+          const decoded = await decodeStxl(Buffer.from(sample[mode], 'base64'));
+          // Independent raw TLINE oracle, avoiding SAP/JSON UTF-8 conversion of lone surrogates.
+          const expected = sample.EXPECTED_RAW.map((raw) => {
+            const bytes = Buffer.from(raw, 'base64');
+            expect(bytes.length).toBe(268);
+            const units = Array.from({ length: 134 }, (_, index) => bytes.readUInt16LE(index * 2));
+            return {
+              format: String.fromCharCode(...units.slice(0, 2)).replace(/ +$/u, ''),
+              text: String.fromCharCode(...units.slice(2)).replace(/ +$/u, ''),
+            };
+          });
+          expect(decoded.lines).toEqual(expected);
+          expect(decoded.wellFormedUnicode).toBe(sample.NAME !== 'unicode-edge-1');
+          expect(JSON.parse(JSON.stringify(decoded.lines))).toEqual(expected);
+          if (sample.NAME === 'unicode-edge-1') {
+            expect(decoded.lines[0].text.charCodeAt(131)).toBe(0xd83d);
+            expect(decoded.lines[1].text.charCodeAt(0)).toBe(0xde00);
+          }
+          if (sample.NAME === 'unicode-edge-2') expect(decoded.lines[0].text.charCodeAt(1)).toBe(0);
+          if (sample.NAME === 'unicode-edge-3')
+            expect(decoded.lines.map((line) => line.text.at(-1))).toEqual(['\t', '\u00a0', '\u3000']);
+        });
+      }
+    }
+  }
+
   for (const fixture of fixtures) {
     for (const sample of fixture.cases) {
       for (const mode of ['compressed', 'plain'] as const) {
@@ -137,10 +170,32 @@ describe('STXL spike: independent SAP kernel fixtures', () => {
     await expect(decodeStxl(plain.subarray(0, -3))).rejects.toThrow('missing');
   });
 
-  it('rejects malformed UTF-16 instead of substituting replacement characters', async () => {
+  it('rejects appended stale chunks instead of silently ignoring them', async () => {
+    for (const length of [7, 7902]) {
+      await expect(decodeStxl(Buffer.concat([small, Buffer.alloc(length)]))).rejects.toThrow('trailer');
+      await expect(decodeStxl(Buffer.concat([small, Buffer.alloc(length, 0xa5)]))).rejects.toThrow('trailer');
+    }
+    expect((await decodeStxl(small)).compressedTrailingBytes).toBeLessThanOrEqual(6);
+  });
+
+  it('rejects unsupported initial compression block types', async () => {
+    const shift = 2 + (small[24] & 3);
+    for (const type of [0, 3]) {
+      const bad = Buffer.from(small);
+      bad[24] = (bad[24] & ~(3 << (shift + 1))) | (type << (shift + 1));
+      await expect(decodeStxl(bad)).rejects.toThrow('initial LZH block type');
+    }
+  });
+
+  it('validates segment type, row size, reserved fields and declared length', async () => {
+    for (const offset of [17, 18, 22, 28, 47]) {
+      const bad = Buffer.from(plain);
+      bad[offset] ^= 1;
+      await expect(decodeStxl(bad)).rejects.toThrow(/segment/u);
+    }
     const bad = Buffer.from(plain);
-    bad.writeUInt16LE(0xd800, 100); // First row text, immediately followed by an ordinary BMP character.
-    await expect(decodeStxl(bad)).rejects.toThrow('character sequence');
+    bad.writeUInt32BE(1, 23);
+    await expect(decodeStxl(bad)).rejects.toThrow('segment length');
   });
 
   it('terminates bounded deterministic corruption probes', async () => {
@@ -217,6 +272,7 @@ describe('STXL spike: bounded ADT chunk reader', () => {
       { RELID: 'OT' },
       { SRTF2: '1' },
       { SRTF2: '0x0' },
+      { SRTF2: '256' },
       { CLUSTR: '7903' },
       { CLUSTR: '0' },
       { CLUSTD: row.CLUSTD.slice(2) },
@@ -229,6 +285,22 @@ describe('STXL spike: bounded ADT chunk reader', () => {
     expect(() => keyFilters({ ...key, TDNAME: '' })).toThrow('invalid TDNAME');
     expect(() => keyFilters({ ...key, TDNAME: '\n' })).toThrow('invalid TDNAME');
     expect(keyFilters({ ...key, TDNAME: "A'B" })).toContainEqual({ field: 'TDNAME', op: '=', value: "A'B" });
+  });
+
+  it('bounds SRTF2 at the complete 256-row INT1 domain without a ninth request', async () => {
+    const bytes = Buffer.alloc(7902 * 256);
+    plain.copy(bytes);
+    const rows = rowsFor(bytes);
+    expect(assembleChunks(rows, key, '001').equals(bytes)).toBe(true);
+    expect(() => assembleChunks([...rows, { ...rows[0], SRTF2: '256' }], key, '001')).toThrow('excessive');
+    let offset = 0;
+    const query = vi.fn().mockImplementation(async () => {
+      const result = { rows: rows.slice(offset, offset + 32) };
+      offset += 32;
+      return result;
+    });
+    expect((await readStoredText({ runTableQuery: query }, key, '001')).chunks).toBe(256);
+    expect(query).toHaveBeenCalledTimes(8);
   });
 
   it('rejects a truncated/inconsistent window without returning partial text', async () => {

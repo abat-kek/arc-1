@@ -51,11 +51,9 @@ function uint(data: Buffer, offset: number, size: number): number {
 }
 function textBytes(bytes: Buffer, codePage: string): string {
   if (codePage !== '4103') fail(`unverified code page ${codePage}`);
-  try {
-    return new TextDecoder('utf-16le', { fatal: true, ignoreBOM: true }).decode(bytes);
-  } catch {
-    return fail(`invalid ${codePage} character sequence`);
-  }
+  // ABAP CHAR truncation can leave a lone surrogate. Preserve its code unit, as IMPORT does.
+  // JSON.stringify escapes such units; callers must not silently replace them during encoding.
+  return bytes.toString('utf16le');
 }
 
 export async function unpackCluster(data: Buffer, limits: DecodeLimits = DEFAULT_LIMITS) {
@@ -68,6 +66,7 @@ export async function unpackCluster(data: Buffer, limits: DecodeLimits = DEFAULT
   textBytes(Buffer.alloc(0), codePage); // Reject unknown code pages even for an empty table.
   const compression = data[4];
   let payload: Buffer;
+  let compressedTrailingBytes = 0;
   if (compression === 1) {
     payload = data.subarray(16);
     if (payload.length > limits.maxOutputBytes) fail('uncompressed output limit exceeded');
@@ -82,20 +81,35 @@ export async function unpackCluster(data: Buffer, limits: DecodeLimits = DEFAULT
     for (let i = 0; i < source.length; i++) {
       reframed[i] = (source[i] >>> shift) | ((source[i + 1] ?? 0) << (8 - shift));
     }
+    const firstBlockType = (reframed[0] >>> 1) & 3;
+    if (firstBlockType !== 1 && firstBlockType !== 2) fail('unsupported initial LZH block type');
+    let consumed: number;
     try {
-      payload = await inflate(reframed, { maxOutputLength: expected, windowBits: 14 });
+      // Node's callback typings omit the info:true result shape.
+      const inflated = (await inflate(reframed, {
+        maxOutputLength: expected,
+        windowBits: 14,
+        info: true,
+      })) as unknown as { buffer: Buffer; engine: { bytesWritten: number } };
+      payload = inflated.buffer;
+      consumed = inflated.engine.bytesWritten;
     } catch {
       return fail('invalid, truncated, oversized, or unsupported LZH stream');
     }
     if (payload.length !== expected) fail('decompressed length mismatch');
+    compressedTrailingBytes = reframed.length - consumed;
+    // Live SAP buffers have 1–6 residual bytes, sometimes nonzero. Their grammar is unverified.
+    // Bound the opaque tail to reject appended stale chunks; this is not an integrity check.
+    if (!Number.isSafeInteger(consumed) || consumed < 1 || compressedTrailingBytes < 0 || compressedTrailingBytes > 6)
+      fail('excess compressed trailer bytes');
   } else {
     return fail(`unsupported compression flag ${compression}`);
   }
-  return { version, codePage, compressed: compression === 2, payload };
+  return { version, codePage, compressed: compression === 2, compressedTrailingBytes, payload };
 }
 
 export async function decodeStxl(data: Buffer, limits: DecodeLimits = DEFAULT_LIMITS) {
-  const { version, codePage, compressed, payload } = await unpackCluster(data, limits);
+  const { version, codePage, compressed, compressedTrailingBytes, payload } = await unpackCluster(data, limits);
   const charBytes = codePage.startsWith('410') ? 2 : 1;
   const lines: TextLine[] = [];
   let p = 0;
@@ -108,6 +122,7 @@ export async function decodeStxl(data: Buffer, limits: DecodeLimits = DEFAULT_LI
   let structureEnded = false;
   let rowPending = false;
   let tableClosed = false;
+  let segmentLength = 0;
   const emit = (offset: number, length: number) => {
     if (
       ended ||
@@ -141,6 +156,10 @@ export async function decodeStxl(data: Buffer, limits: DecodeLimits = DEFAULT_LI
       case 3: {
         if (descriptor) fail('multiple tables in TLINE container');
         const nameOffset = 32;
+        if (uint(payload, p + 1, 1) !== 14 || uint(payload, p + 2, 1) !== 0 || uint(payload, p + 3, 4) !== 268)
+          fail('unexpected TLINE segment descriptor');
+        if (range(payload, p + 12, 20).some((byte) => byte !== 0)) fail('unsupported segment header fields');
+        segmentLength = uint(payload, p + 7, 4);
         const nameLength = uint(payload, p + 11, 1);
         const bytes = charBytes;
         const name = textBytes(range(payload, p + nameOffset, nameLength * bytes), codePage);
@@ -203,6 +222,7 @@ export async function decodeStxl(data: Buffer, limits: DecodeLimits = DEFAULT_LI
         break;
       case 4:
         if (!tableClosed) fail('container ended before table');
+        if (segmentLength !== 0 && segmentLength !== p) fail('segment length mismatch');
         ended = true;
         p++;
         break;
@@ -212,5 +232,13 @@ export async function decodeStxl(data: Buffer, limits: DecodeLimits = DEFAULT_LI
   }
   if (!descriptor || !ended) fail('missing TLINE descriptor or end marker');
   if (declaredRows !== undefined && declaredRows !== lines.length) fail('declared line count mismatch');
-  return { version, codePage, compressed, lines, outputBytes: payload.length };
+  return {
+    version,
+    codePage,
+    compressed,
+    compressedTrailingBytes,
+    wellFormedUnicode: lines.every((line) => !/\p{Surrogate}/u.test(line.format) && !/\p{Surrogate}/u.test(line.text)),
+    lines,
+    outputBytes: payload.length,
+  };
 }

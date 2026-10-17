@@ -58,7 +58,6 @@ describe('multi-target tool surface', () => {
     expect(diagnose.inputSchema.properties).toHaveProperty('includeSubpackages');
     expect(property(diagnose, 'action').enum).toEqual([
       'syntax',
-      'explain_policy',
       'feed_schema',
       'activation_log',
       'unittest',
@@ -93,7 +92,6 @@ describe('multi-target tool surface', () => {
     const diagnose = tools.find((tool) => tool.name === 'SAPDiagnose') as ToolDefinition;
     expect(property(diagnose, 'action').enum).toEqual([
       'syntax',
-      'explain_policy',
       'feed_schema',
       'activation_log',
       'unittest',

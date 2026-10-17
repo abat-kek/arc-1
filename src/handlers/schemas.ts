@@ -1037,7 +1037,6 @@ export const SAPDiagnoseSchema = z
   .object({
     action: z.enum([
       'syntax',
-      'explain_policy',
       'feed_schema',
       'activation_log',
       'unittest',
@@ -1064,8 +1063,6 @@ export const SAPDiagnoseSchema = z
       'authorization_trace',
     ]),
     filters: dumpFilters.optional(),
-    proposedTool: z.string().min(1).max(40).optional(),
-    proposedArgs: z.record(z.string(), z.unknown()).optional(),
     name: z.string().optional(),
     url: z.string().optional(),
     type: z.string().optional(),
@@ -1114,17 +1111,6 @@ export const SAPDiagnoseSchema = z
   .strict()
   .superRefine((input, ctx) => {
     validateDiagnosticInputs(input, ctx);
-    if (input.action === 'explain_policy') {
-      if (!input.proposedTool || !input.proposedArgs)
-        ctx.addIssue({ code: 'custom', message: 'explain_policy requires proposedTool and proposedArgs.' });
-      if (input.proposedArgs && Buffer.byteLength(JSON.stringify(input.proposedArgs)) > 64 * 1024)
-        ctx.addIssue({ code: 'custom', path: ['proposedArgs'], message: 'Proposed arguments exceed 64 KiB.' });
-      for (const [key, value] of Object.entries(input))
-        if (value !== undefined && !['action', 'proposedTool', 'proposedArgs'].includes(key))
-          ctx.addIssue({ code: 'custom', path: [key], message: `${key} is not supported for explain_policy.` });
-    } else if (input.proposedTool !== undefined || input.proposedArgs !== undefined) {
-      ctx.addIssue({ code: 'custom', message: 'proposedTool/proposedArgs are only supported for explain_policy.' });
-    }
     const ci = input.action === 'atc_ci' || input.action === 'unittest_ci';
     if (ci) {
       const count = (input.packages?.length ?? 0) + (input.packageTrees?.length ?? 0);

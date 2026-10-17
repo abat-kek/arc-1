@@ -1,5 +1,11 @@
 # Current-caller policy explanations
 
+> **Superseded decision (17 October 2026).** Do not ship `explain_policy` or require
+> it before normal calls. Existing denials and schema pruning cover the ordinary
+> workflow. Only the deny-rule clarification and BOR regression are retained in
+> [#1016](https://github.com/arc-mcp/arc-1/pull/1016). This document and its reviews
+> preserve the historical experiment, not the current product contract.
+
 ## Scope
 
 Add `SAPDiagnose action=explain_policy` with `proposedTool` and `proposedArgs`. Explain one

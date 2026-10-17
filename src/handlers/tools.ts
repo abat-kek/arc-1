@@ -1135,7 +1135,6 @@ export function getToolDefinitions(
         'ABAP diagnostics and runtime analysis. Actions:\n' +
         '- "feed_schema": dump filter attributes/operators. dumps filters are ANDed; datetime uses UTC YYYYMMDDHHMMSS.\n' +
         '- "activation_log": latest advertised DDIC log (DOMA/DTEL/TABL/DDLS); no activation or attempt correlation.\n' +
-        '- "explain_policy": explain current caller gates for built-in proposedTool/proposedArgs (64 KiB max) on this connection; never executes the proposal or certifies SAP authorization.\n' +
         '- "syntax": compatibility check; when available prefer SAPRead(type="SYNTAX", objectType, name, version?, source?).\n' +
         '- "unittest": harmless ABAP Unit for CLAS/PROG/FUGR or DEVC (exact; includeSubpackages recurses).\n' +
         '- "unittest_ci": harmless package tests with source reconciliation; empty/incomplete runs fail.\n' +
@@ -1162,7 +1161,6 @@ export function getToolDefinitions(
             type: 'string',
             enum: [
               'syntax',
-              'explain_policy',
               'feed_schema',
               'activation_log',
               'unittest',
@@ -1190,8 +1188,6 @@ export function getToolDefinitions(
             ],
           },
           filters: dumpFiltersJson,
-          proposedTool: { type: 'string', minLength: 1, maxLength: 40 },
-          proposedArgs: { type: 'object' },
           name: {
             type: 'string',
             description: 'syntax/unittest/atc/object_state object name; cds_testcases/cds_sql CDS entity or DDLS name.',

@@ -1,7 +1,8 @@
 # ADT for VS Code 1.2: ARC-1 adoption backlog
 
 **Decision record · 17 October 2026.** Trustworthy transport review comes first, followed by
-the notebook runner, policy explanations and verified diagnostics in separate draft PRs.
+the notebook runner and diagnostics in separate draft PRs. Policy explanations are deferred:
+ordinary denial feedback comes first; see FEAT-88 and the extraction in #1016.
 This is the durable index for the research, including ideas we deliberately defer.
 
 ## Read in this order
@@ -37,7 +38,7 @@ must pass fresh review and tests before being treated as implemented product fun
 | 2 · TD-05–09 | Explicit source mode, revision evidence, bounded collection and inventory drift detection | Existing revision reader/diff; local prototype | Modes cannot substitute work states for released history; bounded bytes/work; caller/target-bound continuation; invalid history differs from empty |
 | 3 · REVIEW-01 | Reusable JSON and readable HTML review report | Existing intent dispatcher, SAPContext, syntax checks | Complete/partial/stale demos; real transport run; checks identify current source; no release-readiness verdict |
 | 4 · NB-01 | Portable Markdown/SQL notebook and small runner | SAPQuery; observed `.abapsql` flight fixture; local prototype | Explicit target mapping; no auto-run; SQL gates; exact string values; blocked/failed/incomplete states; real allowed and denied run |
-| 5 · POL-01 | Explain the caller's effective policy | ACTION_POLICY, dispatch, safety, package and target evaluators; prototype | Explanation agrees with enforcement; unresolved prerequisites explicit; never execute a mutation to test permission |
+| Deferred · POL-01 | Better policy troubleshooting only if normal errors prove insufficient | #1010 experiment; useful docs/test extracted to #1016 | Demonstrate task benefit before adding a preflight; no SAP authorization promise |
 | 6a · SYN-01 / FEAT-69 | Bounded native multi-object syntax checks | Observed 758 `checkObjectList`, prototype | Missing/unattributed reports cannot become passes; deterministic per-object results; cross-release limits |
 | 6b · FEED-01 / FEAT-74 | Discover diagnostic schema and validate focused dump filters | Existing feeds; 758/816 observations; prototype | Target-specific advertised attributes/operators; validated grammar; existing paging/time guards; denied differs from empty |
 | 6c · DDIC-01 / FEAT-71 | Read the advertised Dictionary activation log | Observed relation/media-type GET on 758; prototype | Canonical same-target link, bounded hierarchy, denied/unsupported states; old log never attributed to the newest attempt |
@@ -54,7 +55,7 @@ ordering. The earlier activation-log uncertainty is also superseded: the install
 |---|---|---|
 | Destination restrictions | Reuse merged opt-in XSUAA target grants, #677 / ADR-0008 | Release and landscape acceptance; no second ACL engine or incidental writes |
 | Package write restrictions | Reuse real-package exact/prefix/subtree checks | Explain clearly: write-package rules are not read/data restrictions |
-| Effective access explanation | POL-01 implemented in draft #1010 | FEAT-88 retains complex prerequisites; execution remains authoritative |
+| Effective access explanation | POL-01 deferred; #1016 retains docs/test only | FEAT-88: repeated failure of normal error guidance plus A/B evidence of improvement |
 | SQL notebooks | NB-01 above | Small runner first; editor only if repeated use identifies editing as the bottleneck |
 | Timeline / comparisons | REVIEW-01 above | Preserve provenance and uncertainty; avoid another diff engine |
 | Transport Organizer | Reuse list/get/history/mutations; build review workflow | Specific missing task/member action needs its own use case; owner fix #1003 is merged |
@@ -160,9 +161,16 @@ with explicit limits, and independent review evidence.
 |---|---|---|
 | Transport review | [Draft #1008](https://github.com/arc-mcp/arc-1/pull/1008) | Three Claude review rounds; final approval; eight-request pilot |
 | SQL notebook | [Draft #1009](https://github.com/arc-mcp/arc-1/pull/1009) | Allowed/denied live run; exact strings; three review rounds; final approval and 52 focused checks |
-| Policy explanation | [Draft #1010](https://github.com/arc-mcp/arc-1/pull/1010) | Four live explanations; three review rounds; final approval and 106 focused checks; no proposed execution |
+| Policy explanation | [Deferred #1010](https://github.com/arc-mcp/arc-1/pull/1010); [extraction #1016](https://github.com/arc-mcp/arc-1/pull/1016) | Historical reviews prove implementation correctness, not product value. Normal errors remain the workflow. |
 | Diagnostics | [Draft #1011](https://github.com/arc-mcp/arc-1/pull/1011) · [validation](../2026-10-17-verified-diagnostics.md) | Native reads on 758; two Claude review rounds; final approval and 1,632 focused tests; full stack passes 9,103 tests against release 1.6.0 |
 | Broader transport history | Research remains deferred | [Pilot follow-up](evidence/history-pilot-summary.json): no text history relation, current-only entries, one inaccessible archived domain revision |
 
 These are draft changes, not a released feature promise. Merge the stack in order after maintainer
 review. No measured preparation-time saving or blanket cross-release qualification is claimed.
+
+## Value review after implementation
+
+- **POL-01:** deferred; the runtime feature is removed from #1011. Keep only #1016.
+- **SYN-01 / FEED-01 / DDIC-01:** evaluated independently with the
+  [predeclared local-model comparison](../../plans/2026-10-17-diagnostic-value-evals.md).
+  Earlier Claude approvals apply to their recorded revisions, not subsequent changes.

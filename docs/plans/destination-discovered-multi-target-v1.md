@@ -1078,12 +1078,10 @@ Work:
   `SAPDiagnose.odata_perf|authorization_trace` cannot bypass target consent.
 - Add `SAPLint` and `SAPTransport` only through explicit action allowlists:
   `lint|lint_and_fix|list_rules` and `list|get|check|history`. Permit the following `SAPDiagnose`
-  actions through a separate exact allowlist: `syntax`, `explain_policy`, `feed_schema`, `activation_log`, `unittest`, `atc`, `atc_variants`,
+  actions through a separate exact allowlist: `syntax`, `feed_schema`, `activation_log`, `unittest`, `atc`, `atc_variants`,
   `cds_testcases`, `dumps`, `traces`, `trace_requests`, `system_messages`, `gateway_errors`,
   `object_state`, `quickfix`, `odata_perf`, `cds_sql`, `sql_trace_state`, `sql_trace_directory`, and
-  `authorization_trace`. `explain_policy` evaluates only the current caller and selected target;
-  it never executes its proposed action, enumerates grants or relaxes the mutation ceiling.
-  The existing data gates still control `odata_perf` and
+  `authorization_trace`. The existing data gates still control `odata_perf` and
   `authorization_trace`. Reject every omitted action at both list time and call time.
 - Pinned schemas gain no `target` argument, but use the same pruned multi-target read-only surface as
   aggregate routes; they are not byte-identical to the single-target full surface.

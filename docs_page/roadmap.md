@@ -89,7 +89,7 @@ sequence.
 | [FEAT-05](#feat-05) | Safe rename and extract refactorings | P3 | L | Needs research | Developer workflow |
 | [FEAT-21](#feat-21) | ABAP F1 documentation | P3 | S | Needs research | Developer workflow |
 | [FEAT-86](#feat-86) | Broader historical transport coverage | P2 | L | Needs research | Developer workflow |
-| [FEAT-88](#feat-88) | Action-specific policy prerequisites | P3 | M | Needs research | Safety / UX |
+| [FEAT-88](#feat-88) | Policy troubleshooting beyond normal errors | P3 | M | Revisit on trigger | Safety / UX |
 | [FEAT-23](#feat-23) | Recursive program include reading | P2 | M | Needs research | Developer workflow |
 | [FEAT-30](#feat-30) | ABAP cleaner integration | P3 | L | Revisit on trigger | Developer workflow |
 | [FEAT-66](#feat-66) | Interactive confirmation for destructive actions | P3 | L | Blocked | Safety / UX |
@@ -491,20 +491,23 @@ unavailable evidence. Whole-object PROG/CLAS reviews also retain non-source scop
 historical adapters are verified; a 404 alone remains insufficient.
 
 <a id="feat-88"></a>
-### FEAT-88 — Action-specific policy prerequisites
+### FEAT-88 — Policy troubleshooting beyond normal errors
 
-- **Priority / effort / status:** P3 / M / Needs research
+- **Priority / effort / status:** P3 / M / Revisit on trigger
 - **Category:** Safety / UX
 
-**Remaining gap.** Current-caller `SAPDiagnose.explain_policy` covers scope, deny rules, configured
-and effective safety, selected-target grants/ceiling, cached capabilities and simple existing-object
-packages. Creation, structural ownership, hierarchy-dependent package rules and SQL lineage remain
-explicitly unresolved; execution keeps its normal fail-closed guards.
+**Deferred proposal.** [#1010](https://github.com/arc-mcp/arc-1/pull/1010) added a
+proposed-call explanation, but ordinary calls already return actionable denials and the tool
+catalog removes unavailable operations. A preflight adds a call without proving SAP authorization
+or successful execution. Do not make it a prerequisite for tool use.
 
-**Resume with.** Repeated real troubleshooting cases where one of those unknowns prevents a useful
-explanation. Reuse the action's actual prerequisite evaluator under bounded, authorized reads; do
-not duplicate an approximate policy engine or run a mutation to test permission. No broader scope
-or SAP authorization certification is planned. [Current contract](authorization.md#explain-a-proposed-operation).
+**Retained value.** [#1016](https://github.com/arc-mcp/arc-1/pull/1016) extracts the wrapper-vs-intent
+deny-rule clarification and a BOR SQL-gate regression test, without another tool action.
+
+**Resume when.** Repeated user cases cannot be resolved from normal denial errors and operator
+diagnostics. Demonstrate a better task outcome in an A/B eval before expanding the tool surface;
+prefer improving the actual error. Reuse enforcement evaluators, preserve unresolved prerequisites,
+and never execute a mutation as a permission probe.
 
 <a id="feat-89"></a>
 ### FEAT-89 — Validate the legacy dump user filter

@@ -149,7 +149,6 @@ export async function handleSAPNavigate(
       );
     }
     case 'hierarchy': {
-      // Mandatory data prerequisite is also explained in policy-explanation.ts (parity regression tests).
       const className = String(args.name ?? '').toUpperCase();
       if (!className) {
         return errorResult('Provide name (class name) for hierarchy lookup.');

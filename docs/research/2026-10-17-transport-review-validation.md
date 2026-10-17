@@ -145,5 +145,9 @@ contract. Original archive paths are retained for exact provenance as requested;
 - Typecheck, build, lint, policy, file/schema budgets and strict docs build passed.
 - Read-only 758 replay after fixes: partial evidence for two objects; both current syntax
   checks passed and both contexts returned. The collector explicitly received structured provenance.
+  The earlier complete label becomes partial because the R3TR program includes unreviewed text/
+  screen/GUI scope (F2); all three source parts retain their attributed differences. Exit 1 is
+  the expected partial-collection signal. The run took 12.059 s, with 10 sends / 18,704 bytes /
+  1,506 ms on the first page.
 - Source manifest SHA-256: `c42b9495db0dc2ee77f19464308d4bb592f2ec43433e547953b024accc8670b5`.
 - Final Claude pass: pending the pushed follow-up revision.

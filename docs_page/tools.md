@@ -1500,6 +1500,12 @@ text-pool components have an explicit coverage gap. Long diffs set `diffTruncate
 complete only when `statisticsComplete` is true. See [Transport reviews](review-workflows.md) for
 source modes, JSON/HTML reports, bounds and continuation.
 
+Diff `status` and `coverage` describe the returned page; the review CLI reconciles all pages.
+An out-of-range offset is an error. `resultFormat="structured"` adds full revision records and source hashes;
+normal replies retain hunks, raw CTS components and coverage gaps with a smaller payload.
+Malformed or empty revision-feed responses now fail explicitly in both transport review and `SAPRead VERSIONS`;
+a valid empty Atom feed still returns empty history.
+
 **Parameters:**
 
 | Parameter | Type | Required | Description |
@@ -1588,12 +1594,6 @@ one parent request, and `candidateTransports` is empty.
 **Note:** Transport mutations (`create`, `release`, `release_recursive`, `reassign`, `delete`, `remove_object`) require `write` + `transports` scopes and both `SAP_ALLOW_WRITES=true` and `SAP_ALLOW_TRANSPORT_WRITES=true`. `list`, `get`, `diff`, `check`, `history`, `layers`, and `targets` are read actions and work without `--allow-transport-writes`.
 
 ---
-
-Diff `status` and `coverage` describe the returned page; the review CLI reconciles all pages.
-An out-of-range offset is an error. `resultFormat="structured"` adds full revision records and source hashes;
-normal replies retain hunks, raw CTS components and coverage gaps with a smaller payload.
-Malformed or empty revision-feed responses now fail explicitly in both transport review and `SAPRead VERSIONS`;
-a valid empty Atom feed still returns empty history.
 
 ## SAPGit
 

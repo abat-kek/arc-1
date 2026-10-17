@@ -1668,7 +1668,7 @@ export function getToolDefinitions(
           resultFormat: {
             type: 'string',
             enum: ['legacy', 'structured'],
-            description: 'diff: legacy (compact) or structured (full). release: legacy text or structured JSON.',
+            description: 'Default legacy: compact diff, text release. structured: full diff, JSON release.',
           },
           timeoutSeconds: {
             type: 'number',

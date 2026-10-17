@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { AdtClient } from '../../../src/adt/client.js';
-import { AdtApiError } from '../../../src/adt/errors.js';
+import { AdtApiError, AdtResponseLimitError } from '../../../src/adt/errors.js';
+import { AdtRequestBudgetError } from '../../../src/adt/request-attempt-budget.js';
 import {
   baselineStatusFor,
   diffTransportObject,
@@ -50,6 +51,56 @@ function client(missing: string[] = []) {
 }
 
 describe('transport review evidence regressions', () => {
+  it.each([false, true])('names an oversized response under minimalErrors=%s', async (minimalErrors) => {
+    const c = client();
+    vi.mocked(c.getRevisionSource).mockRejectedValue(new AdtResponseLimitError(1024, 1025, 'transport-review'));
+    const result = await diffTransportObject(c, { ...object([]), type: 'PROG' }, ids, {
+      budget: new ReviewBudget(),
+      minimalErrors,
+    });
+    expect(result.parts[0].note).toContain('response exceeded its 1024-byte review allowance');
+    expect(result.parts[0].note).not.toContain('page budget exhausted');
+  });
+  it.each([false, true])(
+    'preserves a SAP failure on the last allowed read under minimalErrors=%s',
+    async (minimalErrors) => {
+      const c = client();
+      vi.mocked(c.getRevisions).mockRejectedValue(
+        new AdtApiError('Sensitive SAP diagnostic', 403, '/sap/bc/adt/private'),
+      );
+      const budget = new ReviewBudget();
+      budget.reads = 179;
+      const result = await diffTransportObject(c, { ...object([]), type: 'PROG' }, ids, { budget, minimalErrors });
+      expect(budget.exhausted).toBe(true);
+      expect(result.parts[0].note).toContain(
+        minimalErrors ? 'SAP request failed (status 403)' : 'Sensitive SAP diagnostic',
+      );
+      expect(result.parts[0].note).not.toContain('page budget exhausted');
+      if (minimalErrors) expect(result.parts[0].note).not.toMatch(/Sensitive|private/);
+    },
+  );
+  it('names the actual send limit with minimal SAP errors', async () => {
+    const c = client();
+    vi.mocked(c.getRevisions).mockRejectedValue(new AdtRequestBudgetError(180));
+    const result = await diffTransportObject(c, { ...object([]), type: 'PROG' }, ids, {
+      budget: new ReviewBudget(),
+      minimalErrors: true,
+    });
+    expect(result.parts[0].note).toContain('SAP HTTP attempt limit (180) reached');
+  });
+  it('names a request deadline with minimal SAP errors', async () => {
+    const budget = new ReviewBudget();
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(budget.deadline);
+    try {
+      const result = await diffTransportObject(client(), { ...object([]), type: 'PROG' }, ids, {
+        budget,
+        minimalErrors: true,
+      });
+      expect(result.parts[0].note).toContain('ARC-1 review request time limit reached');
+    } finally {
+      clock.mockRestore();
+    }
+  });
   it('keeps local budget exhaustion intelligible with minimal SAP errors', async () => {
     const budget = new ReviewBudget();
     budget.reads = 180;

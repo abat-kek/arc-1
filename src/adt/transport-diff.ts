@@ -21,7 +21,8 @@
  */
 import { createHash } from 'node:crypto';
 import { type AdtClient, CLASS_REVISION_INCLUDES, REVISION_TYPES } from './client.js';
-import { AdtApiError, isNotFoundError } from './errors.js';
+import { AdtApiError, AdtNetworkError, AdtResponseLimitError, isNotFoundError } from './errors.js';
+import { AdtRequestBudgetError } from './request-attempt-budget.js';
 import { unifiedDiff } from './source-diff.js';
 import { ReviewBudget } from './transport-review-budget.js';
 import type { RevisionInfo, TransportObject } from './types.js';
@@ -33,10 +34,17 @@ import type { RevisionInfo, TransportObject } from './types.js';
  * Under `ARC1_MINIMAL_ERRORS` the SAP diagnostic and the ADT path must still be withheld —
  * the status code alone is enough for a reviewer to see that something failed.
  */
-function describeError(err: unknown, minimalErrors?: boolean, budget?: ReviewBudget): string {
-  if (budget?.exhausted) return 'ARC-1 review page budget exhausted; remaining source evidence was not collected.';
+function describeError(err: unknown, minimalErrors?: boolean): string {
+  // Explain the cause, not the budget state: SAP may fail on the last allowed read.
+  if (err instanceof AdtApiError) return minimalErrors ? `SAP request failed (status ${err.statusCode})` : err.message;
+  if (err instanceof AdtResponseLimitError)
+    return `ARC-1 response exceeded its ${err.limitBytes}-byte review allowance; inspect this part in SAP.`;
+  if (err instanceof AdtRequestBudgetError) return err.message;
+  if (err instanceof AdtNetworkError && err.cause?.name === 'TimeoutError')
+    return 'ARC-1 review request time limit reached; source evidence was not collected.';
+  if (err instanceof Error && err.message === 'Review collection budget exhausted.')
+    return 'ARC-1 review page budget exhausted; remaining source evidence was not collected.';
   if (!minimalErrors) return err instanceof Error ? err.message : String(err);
-  if (err instanceof AdtApiError) return `SAP request failed (status ${err.statusCode})`;
   return 'request failed';
 }
 
@@ -563,10 +571,7 @@ async function diffPart(
     if (type === 'CLAS' && part !== 'main' && isNotFoundError(err)) {
       return unavailablePart(part, 'revision history returned 404; absence or deletion is not established');
     }
-    return unavailablePart(
-      part,
-      `revision history unavailable: ${describeError(err, opts.minimalErrors, opts.budget)}`,
-    );
+    return unavailablePart(part, `revision history unavailable: ${describeError(err, opts.minimalErrors)}`);
   }
 
   const pair = selectTransportRevisionPair(revisions, transportIds, opts.mode);
@@ -601,7 +606,7 @@ async function diffPart(
     after = await read(pair.current.uri);
     before = pair.previous ? await read(pair.previous.uri) : '';
   } catch (err) {
-    return unavailablePart(part, `source read failed: ${describeError(err, opts.minimalErrors, opts.budget)}`, base);
+    return unavailablePart(part, `source read failed: ${describeError(err, opts.minimalErrors)}`, base);
   }
 
   const sourceEvidence = {
@@ -713,7 +718,7 @@ export async function diffTransportObject(
       return {
         ...head,
         parts: [],
-        inventoryReason: `function group lookup failed: ${describeError(err, opts.minimalErrors, opts.budget)}`,
+        inventoryReason: `function group lookup failed: ${describeError(err, opts.minimalErrors)}`,
       };
     }
     if (!group) {
@@ -730,7 +735,7 @@ export async function diffTransportObject(
       const result = await diffPart(client, type, name, part, transportIds, { ...opts, group });
       parts.push({ ...result, selectionOrigin: selection.fromComponents ? 'cts' : 'speculative' });
     } catch (err) {
-      parts.push(unavailablePart(part, `source read failed: ${describeError(err, opts.minimalErrors, opts.budget)}`));
+      parts.push(unavailablePart(part, `source read failed: ${describeError(err, opts.minimalErrors)}`));
     }
   }
   return { ...head, parts };

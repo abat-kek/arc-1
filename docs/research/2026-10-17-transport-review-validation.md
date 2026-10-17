@@ -150,4 +150,27 @@ contract. Original archive paths are retained for exact provenance as requested;
   the expected partial-collection signal. The run took 12.059 s, with 10 sends / 18,704 bytes /
   1,506 ms on the first page.
 - Source manifest SHA-256: `c42b9495db0dc2ee77f19464308d4bb592f2ec43433e547953b024accc8670b5`.
-- Final Claude pass: pending the pushed follow-up revision.
+- Claude's [second GUI review](adt-vscode-1.2/evidence/claude-review-2.md) approves
+  `d83cf19b` with no must-fix items. It independently passed all 8,933 tests on Node 22.21.1
+  and measured compact replies at 16,084 bytes versus 34,087 bytes for 20 METH entries.
+
+### Small diagnostic follow-up
+
+| Second-review note | Decision |
+|---|---|
+| N1: oversized source described as generic exhaustion | Name the response's actual byte allowance, which can be lower than 1 MiB near the page limit. |
+| N2: SAP failure masked by exhausted-budget state | Classify the actual error. Preserve SAP status/redaction; identify local time, send and collection limits separately. |
+| N3: misplaced documentation paragraph | Move it into the transport diff subsection. |
+| N4: compact output measured against full evidence size | Retain the conservative guard so both formats have identical page boundaries. |
+| N5: minor wording and local repro paths | Restore the default in tool help. Keep the shared response-limit wording and original report paths; committed regression files below cover the accepted findings. |
+
+Six new assertions failed before the diagnostic correction (both error modes, send and time limits).
+They exercise `diffTransportObject` through `ReviewBudget`; no new abstraction or configuration is added.
+The successful-path SAP behavior is unchanged from the recorded `d83cf19b` replay.
+
+Reproducible tests are committed under `tests/unit/`: `transport-review-regressions.test.ts`,
+`adt/transport-review-evidence.test.ts`, `adt/request-attempt-budget.test.ts`, and
+`handlers/transport-review-limits.test.ts`. The archived Claude reports remain verbatim; their scratch
+repro paths are local, while these committed tests are the maintained regressions.
+
+Final automated results and targeted Claude verification follow after this correction is pushed.

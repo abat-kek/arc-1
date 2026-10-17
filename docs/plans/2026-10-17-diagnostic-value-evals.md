@@ -67,3 +67,18 @@ task matrix; retain the preliminary failures. The run also exposed an empty nati
 single-object check being labeled clean. Fix this independently of batching and
 apply the correction to **both** arms of the definitive ablation. Do not credit
 batching with a safety improvement available to the ordinary single-object tool.
+
+## Model availability adjustment
+
+The Gemma 4 31B attempt took approximately four minutes for its first turn with
+this full catalog and did not complete a trial before stopping. Preserve its
+manifest and partial console log. Run the complete unchanged matrix with installed
+**Qwen 3 30B and Llama 3.1 8B** instead. The earlier Qwen 3.6 preliminary results
+remain exploratory. This is a runtime-budget change, not selection by task score.
+
+Run each catalog's eight tasks together, reversing catalog order in repetition 2.
+The first Qwen 3 trial took 154 seconds including cold prompt evaluation; alternating
+the 12k-token catalogs after every task repeatedly discards the reusable prefix.
+Grouping preserves fresh independent conversations, identical tasks and both orders.
+It changes scheduling, not acceptance criteria. Save partial responses after each
+turn so cancellation does not discard the completed portion of a trial.

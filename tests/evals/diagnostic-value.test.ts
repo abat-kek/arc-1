@@ -25,7 +25,7 @@ const hash = (value: string) => createHash('sha256').update(value).digest('hex')
 const baseUrl = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
 if (!['localhost', '127.0.0.1', '[::1]'].includes(new URL(baseUrl).hostname))
   throw new Error('This offline eval uses local Ollama only.');
-const models = (process.env.DIAGNOSTIC_EVAL_MODELS ?? 'qwen3.6:35b-mlx,gemma4:31b').split(',');
+const models = (process.env.DIAGNOSTIC_EVAL_MODELS ?? 'qwen3:30b,llama3.1:8b').split(',');
 const repeats = Number(process.env.DIAGNOSTIC_EVAL_REPEATS ?? 2);
 if (!Number.isInteger(repeats) || repeats < 1 || repeats > 3) throw new Error('Use 1..3 repetitions.');
 const selected = cases.filter(
@@ -123,8 +123,8 @@ it('compares diagnostic task outcomes with installed local models', async () => 
   const results = [];
   for (const model of models)
     for (let repeat = 0; repeat < repeats; repeat++)
-      for (const task of selected) {
-        for (const arm of repeat % 2 ? ['candidate', 'baseline'] : ['baseline', 'candidate']) {
+      for (const arm of repeat % 2 ? ['candidate', 'baseline'] : ['baseline', 'candidate']) {
+        for (const task of selected) {
           vi.restoreAllMocks();
           resetCachedFeatures();
           mockFetch.mockReset();
@@ -139,6 +139,8 @@ it('compares diagnostic task outcomes with installed local models', async () => 
           const trace: TraceEntry[] = [];
           const responses = [];
           const started = Date.now();
+          const trialId = `${model.replace(/[^\w.-]/g, '_')}-${repeat}-${task.id}-${arm}`;
+          console.log(JSON.stringify({ event: 'trial_start', model, repeat, arm, caseId: task.id }));
           let answer = '';
           let error: string | undefined;
           try {
@@ -153,6 +155,24 @@ it('compares diagnostic task outcomes with installed local models', async () => 
                 options: { ...options, seed: 1700 + repeat },
               });
               responses.push(response);
+              writeFileSync(
+                `${outDir}/${trialId}.partial.json`,
+                JSON.stringify(
+                  {
+                    model,
+                    repeat,
+                    arm,
+                    caseId: task.id,
+                    started,
+                    messages,
+                    responses,
+                    trace,
+                    requests: world.requests,
+                  },
+                  null,
+                  2,
+                ),
+              );
               const message = response.message;
               if (!message || typeof message !== 'object') throw new Error('Missing Ollama message.');
               messages.push(message);

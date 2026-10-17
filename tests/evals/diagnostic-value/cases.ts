@@ -57,6 +57,7 @@ export function grade(task: DiagnosticCase, answer: string, trace: TraceEntry[])
   let result: Record<string, unknown>;
   try {
     result = JSON.parse(answer.replace(/^```(?:json)?\s*|\s*```$/g, '').trim());
+    if (!result || typeof result !== 'object' || Array.isArray(result)) throw new Error('Expected an answer object.');
   } catch {
     return { completed: false, honest: false, reason: 'Final answer is not JSON.' };
   }

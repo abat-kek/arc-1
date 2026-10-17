@@ -29,6 +29,9 @@ async function call(caseId: string, name: string, args: Record<string, unknown>)
   return { world, trace, result: JSON.parse(trace[0]!.result) };
 }
 const objects = ['A', 'B', 'C', 'D'].map((letter) => ({ type: 'PROG', name: `ZEVAL_${letter}` }));
+it.each(['null', '[]', 'false', '"answer"'])('records malformed answer %s without aborting the run', (answer) => {
+  expect(grade(cases[0], answer, []).completed).toBe(false);
+});
 it('scores real batch verdicts, rejects guessed and incomplete answers', async () => {
   const task = cases[1];
   const answer = JSON.stringify({ statuses: task.statuses });

@@ -11,7 +11,7 @@ Normal routing evals do not run it automatically.
 DIAGNOSTIC_VALUE_EVAL=1 npx vitest run --config vitest.eval.config.ts tests/evals/diagnostic-value.test.ts
 ```
 
-Defaults: `qwen3.6:35b-mlx,gemma4:31b`, two repetitions, eight tasks, both catalogs.
+Defaults: `qwen3:30b,llama3.1:8b`, two repetitions, eight tasks, both catalogs.
 Override `DIAGNOSTIC_EVAL_MODELS` (comma-separated installed names),
 `DIAGNOSTIC_EVAL_REPEATS` (1–3), `DIAGNOSTIC_EVAL_CASES` (case IDs), or
 `DIAGNOSTIC_EVAL_OUTPUT` (artifact directory). `OLLAMA_BASE_URL` must be local.

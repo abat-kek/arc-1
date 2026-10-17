@@ -1,11 +1,21 @@
 import { readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
+import { parseSyntaxCheckResult } from '../../../src/adt/devtools.js';
 import { compileDumpFilters, parseDumpFeedSchema } from '../../../src/adt/feed-schema.js';
 import { parseSyntaxBatch } from '../../../src/adt/syntax-batch.js';
 
 const schema = parseDumpFeedSchema(
   readFileSync(new URL('../../fixtures/xml/dumps-schema-758.xml', import.meta.url), 'utf8'),
 );
+it.each([
+  ['<checkRunReports/>', false],
+  ['<checkRunReports></checkRunReports>', false],
+  ['<checkMessages/>', true],
+] as const)('distinguishes empty native reports from legacy message-only success: %s', (xml, checked) => {
+  const result = parseSyntaxCheckResult(xml);
+  expect(result.checked).toBe(checked);
+  if (!checked) expect(result.statusText).toContain('no syntax-check report');
+});
 it('parses the captured 758 schema without exposing caller-specific variants', () => {
   expect(schema.attributes.find((a) => a.id === 'runtimeError')).toMatchObject({ type: 'string' });
   expect(schema.queryDepth).toBe(2);

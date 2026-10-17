@@ -173,4 +173,23 @@ Reproducible tests are committed under `tests/unit/`: `transport-review-regressi
 `handlers/transport-review-limits.test.ts`. The archived Claude reports remain verbatim; their scratch
 repro paths are local, while these committed tests are the maintained regressions.
 
-Final automated results and targeted Claude verification follow after this correction is pushed.
+Final code at `f7598c3338bff11711f70b0336d93682039831e0`:
+
+- **8,939 tests passed in 316 files**, 155.66 s, Node 24.11.1 (`npm test -- --maxWorkers=2`).
+- The earlier concurrent run observed six tool-help snapshot mismatches during the final wording
+  refresh. All six snapshots were regenerated and the entire suite rerun against stable files.
+- Targeted transport/limits/tool-snapshot run: 90 tests passed; final snapshot refresh: 12 passed.
+- Typecheck, build, lint, policy, file/schema budgets and strict docs build passed. The first
+  size check caught one extra help-text line; shortened the wording without raising the ratchet.
+- Original work remains intact: 67/67 preserved files and 11/11 archived original evidence hashes.
+
+Claude Code Opus 5.5 Max's [third GUI review](adt-vscode-1.2/evidence/claude-review-3.md)
+approved exact product revision `f7598c3338bff11711f70b0336d93682039831e0`: **no must-fix items
+and no remaining actionable findings**. It independently passed 442 targeted tests, 12 snapshot
+tests and two real HTTP deadline checks on Node 22.21.1, plus typecheck, lint and schema budgets.
+Its report's “full rerun is in progress” reflects when that request was sent; the complete passing
+result is recorded above. This final record/archive commit changes documentation only.
+
+All review findings have a recorded disposition. The draft PR remains post-1.6, with current GitHub
+CI results visible on PR #1008. Local unit verification and the bounded SAP replay are distinct from
+shared-runner integration/E2E qualification; pending or skipped jobs do not prove live coverage.

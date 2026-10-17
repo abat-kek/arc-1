@@ -123,6 +123,7 @@ the original session. Use this index for current decisions. No SAP binaries/disa
 | [Prototype record](evidence/local-prototype-results.md) | Earlier local implementation and measured 758 results; later stages remain outside this PR |
 | [Independent Claude review](evidence/claude-review-1.md) | Opus 5.5 Max GUI review of PR #1008 at `0244d4cc`; dispositions in the [validation log](../2026-10-17-transport-review-validation.md) |
 | [Claude follow-up approval](evidence/claude-review-2.md) | Independent verification at `d83cf19b`; no must-fix findings; optional diagnostic notes followed up |
+| [Claude final approval](evidence/claude-review-3.md) | Final product revision `f7598c33`; no remaining actionable findings; targeted tests and real HTTP timeout check |
 | [Original manifest](evidence/HANDOFF_MANIFEST.json) / [archive hashes](evidence/archive-sha256.json) | Provenance and integrity |
 
 Further repository evidence: [August transport plan](../../plans/2026-08-03-transport-diff.md),

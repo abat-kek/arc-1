@@ -40,7 +40,8 @@ Optional checks reuse existing single-object syntax and context. ATC/Unit remain
 - [x] Run focused tests, full unit suite and repository gates; record exact results.
 - [x] Final diff/documentation/roadmap review; create draft PR #1008.
 - [x] Ask Claude Code Opus 5.5 Max in the GUI to review the exact PR revision.
-- [ ] Evaluate each Claude finding, fix valid issues, retest, and request a final Claude pass if changed.
+- [x] Evaluate each Claude finding, fix valid issues, retest, and request a final Claude pass if changed.
+- [x] Archive all three reviews; final approval at `f7598c33`, with 8,939 unit tests passing.
 
 ## Spike protocol
 
@@ -74,7 +75,7 @@ controls. Document exactly what each bound includes; cancellation must reach the
 | Honest baseline | Empty/malformed feed distinction; undated active, draft-only, no prior numbered version; contiguous same-request versions |
 | Explicit intent | released/active/draft/legacy; normalized request/task IDs; no silent current-source substitution in released mode |
 | Bounded work | Large source/output, many parts, timeouts, cancellation, byte limit abort, CPU diff cap and retry accounting |
-| Continuation integrity | Signature tampering, caller/target/mode mismatch, changed inventory and stale token; no source snapshot promise |
+| Continuation integrity | Binding tampering, caller/target/mode mismatch, changed inventory and stale token; no source snapshot promise |
 | Collector integrity | Missing/duplicate/contradictory pages and counts; gaps remain partial; final inventory recheck |
 | Check provenance | Active source hash before/after; drift makes check stale; no historical validation claim |
 | Safe output | HTML escaping, no executable source, bounded input/output, private files and no overwrite |

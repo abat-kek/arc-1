@@ -18,10 +18,12 @@ function collectNodes(node: unknown, key: string, depth = 0): Record<string, unk
   if (!node || typeof node !== 'object') return [];
   if (Array.isArray(node)) return node.flatMap((item) => collectNodes(item, key, depth + 1));
   return Object.entries(node).flatMap(([name, value]) => {
-    if (name !== key) return collectNodes(value, key, depth + 1);
-    return (Array.isArray(value) ? value : [value]).map((item) =>
+    const descendants = collectNodes(value, key, depth + 1);
+    if (name !== key) return descendants;
+    const matches = (Array.isArray(value) ? value : [value]).map((item) =>
       item && typeof item === 'object' ? (item as Record<string, unknown>) : { '#text': item },
     );
+    return [...matches, ...descendants];
   });
 }
 export function parseSyntaxBatch(xml: string, objects: SyntaxBatchObject[], version: 'active' | 'inactive') {

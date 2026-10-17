@@ -50,7 +50,9 @@ export function parseDdicActivationLog(xml: string) {
           });
       });
       const references = toRecordArray(row.link).flatMap((l) => {
-        const uri = canonicalHostRelativeAdtPath(String(l['@_href'] ?? ''));
+        const uri = canonicalHostRelativeAdtPath(String(l['@_href'] ?? ''), '/sap/bc/adt/', {
+          allowRawEncodedSlash: true,
+        });
         return uri ? [{ uri, relation: clip(l['@_rel']) }] : [];
       });
       return [
@@ -88,7 +90,10 @@ export async function readDdicActivationLog(
   object: { type: string; name: string; uri: string },
 ) {
   checkOperation(safety, OperationType.Read, 'DdicActivationLog');
-  if (!canonicalHostRelativeAdtPath(object.uri) || object.uri.includes('?'))
+  if (
+    !canonicalHostRelativeAdtPath(object.uri, '/sap/bc/adt/', { allowRawEncodedSlash: true }) ||
+    object.uri.includes('?')
+  )
     throw new Error('Unsupported or unsafe object URI.');
   const evidence = {
     object,
@@ -123,7 +128,9 @@ export async function readDdicActivationLog(
         reason: 'Object metadata does not advertise an activation-log relation.',
       };
     if (links.length !== 1) throw new Error('Ambiguous activation-log relation.');
-    const uri = canonicalHostRelativeAdtPath(String(links[0]!['@_href'] ?? ''), '/sap/bc/adt/ddic/logs/');
+    const uri = canonicalHostRelativeAdtPath(String(links[0]!['@_href'] ?? ''), '/sap/bc/adt/ddic/logs/', {
+      allowRawEncodedSlash: true,
+    });
     if (!uri || uri.includes('?')) throw new Error('Unsupported or unsafe advertised activation-log URI.');
     const response = await http.get(uri, { Accept: DDIC_LOG_MEDIA }, request);
     return {

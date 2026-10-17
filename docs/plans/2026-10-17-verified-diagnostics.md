@@ -2,8 +2,8 @@
 
 ## Scope and acceptance
 
-Stack on policy draft #1010. Upstream main `9aad13a1` includes #1006 and #1007; neither adds these
-features. Preserve all single-object behavior, SQL/data gates and the multi-target mutation ceiling.
+Stack on policy draft #1010. Upstream main `041a9e48` includes #1006, #1007 and release 1.6.0;
+none adds these features. Preserve all single-object behavior, SQL/data gates and the multi-target mutation ceiling.
 
 | Stage | Small implementation | Evidence needed before a pass |
 |---|---|---|

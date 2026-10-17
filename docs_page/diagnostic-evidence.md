@@ -62,8 +62,10 @@ No arbitrary query expressions, feed URLs or shared schema cache are accepted.
 
 Existing `user`, `from`, `to`, result limits and inclusive time-cursor pagination remain supported.
 Typed filters apply only to list mode, without `id`. Schema plus pages share a 30-second deadline
-and 2-MiB response budget. Schema parsing itself is capped at 256 KiB. A saturated second that
-prevents safe paging still produces an explicit error.
+and 2-MiB response budget. These page bounds also apply to existing unfiltered dump lists.
+Schema parsing itself is capped at 256 KiB. A saturated second that prevents safe paging still
+produces an explicit error. On a response limit, narrow the time window or filters; no partial
+list is silently presented as complete.
 
 ## Read an existing Dictionary log
 

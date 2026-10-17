@@ -68,6 +68,6 @@ separate from a current activation attempt. Prefer a small focused module for ea
 - [x] Bounded historical investigation: no verified pair; keep adapters deferred (FEAT-86).
   See diagnostic draft #1011 for the 15-request probe and exact stop condition.
 - [x] Notebook runner, tests, docs, live run and three independent review rounds (#1009).
-- [ ] Policy explanations, parity tests, docs, live read-only check and independent review.
+- [x] Policy explanations, parity tests, docs, live read-only check and three review rounds (#1010).
 - [ ] Verified syntax/feed/DDIC diagnostics, tests, docs, live checks and independent review.
 - [ ] Final preservation check and links to all draft PRs and evidence.

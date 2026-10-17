@@ -85,3 +85,33 @@ Self-review also reproduced acceptance of duplicate filter-schema containers and
 datatypes. The parser now rejects those ambiguous shapes; 42 focused parser/log/handler tests
 passed after the regression failed on the prior implementation. The recorded live source remains
 `5bc693b3`; the stricter parser replays the same captured 758 schema offline.
+
+The pre-review [combined-tree record](adt-vscode-1.2/evidence/release-integration-summary.json) pins
+product `d93272ad`, upstream `041a9e48` and tree `ea1f0685`. On Node 24.11.1, all **9,087 tests /
+326 files passed** with two workers. Typecheck, build, lint, policy, file/schema budgets and strict
+docs passed. Lint reports three informational style suggestions, no errors. The four-worker run
+had one failure in the unchanged real-SIGTERM startup test; all 12 shutdown tests passed alone
+before the clean full rerun. No timeout or unrelated source was changed to obtain the pass.
+
+The first integration attempt exposed a file-size ratchet mismatch after upstream #1007 added
+12 search-name normalization lines. The transport foundation budget now includes those exact
+upstream lines. The combined parser remains reduced from the original monolith.
+
+Stacked PR bases do not trigger the repository's main test workflow. Their docs/security checks
+are separate from these local full-suite results; no skipped CI job is described as test coverage.
+
+## Diagnostic review follow-up
+
+The independent review and additional regressions identified three small corrections:
+
+| Finding | Correction and evidence |
+|---|---|
+| Namespaced Dictionary URIs refused | Reuse the existing canonical path guard with raw encoded namespace separators for owner, advertised log and retained references. Traversal and nested encodings remain rejected. The real-dispatch regression failed before correction. |
+| Nested report/message evidence could disappear | Continue traversing matched nodes; nested errors cannot pass and nested foreign/duplicate reports remain incomplete. Two regressions failed before correction. |
+| Diagnostic byte limits suggested SQL fixes | Preserve the stable error code and give advice for syntax batches, schemas, dump windows and logs. Normal/minimal-error regressions failed before correction. |
+
+The guide now explicitly states that the 30-second / 2-MiB dump-list bounds also apply without
+typed filters. A real HTTP/dispatch test proves that legacy path is bounded without schema
+discovery. Plain-text sibling log messages also have a dedicated regression. The recorded live
+run still belongs to `5bc693b3`; these corrections are tested offline. Final exact-commit review
+and the updated combined-tree results follow below.

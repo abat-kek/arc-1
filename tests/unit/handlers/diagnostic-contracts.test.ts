@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { beforeEach, expect, it, vi } from 'vitest';
+import { AdtResponseLimitError } from '../../../src/adt/errors.js';
 import { defaultSafetyConfig } from '../../../src/adt/safety.js';
 import { DEFAULT_CONFIG } from '../../../src/server/types.js';
 import { mockResponse } from '../../helpers/mock-fetch.js';
@@ -120,6 +121,16 @@ it('enforces the native response byte cap through HTTP and dispatch', async () =
   expect(result.content[0].text).toContain('DATA_RESPONSE_TOO_LARGE');
   expect(mockFetch.mock.calls.filter(([, o]) => o?.method === 'POST')).toHaveLength(1);
 });
+it('bounds legacy unfiltered dump lists without schema discovery', async () => {
+  mockFetch.mockResolvedValue(mockResponse(200, `<feed>${' '.repeat(2 * 1024 * 1024)}</feed>`));
+  const result = await handleToolCall(client(), DEFAULT_CONFIG, 'SAPDiagnose', { action: 'dumps' }, reader);
+  expect(result.isError).toBe(true);
+  const reply = JSON.parse(result.content[0].text);
+  expect(reply).toMatchObject({ error: 'DATA_RESPONSE_TOO_LARGE', limitBytes: 2 * 1024 * 1024, retryable: false });
+  expect(reply.message).toContain('from/to');
+  expect(mockFetch).toHaveBeenCalledTimes(1);
+  expect(String(mockFetch.mock.calls[0]?.[0])).toContain('/runtime/dumps');
+});
 it('keeps the compatibility batch available through hyperfocused read delegation', async () => {
   const result = await handleToolCall(
     client(),
@@ -130,4 +141,51 @@ it('keeps the compatibility batch available through hyperfocused read delegation
   );
   expect(result.isError).toBeUndefined();
   expect(JSON.parse(result.content[0].text)).toMatchObject({ status: 'passed', checkedObjectCount: 2 });
+});
+
+it('reads a namespaced Dictionary log through the real dispatcher', async () => {
+  const objectUri = '/sap/bc/adt/ddic/domains/%2FABC%2FDOMAIN';
+  const logUri = '/sap/bc/adt/ddic/logs/db/ACTDOMA%2FABC%2FDOMAIN';
+  mockFetch.mockImplementation(async (url) =>
+    mockResponse(
+      200,
+      String(url).includes('/ddic/domains/')
+        ? `<domain name="/ABC/DOMAIN"><link rel="http://www.sap.com/adt/relations/ddic/activationlog" type="application/vnd.sap.adt.logs+xml" href="${logUri}"/></domain>`
+        : `<log><entry><link rel="object" href="${objectUri}"/></entry></log>`,
+    ),
+  );
+  const result = await handleToolCall(
+    client(),
+    DEFAULT_CONFIG,
+    'SAPDiagnose',
+    { action: 'activation_log', type: 'DOMA', name: '/ABC/DOMAIN' },
+    reader,
+  );
+  expect(result.isError).toBeUndefined();
+  expect(JSON.parse(result.content[0].text)).toMatchObject({
+    status: 'available',
+    relation: { uri: logUri },
+    log: { entries: [{ references: [{ uri: objectUri, relation: 'object' }] }] },
+  });
+  expect(mockFetch.mock.calls.map(([url]) => new URL(String(url)).pathname)).toEqual([objectUri, logUri]);
+});
+
+it.each([false, true])('gives diagnostic-specific response-limit advice (minimal=%s)', async (minimalErrors) => {
+  for (const [family, args, expectedHint] of [
+    ['syntax-batch', { action: 'syntax', objects }, /smaller batch/i],
+    ['feed-schema', { action: 'feed_schema' }, /schema.*SAP ADT/i],
+    ['dumps', { action: 'dumps' }, /from\/to/],
+    ['ddic-activation-log', { action: 'activation_log', type: 'DOMA', name: 'ZDOMAIN' }, /log.*SAP ADT/i],
+  ] as const) {
+    const adt = client();
+    const error = new AdtResponseLimitError(512 * 1024, 512 * 1024 + 1, family);
+    vi.spyOn(adt.http, 'get').mockRejectedValue(error);
+    vi.spyOn(adt.http, 'post').mockRejectedValue(error);
+    const result = await handleToolCall(adt, { ...DEFAULT_CONFIG, minimalErrors }, 'SAPDiagnose', args, reader);
+    expect(result.isError).toBe(true);
+    const reply = JSON.parse(result.content[0].text);
+    expect(reply).toMatchObject({ error: 'DATA_RESPONSE_TOO_LARGE', retryable: false, limitBytes: 512 * 1024 });
+    expect(reply.message).toMatch(expectedHint);
+    expect(reply.message).not.toMatch(/data-preview|maxRows|WHERE/);
+  }
 });

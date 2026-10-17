@@ -20,6 +20,12 @@ it('preserves the captured hierarchy and stale activation text without inventing
   expect(log.entries[2]?.children[0]?.messages[0]?.text).toBe('Technical log for mass activation');
   expect(log.entries[1]?.messages[0]?.text).toContain('03.08.2026');
 });
+it('retains plain-text messages from every message branch', () => {
+  const log = parseDdicActivationLog(
+    '<log><entry><message><messageText>First finding</messageText></message><message><messageText>Second finding</messageText></message></entry></log>',
+  );
+  expect(log.entries[0]?.messages.map((message) => message.text)).toEqual(['First finding', 'Second finding']);
+});
 it('follows only the advertised log with GET and reports no attempt correlation', async () => {
   const get = vi
     .fn()
@@ -43,7 +49,13 @@ it('keeps missing relations, denial and missing log distinct and refuses externa
       status: statusCode === 403 ? 'denied' : 'unavailable',
     });
   }
-  for (const href of ['https://evil.test/log', '/sap/bc/adt/activation', '/sap/bc/adt/ddic/logs/../activation']) {
+  for (const href of [
+    'https://evil.test/log',
+    '/sap/bc/adt/activation',
+    '/sap/bc/adt/ddic/logs/../activation',
+    '/sap/bc/adt/ddic/logs/x%2F..%2F..%2Factivation',
+    '/sap/bc/adt/ddic/logs/%252FABC%252FNAME',
+  ]) {
     get.mockResolvedValueOnce({ body: metadata(href) });
     await expect(readDdicActivationLog(http, defaultSafetyConfig(), object)).rejects.toThrow(/unsafe/);
   }

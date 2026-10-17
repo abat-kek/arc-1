@@ -141,6 +141,24 @@ it('keeps all message branches inside a recognized report', () => {
     messages: expect.arrayContaining([expect.objectContaining({ text: 'Error in second branch' })]),
   });
 });
+it('does not hide an error nested inside another message', () => {
+  const report = cleanReport.replace(
+    '/>',
+    '><checkMessage type="W" shortText="Outer"><checkMessage type="E" shortText="Nested error"/></checkMessage></checkReport>',
+  );
+  const result = parseSyntaxBatch(`<checkRunReports>${report}</checkRunReports>`, [syntaxObject], 'active');
+  expect(result.status).toBe('failed');
+  expect(result.results[0]?.messages).toEqual(
+    expect.arrayContaining([expect.objectContaining({ text: 'Nested error', severity: 'error' })]),
+  );
+});
+it('keeps a foreign report nested inside a recognized report incomplete', () => {
+  const nested = cleanReport.replace('abapCheckRun', 'foreign');
+  const report = cleanReport.replace('/>', `>${nested}</checkReport>`);
+  const result = parseSyntaxBatch(`<checkRunReports>${report}</checkRunReports>`, [syntaxObject], 'active');
+  expect(result.status).toBe('incomplete');
+  expect(result.unexpectedReports).toEqual([expect.objectContaining({ reporter: 'foreign' })]);
+});
 it('refuses duplicate schema containers and ambiguous attribute datatypes', () => {
   const operators = feedXml.match(/<feed:operators>[\s\S]*?<\/feed:operators>/)![0];
   const attributes = feedXml.match(/<feed:attributes>[\s\S]*?<\/feed:attributes>/)![0];

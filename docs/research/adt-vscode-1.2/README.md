@@ -140,9 +140,10 @@ or unavailable during revalidation. The archive records the original observation
 
 ## Measure before expanding
 
-Pilot 5–10 representative transports. Record reviewer preparation time, false-complete outcomes,
-coverage gaps by family, backend calls/bytes/latency and report usefulness. Choose the next historical
-adapter from those gaps. Savings and commercial demand remain hypotheses until measured.
+The eight-request technical pilot records coverage gaps and backend calls/bytes/latency. Before
+expanding, measure reviewer preparation time, false-complete outcomes and report usefulness with
+real reviewers. Choose the next historical adapter from those results. Savings and commercial
+demand remain hypotheses until measured.
 
 ## Follow-up implementation
 
@@ -156,9 +157,9 @@ and limits. Validation and independent-review results are recorded with its draf
 
 | Stage | Reviewable result | Evidence |
 |---|---|---|
-| Transport review | [Draft #1008](https://github.com/arc-mcp/arc-1/pull/1008) | Three independent Claude reviews; CI green; eight-request pilot |
-| SQL notebook | [Draft #1009](https://github.com/arc-mcp/arc-1/pull/1009) | Allowed/denied live run; exact scalar strings; review corrections and 8,976 tests |
-| Policy explanation | [Draft #1010](https://github.com/arc-mcp/arc-1/pull/1010) | Four live explanations; independent review corrections; no proposed execution |
+| Transport review | [Draft #1008](https://github.com/arc-mcp/arc-1/pull/1008) | Three Claude review rounds; final approval; eight-request pilot |
+| SQL notebook | [Draft #1009](https://github.com/arc-mcp/arc-1/pull/1009) | Allowed/denied live run; exact strings; three review rounds; final approval and 52 focused checks |
+| Policy explanation | [Draft #1010](https://github.com/arc-mcp/arc-1/pull/1010) | Four live explanations; three review rounds; final approval and 106 focused checks; no proposed execution |
 | Diagnostics | [Draft #1011](https://github.com/arc-mcp/arc-1/pull/1011) · [validation](../2026-10-17-verified-diagnostics.md) | Native syntax, typed feed filter and existing log reads on 758; parser/handler regressions |
 | Broader transport history | Research remains deferred | [Pilot follow-up](evidence/history-pilot-summary.json): no text history relation, current-only entries, one inaccessible archived domain revision |
 

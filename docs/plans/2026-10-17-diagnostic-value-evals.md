@@ -58,3 +58,12 @@ existing tool snapshots, dispatcher, HTTP mock and test configuration. Do not ad
 a production eval API, another general harness, paid provider dependency or SAP
 write permissions. Unit-test the grader against guessed answers and incomplete
 evidence before running models. Archive failures as well as successes.
+
+## Preliminary fixture correction
+
+The first run stopped after nine completed trials: a model used valid legacy dump
+detail reads absent from the fixture. Add these responses and rerun the unchanged
+task matrix; retain the preliminary failures. The run also exposed an empty native
+single-object check being labeled clean. Fix this independently of batching and
+apply the correction to **both** arms of the definitive ablation. Do not credit
+batching with a safety improvement available to the ordinary single-object tool.

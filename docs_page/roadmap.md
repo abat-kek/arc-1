@@ -104,6 +104,9 @@ sequence.
 | [FEAT-73](#feat-73) | Additional server-driven object types | P3 | S | Needs research | Object coverage |
 | [FEAT-78](#feat-78) | Table type access type and keys | P2 | M | Needs research | Object coverage |
 | [FEAT-09](#feat-09) | Cross Trace result reader | P2 | M | Needs research | Diagnostics |
+| [FEAT-69](#feat-69) | Batch syntax in transport review | P2 | S | Needs validation | Diagnostics |
+| [FEAT-71](#feat-71) | Reliable saved-log interpretation | P3 | M | Needs validation | Diagnostics |
+| [FEAT-74](#feat-74) | Model-usable dump filters | P3 | S | Needs validation | Diagnostics |
 | [FEAT-50](#feat-50) | ADT type-probe fixture coverage | P3 | XS each | Contributor-driven | Diagnostics |
 | [FEAT-89](#feat-89) | Validate the legacy dump user filter | P2 | S | Needs research | Diagnostics |
 | [FEAT-32](#feat-32) | Stable data-preview pagination | P3 | M | Needs research | Data access |
@@ -508,6 +511,54 @@ deny-rule clarification and a BOR SQL-gate regression test, without another tool
 diagnostics. Demonstrate a better task outcome in an A/B eval before expanding the tool surface;
 prefer improving the actual error. Reuse enforcement evaluators, preserve unresolved prerequisites,
 and never execute a mutation as a permission probe.
+
+<a id="feat-69"></a>
+### FEAT-69 — Batch syntax in transport review
+
+- **Priority / effort / status:** P2 / S / Needs validation
+- **Category:** Diagnostics
+
+**Remaining gap.** Draft [#1011](https://github.com/arc-mcp/arc-1/pull/1011) implements bounded native
+batch checks. The transport-review runner still checks objects individually and reconciles source
+state before and after each check. Local model trials show a specific call-count benefit, not an
+end-to-end review improvement or lower token cost.
+
+**Resume with.** Integrate one bounded batch into a representative transport review while preserving
+source-state reconciliation and explicit missing evidence. Compare correctness, calls and total
+result size against the existing runner before prioritizing rollout.
+[Evaluation and limitations](https://github.com/arc-mcp/arc-1/blob/codex/verified-diagnostics/docs/research/2026-10-17-diagnostic-value-evaluation.md).
+
+<a id="feat-71"></a>
+### FEAT-71 — Reliable saved-log interpretation
+
+- **Priority / effort / status:** P3 / M / Needs validation
+- **Category:** Diagnostics
+
+**Remaining gap.** Draft [#1011](https://github.com/arc-mcp/arc-1/pull/1011) reads an advertised
+Dictionary activation log through GET; the earlier endpoint uncertainty is resolved for the
+verified DOMA case. It cannot correlate that saved log with the latest activation. A local model
+claimed that correlation despite explicit unknown time and absent correlation evidence.
+
+**Resume with.** Qualify a concrete diagnosis workflow that preserves uncertainty, including stale,
+unavailable and unrelated logs. Keep latest-attempt attribution unavailable unless a native SAP
+correlation contract is independently established; qualify other releases and object types before
+expanding coverage. [Failed control and evidence](https://github.com/arc-mcp/arc-1/blob/codex/verified-diagnostics/docs/research/2026-10-17-diagnostic-value-evaluation.md#the-failed-freshness-control).
+
+<a id="feat-74"></a>
+### FEAT-74 — Model-usable dump filters
+
+- **Priority / effort / status:** P3 / S / Needs validation
+- **Category:** Diagnostics
+
+**Remaining gap.** Draft [#1011](https://github.com/arc-mcp/arc-1/pull/1011) exposes advertised typed
+filters, but neither tested local model completed the rare-error retrieval task, including a
+follow-up with concise calling guidance. Smaller direct fixture responses do not establish model
+benefit. A positive live match on the final implementation is also still missing.
+
+**Resume with.** Improve the smallest interface or error-recovery issue demonstrated by the saved
+traces, then rerun the same task and ordinary unfiltered controls. Keep schema discovery optional;
+do not require a preflight for known filters. Verify positive filtered matches on supported targets.
+[Evaluation and raw traces](https://github.com/arc-mcp/arc-1/blob/codex/verified-diagnostics/docs/research/2026-10-17-diagnostic-value-evaluation.md).
 
 <a id="feat-89"></a>
 ### FEAT-89 — Validate the legacy dump user filter

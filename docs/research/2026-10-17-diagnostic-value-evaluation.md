@@ -120,5 +120,7 @@ sampled DTEL/TABL objects advertised no relation. Positive live filtered matches
 Prioritize #1008, #1016 and the independent correctness fix. Resume #1011 by choosing one concrete
 workflow: measure batch checks inside transport review, demonstrate natural-language filtered
 incident retrieval, or qualify saved-log interpretation with a model that preserves uncertainty.
-FEAT-88 remains deferred; FEAT-89 still tracks the older user-filter grammar issue. No benchmark
-result authorizes a broader feature rollout or establishes reviewer time saved.
+The roadmap retains these remaining gaps as FEAT-69 (review integration), FEAT-71 (log
+interpretation) and FEAT-74 (model-usable filters). FEAT-88 remains deferred; FEAT-89 still tracks
+the older user-filter grammar issue. No benchmark result authorizes a broader feature rollout or
+establishes reviewer time saved.

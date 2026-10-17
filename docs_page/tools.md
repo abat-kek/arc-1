@@ -1486,6 +1486,27 @@ Reads detect observed changes but do not guarantee a transactional snapshot. Thi
 from ABAP `TEXT_ELEMENTS`, message-class texts, and form layouts. See the
 [qualification evidence and technical limits](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-17-stored-text-integration-evals.md).
 
+### Saved application logs (`action="application_log"`)
+
+Read a known **SLG1 log number** using SAP's `APL_LOG_MANAGEMENT_SRV` service. Enable
+`SAP_ALLOW_DATA_PREVIEW=true`; authenticated callers need `data` scope and SAP service/log
+authorizations. No RFC, ABAP helper, or free SQL is used.
+
+```json
+{"action":"application_log","applicationLog":{"logNumber":"00000000000000000042","maxRows":50}}
+```
+
+Copy the exact 20-digit number from SAP, including leading zeros. The result contains the log
+header and SAP-rendered messages. When `more=true`, use the returned `nextOffset` as `offset`.
+Default page size is 50, maximum 100; offsets stop at 5000. Paging is not a snapshot.
+`not_found_or_not_visible` means no log is visible for that number, not proof that it does not exist.
+
+This first version does not discover logs or expand message details/long texts. It is qualified
+on the tested 7.58 system; other systems need the native service enabled and accessible. BTP ABAP
+targets and deployments with `SAP_BLOCKED_DATA_SOURCES` configured are unsupported. SAP loads
+the selected log internally even when ARC-1 returns a small page. To disable this action alone,
+set `SAP_DENY_ACTIONS=SAPQuery.application_log`.
+
 ### Freestyle SQL behavior
 
 For freestyle SQL, when `SAP_BLOCKED_DATA_SOURCES` is non-empty, SAPQuery is restricted to one statically provable

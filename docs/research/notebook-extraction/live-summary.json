@@ -39,5 +39,7 @@
   "queryPosts": 3,
   "mutations": 0,
   "freeSqlDisabledRefusedBeforePost": true,
-  "nativeEditorExecution": false
+  "nativeEditorExecution": false,
+  "currentExampleSha256": "fb8b20c2650590b9bcab810f0fa6eab91e547c58f5db30681a32b9f82c613801",
+  "exampleChangeAfterProbe": "Removed final newline to match native serializer bytes; SQL cell strings and hashes unchanged."
 }

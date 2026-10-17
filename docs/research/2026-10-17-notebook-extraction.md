@@ -2,8 +2,8 @@
 
 ## Decision
 
-Keep native notebook authoring guidance, a portable example and two existing-query
-regressions. Retire the alternate notebook format and runner. Creating a JSON file
+Keep native notebook authoring guidance, a portable example and one existing-query
+regression. Retire the alternate notebook format and runner. Creating a JSON file
 does not need another MCP action, CLI command, generator or execution framework.
 
 The user explicitly rejected #1009's additions and requested a reviewed extraction,
@@ -30,7 +30,7 @@ implementation code is redistributed.
 |---|---|
 | `Flight_Capacity_Showcase.abapsql` | Adapt its proven airline query into `examples/notebooks/flight.abapsql`. Remove the personal destination; add a separate count cell and interpretation notes. |
 | Native-format knowledge | Document the five supported fields and real editor commands. Unknown metadata and results are not persisted by the inspected serializer. |
-| Scalar-count fixture | Preserve the sanitized 758 fixture byte-for-byte as `query-scalars-758.json`. Test the existing HTTP → XML parser → SAPQuery handler path. |
+| Scalar-count evidence | [Keep the original sanitized fixture](https://github.com/arc-mcp/arc-1/blob/62eb17b456cd57908cdac2a508082027ed5d88f7/tests/fixtures/json/notebook-scalars-758.json) on the source branch. Add only the zero-match case through the public dispatcher, real XML parser and query handler. |
 | `flight.notebook.json`, document schema/importer | Reject. Native `.abapsql` already expresses the needed Markdown/SQL cells. |
 | Runner, CLI, assertions, result export and HTML | Reject. They duplicate editor execution and add a new completeness contract without measured user benefit. |
 | Scalar aggregate detector | Reject. Existing SAPQuery preserves native metrics; a partial SQL parser would add maintenance and semantic risk. Explain the counts instead. |
@@ -38,10 +38,10 @@ implementation code is redistributed.
 | Eight-transport pilot | Useful historical evidence for #1008, unrelated to authoring. [Preserved pilot](https://github.com/arc-mcp/arc-1/blob/62eb17b456cd57908cdac2a508082027ed5d88f7/docs/research/2026-10-17-transport-pilot.md); do not repeat its SAP calls or claim customer savings. |
 | Old plan, reviews and broad research index | Preserve on the source branch. They describe the rejected runner and are not approval of this extraction. |
 
-No source, schema, authorization, dependency or CLI changes are required. Existing
-whitespace tests already cover exact cell strings; the new cases add the specific
-`totalRows=0/40` versus one scalar output row distinction. They pass on unchanged
-production code and are contract coverage, not a claimed bug fix. Their XML is a
+No production source, schema, authorization, dependency or CLI changes are required. Existing
+whitespace tests already cover exact cell strings; the new case adds the uncovered
+`totalRows=0` versus one scalar output row distinction. It passes on unchanged
+production code and is contract coverage, not a claimed bug fix. Its XML is a
 minimal reconstruction from recorded public responses, not a captured SAP body.
 
 The current roadmap has reused FEAT-86/87 for stored-text coverage and repeated
@@ -54,14 +54,14 @@ this extraction; the PR contains no object-creation improvement.
 Results and independent review are recorded here before merge. Native editor
 execution and ARC-1 query execution are different routes and are qualified separately.
 
-- Installed 1.2.0 serializer: the example round-trips semantically unchanged, with
+- Installed 1.2.0 serializer: the example round-trips byte-for-byte unchanged, with
   three ordered Markdown/SQL cells and no destination binding. The actual serializer
   was evaluated locally with minimal VS Code cell/data stubs; no extension code
   is checked in. Bundle and example hashes are in `notebook-extraction/serializer.json`.
-- Focused existing query/parser/aggregate tests: 197 passed. The first run had one
+- Initial focused query/parser/aggregate tests: 197 passed. The first run had one
   test-fixture error (unescaped `<` in reconstructed XML); escaping it fixed the
   fixture. No production defect or fail-before product regression is claimed.
-- Full local suite: **9,235 tests passed** (Node 24.11.1, four workers). Build,
+- Before review simplification: **9,235 local tests passed** (Node 24.11.1, four workers). Build,
   all TypeScript projects, lint, policy, size/schema budgets and strict docs pass.
   Existing production files and tool snapshots are unchanged.
 - Fresh live probe: the example returned six airline rows and `"40 "` in one count
@@ -75,7 +75,16 @@ execution and ARC-1 query execution are different routes and are qualified separ
   window changed during file selection. No notebook cell was executed there.
   Serializer round-trip and ARC-1 live queries do not establish an editor run or
   compatibility with other extension versions, 750, 816 or BTP.
-- Claude plan and frozen-diff reviews: pending final recording.
+- [Claude Opus 5.5 Max plan review](notebook-extraction/claude-plan-review.md):
+  scope approved; no further extraction needed. Applied the useful refinements:
+  one missing case through `handleToolCall`, synthesized XML clearly labeled,
+  explicit extension/ARC-1 control and row-limit separation, canonical sample bytes,
+  and preservation of today's roadmap IDs. The initial direct-handler test did
+  exercise serialization, but the public dispatcher is the stronger coverage.
+  The short guide stays separate to keep the already large tool reference concise.
+- Final focused checks: **372 passed** across four files, including the public
+  dispatcher case, XML parser, whitespace and grouped-count errors. Typecheck and
+  strict docs pass after the simplification. Frozen-diff review is pending.
 
 Raw local outputs remain private. Only count-only fixtures, aggregate summaries
 and review reports belong in the repository. The original 67-file working tree,

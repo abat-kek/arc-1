@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { unrestrictedSafetyConfig } from '../../../src/adt/safety.js';
-import { escapeXmlAttr } from '../../../src/adt/xml-parser.js';
 import { mockResponse } from '../../helpers/mock-fetch.js';
 
 const mockFetch = vi.fn();
@@ -12,16 +11,6 @@ vi.mock('undici', async (importOriginal) => ({
 const { AdtClient } = await import('../../../src/adt/client.js');
 const { handleSAPQuery } = await import('../../../src/handlers/query.js');
 const tableResponse = readFileSync(new URL('../../fixtures/xml/table-contents.xml', import.meta.url), 'utf8');
-const scalarResults = JSON.parse(
-  readFileSync(new URL('../../fixtures/json/query-scalars-758.json', import.meta.url), 'utf8'),
-).queries as Array<{
-  totalRows: number;
-  queryExecutionTimeMs: number;
-  executedQueryString: string;
-  rowsReturned: number;
-  columns: string[];
-  rows: Array<{ N: string }>;
-}>;
 
 function createClient() {
   return new AdtClient({
@@ -35,23 +24,6 @@ function createClient() {
 describe('freestyle SQL line preparation at the client boundary', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-  });
-
-  it.each(scalarResults)('preserves one scalar row when SAP reports $totalRows input matches', async (expected) => {
-    // Reconstruct minimal XML from the recorded public response; this is not a captured wire body.
-    const xml = `<tableData><totalRows>${expected.totalRows}</totalRows>
-      <queryExecutionTime>${expected.queryExecutionTimeMs}</queryExecutionTime>
-      <executedQueryString>${escapeXmlAttr(expected.executedQueryString)}</executedQueryString>
-      <columns><metadata name="N"/><dataSet><data>${expected.rows[0]!.N}</data></dataSet></columns></tableData>`;
-    mockFetch.mockResolvedValueOnce(mockResponse(200, '', { 'x-csrf-token': 'T' }));
-    mockFetch.mockResolvedValueOnce(mockResponse(200, xml));
-    const sql = `SELECT COUNT( * ) AS N FROM /DMO/FLIGHT${expected.totalRows === 0 ? ' WHERE seats_occupied < 0' : ''}`;
-    const result = await handleSAPQuery(createClient(), { sql, maxRows: 20 }, false);
-    expect(result.isError).toBeUndefined();
-    expect(JSON.parse(result.content[0]!.text)).toEqual(expected);
-    const posts = mockFetch.mock.calls.filter((call) => call[1]?.method === 'POST');
-    expect(posts).toHaveLength(1);
-    expect(posts[0]![1].body).toBe(sql);
   });
 
   it.each(['runQuery', 'runQueryWithMetrics', 'runQueryBatch'] as const)(

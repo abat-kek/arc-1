@@ -17,8 +17,9 @@ to your workspace. It uses SAP's `/DMO` demo tables; adapt it if those tables ar
    A row cap limits returned rows, not necessarily database work.
 4. Run the intended cells explicitly and save the file. Opening it does not execute SQL.
 
-Execution in the extension uses its own destination, identity and controls. ARC-1
-configuration and permissions apply only when a query is sent through ARC-1.
+Execution uses the extension's own destination and SAP identity. SAP authorization
+still applies; ARC-1's SQL/data gates, blocklist, deny rules, scopes and audit do not.
+ARC-1 controls apply only when a query is sent through ARC-1.
 
 ## Ask an agent to create one
 
@@ -46,12 +47,15 @@ The file is ordinary UTF-8 JSON. This is the format observed in SAP extension **
 | `kind` | `markdown` or `sql` |
 | `value` | Markdown or ABAP SQL text |
 | `destination` | Optional exact extension destination name; set through the editor |
-| `rowNumber` | Optional numeric row cap; use a small positive integer |
+| `rowNumber` | Optional integer row cap; extension default 100, editor range 1–100,000 |
 
 The extension saves these fields, not arbitrary custom metadata, assertions or
 result rows. Keep durable notes in Markdown cells. This observed serialization is
 not a versioned SAP interchange specification; recheck it after extension updates.
 No ARC-1-specific `schemaVersion`, cell IDs, target mapping or import step is needed.
+Validate the JSON before opening: malformed JSON opens as an empty SQL cell in
+1.2.0, and saving that state replaces the original contents. The supplied example
+already matches the serializer's formatting. ARC-1's separate `maxRows` cap is 10,000.
 
 ## Interpret query results
 

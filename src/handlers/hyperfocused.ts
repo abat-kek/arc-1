@@ -46,6 +46,11 @@ export function resolveHyperfocusedTool(action: string): string | undefined {
   return ACTION_TO_TOOL[action];
 }
 
+/** Inverse routing for intent-form proposals in a hyperfocused-only connection. */
+export function resolveHyperfocusedAction(toolName: string): string | undefined {
+  return Object.entries(ACTION_TO_TOOL).find(([, tool]) => tool === toolName)?.[0];
+}
+
 /**
  * Expand hyperfocused args into the flat args format expected by the real handler.
  * Merges top-level type/name with params object. Top-level values take precedence.

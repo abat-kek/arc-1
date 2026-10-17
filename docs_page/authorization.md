@@ -674,13 +674,20 @@ In builds containing this feature, ask for the current caller's ARC-1 checks bef
 Send this to `SAPDiagnose`. The proposed operation is **never executed**. The explanation itself
 requires `read` scope and respects `SAP_DENY_ACTIONS`. It uses the already selected connection;
 on aggregate endpoints, supply that call's normal outer `target`. It cannot inspect another user
-or enumerate their target grants. Proposed arguments are limited to 64 KiB.
+or enumerate their target grants. Omit `target` inside `proposedArgs`; the outer call selects it.
+Proposed arguments are limited to 64 KiB. If the proposed action requires scope the caller lacks,
+only that refusal is shown; later policy checks and metadata reads do not run.
+
+In hyperfocused mode use `SAP(action="diagnose", params={action:"explain_policy", ...})`.
+Proposals can use `proposedTool:"SAP"` with normal hyperfocused arguments, or the intent form
+above. Both include the delegator's scope and deny rules on a hyperfocused connection.
 
 | Check | What it establishes |
 |---|---|
-| `scope` / `denyRule` | Required role scope and matching server action denial |
+| `scope` / `denyRule` / `delegatorDenyRule` | Required role scope and matching server action denial |
 | `serverCeiling` / `effectiveSafety` | Configured safety gates and the caller's further restrictions |
 | `targetGrant` / `targetCeiling` | Selected-target grant and the multi-target mutation-free boundary |
+| `handlerData` | Mandatory SQL/data access for BOR objects and class hierarchy |
 | `feature` | Cached capability evidence, when the action declares a feature gate |
 | `package` | Actual metadata package for supported simple updates/deletes, never the supplied package |
 | `arguments` / `operationPrerequisites` / `dataSources` | Schema validity and checks that still require execution-time evidence |
@@ -694,7 +701,9 @@ Package resolution reads metadata only after local gates pass and only when a pa
 exists. This first version supports simple `SAPWrite update/delete` for PROG, CLAS, INTF, DDLS,
 DOMA, DTEL, TABL and TTYP. Creation, contained objects, hierarchy-dependent rules and SQL lineage
 remain unresolved. Feature evidence does not test SAP authority. No permission-testing mutation,
-SQL query or extra discovery probe is performed.
+SQL query or extra discovery probe is performed. Git capability remains unresolved until an
+operation-specific discovery check; a Git read therefore cannot receive an unconditional allowed
+result from this explanation.
 
 ## References
 

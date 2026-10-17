@@ -170,20 +170,23 @@ it('retains explicit system type configuration and does not replace known facts 
   expect(getCachedFeatures(target)).toMatchObject({ systemType: 'btp', textSearch: unsupported() });
 });
 
-it('leaves an entirely inconclusive per-user probe unknown', () => {
-  cacheFeatureEvidence(
-    {
-      hana: { id: 'hana', available: false, mode: 'auto', message: 'forbidden (403)' },
-      rap: { id: 'rap', available: false, mode: 'auto', message: 'network error' },
-      textSearch: features.classifyTextSearchError(401),
-      authProbe: { searchAccess: false, transportAccess: false },
-      discoveryMap: new Map(),
-    },
-    true,
-    target,
-  );
-  expect(getCachedFeatures(target)).toBeUndefined();
-});
+it.each(['network error', 'cannot determine availability (HTTP 200)'])(
+  'leaves an entirely inconclusive per-user probe unknown: %s',
+  (reason) => {
+    cacheFeatureEvidence(
+      {
+        hana: { id: 'hana', available: false, mode: 'auto', message: 'forbidden (403)' },
+        rap: { id: 'rap', available: false, mode: 'auto', message: reason },
+        textSearch: features.classifyTextSearchError(401),
+        authProbe: { searchAccess: false, transportAccess: false },
+        discoveryMap: new Map(),
+      },
+      true,
+      target,
+    );
+    expect(getCachedFeatures(target)).toBeUndefined();
+  },
+);
 
 it.each([
   [500, 'SADT_REST', '020'],

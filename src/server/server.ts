@@ -465,7 +465,9 @@ export async function probeClientFeatures(
     if (ap.searchAccess) {
       logger.info('Authorization probe: object search access is available');
     } else {
-      logger.warn(`Authorization probe: object search access denied — ${ap.searchReason ?? 'unknown reason'}`);
+      logger.warn(
+        `Authorization probe: object search access is not confirmed — ${ap.searchReason ?? 'unknown reason'}`,
+      );
     }
     if (ap.transportAccess) {
       logger.info('Authorization probe: transport access is available');

@@ -14,6 +14,7 @@ import type { ServerConfig } from '../server/types.js';
 import { API_RELEASE_FIELDS } from './api-release-fields.js';
 import * as DtelFields from './data-element-fields.js';
 import { SAPDIAGNOSE_ADDITIONAL_INPUTS } from './diagnose-fields.js';
+import { dumpFiltersJson } from './dump-filter-inputs.js';
 import * as FuncProcessing from './function-processing.js';
 import { getHyperfocusedToolDefinition } from './hyperfocused.js';
 import { CLASS_WRITE_INCLUDES } from './object-types.js';
@@ -1132,26 +1133,27 @@ export function getToolDefinitions(
     {
       name: 'SAPDiagnose',
       description:
-        'ABAP diagnostics and runtime analysis. Actions:\n' +
-        '- "syntax": compatibility check; when available prefer SAPRead(type="SYNTAX", objectType, name, version?, source?).\n' +
+        'ABAP diagnostics. Actions:\n' +
+        '- "syntax": compatibility; prefer SAPRead(type="SYNTAX", objectType, name, version?, source?) when available.\n' +
         '- "unittest": harmless ABAP Unit for CLAS/PROG/FUGR or DEVC (exact; includeSubpackages recurses).\n' +
         '- "unittest_ci": harmless package tests with source reconciliation; empty/incomplete runs fail.\n' +
-        '- "atc": run ATC checks (name+type or objects [{type,name}], max 20; omit variant to bind the system default; unknown variant = error). "atc_variants": list variants + that default (variant = name filter; read-only).\n' +
+        '- "atc": ATC (name+type or objects [{type,name}], max 20). Omit variant for system default; unknown variant errors. "atc_variants": read variants/default, optional variant name filter.\n' +
         '- "atc_ci": package ATC CI; requires available API and verified selection.\n' +
-        '- "cds_testcases": SAP-suggested ABAP Unit test cases for a CDS entity (name; read-only; SAP_BASIS 8.16+).\n' +
-        '- "object_state": active/inactive ETags, hashes and divergence (name+type; CLAS: all includes). Server-driven types unsupported.\n' +
-        '- "quickfix": proposals at name+type+source+line (optional column/sourceUri).\n' +
-        '- "apply_quickfix": return proposal text deltas without writing; needs quickfix inputs + proposalUri/proposalUserContent.\n' +
-        '- "dumps": list/read ST22 short dumps (no id = list, newest first, user/from/to/maxResults; id = read; includeFullText, sections).\n' +
+        '- "cds_testcases": read suggested CDS Unit tests (name; SAP_BASIS 8.16+).\n' +
+        '- "object_state": active/inactive ETags/hashes/divergence (name+type; CLAS includes). No server-driven types.\n' +
+        '- "quickfix": proposals: name+type+source+line; optional column/sourceUri.\n' +
+        '- "apply_quickfix": text deltas, no save; quickfix inputs + proposalUri/proposalUserContent.\n' +
+        '- "dumps": ST22 list: user/from/to/maxResults/filters. Supply id for detail.\n' +
+        '- "feed_schema": optional dump filter discovery; action only. Known filters work directly.\n' +
         '- "traces": list profiler traces; id+analysis analyzes one.\n' +
-        '- "trace_start": arm a profiler trace for the NEXT matching execution, then reproduce and read via "traces" (write scope; defaults: next HTTP request, SQL on).\n' +
-        '- "trace_requests": list armed trace requests. "trace_cancel": cancel one by id (write scope).\n' +
+        '- "trace_start": arm NEXT matching execution (write; defaults HTTP, SQL on); reproduce, then read "traces".\n' +
+        '- "trace_requests": list armed traces. "trace_cancel": cancel by id (write).\n' +
         '- "system_messages": list SM02 messages. "gateway_errors": list /IWFND/ERROR_LOG (on-prem; detailUrl or id+errorType for detail).\n' +
-        '- "odata_perf": diagnose why an OData call is slow (url = host-relative path); returns the sap-statistics timing split (DB/ABAP/framework/auth). Read-only; needs allowDataPreview.\n' +
-        '- "authorization_trace": read the on-prem STUSERTRACE auth trace (SUAUTHVALTRC); needs SAP_ALLOW_DATA_PREVIEW.\n' +
-        '- "cds_sql": show the native SQL a CDS view compiles to (name; read-only).\n' +
+        '- "odata_perf": read OData timing (url: host-relative; DB/ABAP/framework/auth); needs allowDataPreview.\n' +
+        '- "authorization_trace": read STUSERTRACE/SUAUTHVALTRC (on-prem; needs SAP_ALLOW_DATA_PREVIEW).\n' +
+        '- "cds_sql": read CDS native SQL (name).\n' +
         '- "sql_trace_state" / "set_sql_trace_state" (sqlOn; needs SAP_ALLOW_WRITES) / "sql_trace_directory": ST05 SQL-trace control.\n' +
-        'Quickfix workflow: syntax/ATC → quickfix → apply_quickfix → write via SAPWrite. Full action reference: docs_page SAPDiagnose.',
+        'Quickfix: syntax/ATC → quickfix → apply_quickfix → SAPWrite.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -1166,6 +1168,7 @@ export function getToolDefinitions(
               'atc_variants',
               'cds_testcases',
               'dumps',
+              'feed_schema',
               'traces',
               'trace_start',
               'trace_requests',
@@ -1266,8 +1269,7 @@ export function getToolDefinitions(
           },
           id: {
             type: 'string',
-            description:
-              'Dump or trace ID (for dumps/traces actions); also the trace-request id to cancel (for trace_cancel). Omit to list, provide to get details.',
+            description: 'dumps/traces: omit to list, supply for detail. trace_cancel: request ID.',
           },
           detailUrl: {
             type: 'string',
@@ -1278,6 +1280,11 @@ export function getToolDefinitions(
             description: 'gateway_errors: required with id instead of detailUrl, e.g. "Frontend Error".',
           },
           user: { type: 'string', description: 'SAP-user filter for dumps, feeds, or authorization_trace.' },
+          filters: {
+            ...dumpFiltersJson,
+            description:
+              'dumps list: AND, max 8 including user. E.g. [{attribute:"runtimeError",operator:"equals",values:["TIME_OUT"]}]. Target-advertised names via optional feed_schema.',
+          },
           authObject: { type: 'string', description: 'Authorization object filter, e.g. S_TCODE.' },
           from: {
             type: 'string',

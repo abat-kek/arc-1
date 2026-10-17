@@ -41,7 +41,8 @@ const BUDGETS = {
   // +30 for SAPDiagnose ATC objects[]; keep its small item schema with the tool (no new module).
   // Combined #769/#772: 1791 lines, retaining 4 lines of headroom.
   // +4: parent function group for SAPTransport check/history.
-  'src/handlers/tools.ts': 1778,
+  // +6: dumps-only filter definition and optional schema discovery; input schemas live separately.
+  'src/handlers/tools.ts': 1784,
   // +shared parseNamedItems relocated here from transport.ts (now used by ATC variants too) +
   // parseAtcSystemCheckVariant (FEAT-68 ATC variant listing) + parseFunctionModuleProperties and
   // the pre-7.52 projectexplorer function-group parser.
@@ -57,7 +58,8 @@ const BUDGETS = {
   // +88 for dump paging: SAP caps the dumps feed at 100 entries and ignores $skip, so listDumps walks
   // the inclusive `to` bound, refuses to guess when a second holds a full page, and rejects bounds
   // SAP would silently discard or roll over to another day.
-  'src/adt/diagnostics.ts': 1933,
+  // +5: bounded typed dump query hook; schema/compiler/budget setup live in feed-schema.ts.
+  'src/adt/diagnostics.ts': 1938,
   // The ADT client facade aggregates every read/write op; set_api_state (#506) + runQueryWithMetrics
   // (SAPQuery metrics) + getEffectiveUser (BTP JWT-derived user, G-5) + getSourceAtObjectUrl
   // (post-activation cache promotion) + get/writeClassTextElements (class text pool) pushed it past

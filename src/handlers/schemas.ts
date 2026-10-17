@@ -27,6 +27,7 @@ import { isServerDrivenObjectType } from '../adt/server-driven.js';
 import { TEXT_ELEMENT_PARTS as SAPREAD_TEXT_ELEMENT_INCLUDES } from '../adt/text-elements.js';
 import { MAX_GREP_PATTERN_LENGTH } from '../context/grep.js';
 import { CI_PACKAGES_SCHEMA } from './diagnose-fields.js';
+import { dumpFilters, validateDumpFilterInputs } from './dump-filter-inputs.js';
 import { sourcePreconditionError } from './editable-source.js';
 import { FUNCTION_PROCESSING_TYPES, FUNCTION_UPDATE_TASK_KINDS } from './function-processing.js';
 import { CLASS_WRITE_INCLUDES, KNOWN_BASE_TYPES } from './object-types.js';
@@ -1052,6 +1053,7 @@ export const SAPDiagnoseSchema = z
       'atc_variants',
       'cds_testcases',
       'dumps',
+      'feed_schema',
       'traces',
       'trace_start',
       'trace_requests',
@@ -1085,6 +1087,7 @@ export const SAPDiagnoseSchema = z
     detailUrl: z.string().optional(),
     errorType: z.string().optional(),
     user: z.string().optional(),
+    filters: dumpFilters.optional(),
     authObject: z.string().optional(),
     from: z.string().optional(),
     to: z.string().optional(),
@@ -1115,6 +1118,7 @@ export const SAPDiagnoseSchema = z
   })
   .strict()
   .superRefine((input, ctx) => {
+    validateDumpFilterInputs(input, ctx);
     const ci = input.action === 'atc_ci' || input.action === 'unittest_ci';
     if (ci) {
       const count = (input.packages?.length ?? 0) + (input.packageTrees?.length ?? 0);

@@ -173,6 +173,7 @@ const MULTI_TARGET_BUDGET: ToolSchemaBudget = {
   maxPerToolWireBytes: PER_TOOL_WIRE_WALL,
 };
 
+// Dump filtering adds one described property; concise diagnostic wording retains all wire/token ceilings.
 export const TOOL_SCHEMA_SCENARIOS: ToolSchemaScenario[] = [
   {
     name: 'standard-default',
@@ -185,7 +186,7 @@ export const TOOL_SCHEMA_SCENARIOS: ToolSchemaScenario[] = [
       // The read wire ceiling is unchanged; source-window growth is recorded above.
       schemaTokenEstimate: 12_000,
       descriptionTokenEstimate: 8_800,
-      descriptionCount: 188,
+      descriptionCount: 189,
       maxTotalWireBytes: READ_WIRE_WALL,
       maxPerToolWireBytes: PER_TOOL_WIRE_WALL,
     },
@@ -211,7 +212,7 @@ export const TOOL_SCHEMA_SCENARIOS: ToolSchemaScenario[] = [
       schemaTokenEstimate: 18_625,
       descriptionTokenEstimate: 12_800,
       // Includes expectedSourceHash (#853) and SAPRead.source (#855).
-      descriptionCount: 281,
+      descriptionCount: 282,
       maxTotalWireBytes: WRITE_WIRE_WALL,
       maxPerToolWireBytes: 23_550,
     },
@@ -228,7 +229,7 @@ export const TOOL_SCHEMA_SCENARIOS: ToolSchemaScenario[] = [
       // Combined relations + bounded ATC objects[]; retain a tighter BTP token ratchet.
       schemaTokenEstimate: 17_650,
       descriptionTokenEstimate: 12_200,
-      descriptionCount: 275,
+      descriptionCount: 276,
       maxTotalWireBytes: WRITE_WIRE_WALL,
       maxPerToolWireBytes: PER_TOOL_WIRE_WALL,
     },
@@ -256,7 +257,7 @@ export const TOOL_SCHEMA_SCENARIOS: ToolSchemaScenario[] = [
     budget: {
       schemaTokenEstimate: 12_000,
       descriptionTokenEstimate: 8_800,
-      descriptionCount: 188,
+      descriptionCount: 189,
       maxTotalWireBytes: READ_WIRE_WALL,
       maxPerToolWireBytes: PER_TOOL_WIRE_WALL,
     },
@@ -269,7 +270,7 @@ export const TOOL_SCHEMA_SCENARIOS: ToolSchemaScenario[] = [
     budget: {
       schemaTokenEstimate: 18_625,
       descriptionTokenEstimate: 12_800,
-      descriptionCount: 281,
+      descriptionCount: 282,
       maxTotalWireBytes: WRITE_WIRE_WALL,
       maxPerToolWireBytes: 23_550,
     },
@@ -282,7 +283,7 @@ export const TOOL_SCHEMA_SCENARIOS: ToolSchemaScenario[] = [
     budget: {
       schemaTokenEstimate: 17_650,
       descriptionTokenEstimate: 12_200,
-      descriptionCount: 275,
+      descriptionCount: 276,
       maxTotalWireBytes: WRITE_WIRE_WALL,
       maxPerToolWireBytes: PER_TOOL_WIRE_WALL,
     },

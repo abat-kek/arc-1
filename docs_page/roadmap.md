@@ -815,16 +815,19 @@ it can reuse the same safe contract.
 SAPscript/SmartForm APIs. A [TypeScript spike](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-17-stxl-typescript-spike.md)
 decodes the verified FF06/4103 TLINE profile using Node zlib and guarded ADT STXL extraction.
 Kernel comparisons pass on 750/758/816; direct preview and persisted 37-chunk round trips pass on
-758/816. It is not exposed as an MCP feature and does not implement READ_TEXT reference, memory,
-archive, alternate-persistence, or form-layout semantics. The explicit free-SQL route recovers a
-repeated-space key lost by 816's ordinary table query; tested 750 preview routes return 404.
+758/816. A manual reader now qualifies STXH headers, empty/missing distinctions, stored reference
+chains, ordered batches, and literal prefix discovery against native SAP oracles on 758/816.
+Repeated-space keys work through the data gate with free SQL disabled. It is not exposed as an MCP
+feature; memory, archives, legacy ITCRF references, alternate/upgrade persistence, non-ITF formats,
+and form-layout semantics remain outside its contract. Tested 750 preview routes return 404.
 
-**Resume with.** Agree an exact-key stored-text contract, then qualify a literal-preserving read
-path, capability detection, STXH/reference behavior, multi-request consistency, and compressor
-trailer handling. Preserve data scope, both table blocklists, per-user SAP identity, and cumulative
-response/time budgets. Require independent SAP fixtures before supporting other versions or code
-pages. Keep #1000's broader companion-service option and FEAT-76's parameterized-service work
-separate; no RFC or dynamically executed ABAP fallback belongs in the native reader.
+**Resume with.** Promote the qualified classic stored-text contract into a dedicated data-scoped
+MCP operation with normal audit/dispatch wiring and release/capability discovery. Carry over table
+blocklists, per-user SAP identity, cumulative response/time budgets, and typed per-item failures.
+Matching header/chunk rereads detect changes but do not provide a snapshot; opaque compressor
+trailers are bounded, not authenticated. Require independent SAP fixtures before expanding
+persistence, versions, or code pages. Keep #1000's broader companion-service option and FEAT-76's
+parameterized-service work separate; no RFC or dynamically executed ABAP fallback belongs in the reader.
 
 <a id="feat-36"></a>
 ### FEAT-36 — Type information

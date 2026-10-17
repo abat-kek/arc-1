@@ -80,6 +80,7 @@ const ALLOWED_OPS = new Set([
   'NOT IN',
   'IS NULL',
   'IS NOT NULL',
+  'STARTS_WITH',
 ]);
 
 // BETWEEN is intentionally excluded: the value would require parsing "low AND high"
@@ -87,11 +88,23 @@ const ALLOWED_OPS = new Set([
 // Use two separate conditions (>= low, <= high) instead.
 
 /** Build a safe IN/NOT IN list from comma-separated raw values. */
-function buildInList(raw: string): string {
+function buildInList(raw: string, preserveLiteralSpaces: boolean): string {
   const trimmed = raw.trim();
   const inner = trimmed.startsWith('(') && trimmed.endsWith(')') ? trimmed.slice(1, -1) : trimmed;
-  const parts = inner.split(',').map((part) => `'${part.trim().replace(/'/g, "''")}'`);
+  const parts = inner.split(',').map((part) => quoteTableQueryValue(part.trim(), preserveLiteralSpaces));
   return `(${parts.join(', ')})`;
+}
+
+/** Opt-in compatibility for SAP handlers that CONDENSE SQL lines, including quoted literals. */
+export function quoteTableQueryValue(value: string, preserveLiteralSpaces = false): string {
+  const quote = (part: string) => `'${part.replaceAll("'", "''")}'`;
+  if (!preserveLiteralSpaces || !/ {2}/u.test(value)) return quote(value);
+  const parts = value.split(/( +)/u);
+  let expression = quote(parts[0] || ' ');
+  for (let index = 1; index < parts.length; index += 2) {
+    expression = `concat_with_space( ${expression}, ${quote(parts[index + 1] || ' ')}, ${parts[index].length} )`;
+  }
+  return expression;
 }
 
 /** Upper bound for an in-memory TABLE_QUERY result. */
@@ -128,6 +141,7 @@ export function buildTableQuerySql(
   tableName: string,
   columns?: string[],
   where?: Array<{ field: string; op: string; value?: string }>,
+  preserveLiteralSpaces = false,
 ): string {
   const safeTable = exactSqlIdentifier(tableName, 'table');
   const colList = columns?.length ? columns.map((column) => exactSqlIdentifier(column, 'column')).join(', ') : '*';
@@ -138,9 +152,14 @@ export function buildTableQuerySql(
       const safeField = exactSqlIdentifier(field, 'field');
       const safeOp = op.trim().toUpperCase();
       if (!ALLOWED_OPS.has(safeOp)) throw new Error(`TABLE_QUERY: operator "${op}" is not allowed`);
+      if (safeOp === 'STARTS_WITH') {
+        const pattern = `${String(value ?? '').replace(/[#%_]/gu, '#$&')}%`;
+        return `${safeField} LIKE ${quoteTableQueryValue(pattern, preserveLiteralSpaces)} ESCAPE '#'`;
+      }
       if (safeOp === 'IS NULL' || safeOp === 'IS NOT NULL') return `${safeField} ${safeOp}`;
-      if (safeOp === 'IN' || safeOp === 'NOT IN') return `${safeField} ${safeOp} ${buildInList(String(value ?? ''))}`;
-      return `${safeField} ${safeOp} '${String(value ?? '').replace(/'/g, "''")}'`;
+      if (safeOp === 'IN' || safeOp === 'NOT IN')
+        return `${safeField} ${safeOp} ${buildInList(String(value ?? ''), preserveLiteralSpaces)}`;
+      return `${safeField} ${safeOp} ${quoteTableQueryValue(String(value ?? ''), preserveLiteralSpaces)}`;
     });
     sql += ` WHERE ${clauses.join(' AND ')}`;
   }

@@ -167,6 +167,7 @@ describe('STXL spike: independent SAP kernel fixtures', () => {
     const duplicateRowEnd = Buffer.concat([empty.subarray(0, -2), Buffer.from([0xbd]), empty.subarray(-2)]);
     await expect(decodeStxl(duplicateRowEnd)).rejects.toThrow('misplaced row end');
     await expect(decodeStxl(Buffer.concat([empty, Buffer.from([1])]))).rejects.toThrow('non-padding');
+    await expect(decodeStxl(Buffer.concat([empty, Buffer.from([0])]))).rejects.toThrow('non-padding');
     await expect(decodeStxl(plain.subarray(0, -3))).rejects.toThrow('missing');
   });
 
@@ -288,9 +289,29 @@ describe('STXL spike: bounded ADT chunk reader', () => {
   });
 
   it('bounds SRTF2 at the complete 256-row INT1 domain without a ninth request', async () => {
-    const bytes = Buffer.alloc(7902 * 256);
-    plain.copy(bytes);
+    // Expand the independently generated single-row container using its parsed frame bounds.
+    // This exercises 256 real chunks without relying on padding after the container end.
+    const payload = (await unpackCluster(plain)).payload;
+    const descriptorEnd = 32 + payload[11] * 2;
+    const tableDescriptor = descriptorEnd + 4 * 7; // structure start, two CHAR fields, structure end
+    expect(payload[tableDescriptor]).toBe(0xbe);
+    const rowStart = tableDescriptor + 9;
+    expect(payload[rowStart]).toBe(0xbc);
+    const rowEnd = rowStart + 5 + payload.readUInt32BE(rowStart + 1) + 1;
+    expect(payload[rowEnd - 1]).toBe(0xbd);
+    expect([...payload.subarray(rowEnd)]).toEqual([0xbf, 4]);
+    const rowCount = 7355;
+    const prefix = Buffer.from(payload.subarray(0, rowStart));
+    prefix.writeUInt32BE(rowCount, tableDescriptor + 5);
+    prefix.writeUInt32BE(prefix.length + (rowEnd - rowStart) * rowCount + 1, 7);
+    const bytes = Buffer.concat([
+      plain.subarray(0, 16),
+      prefix,
+      ...Array.from({ length: rowCount }, () => payload.subarray(rowStart, rowEnd)),
+      Buffer.from([0xbf, 4]),
+    ]);
     const rows = rowsFor(bytes);
+    expect(rows).toHaveLength(256);
     expect(assembleChunks(rows, key, '001').equals(bytes)).toBe(true);
     expect(() => assembleChunks([...rows, { ...rows[0], SRTF2: '256' }], key, '001')).toThrow('excessive');
     let offset = 0;

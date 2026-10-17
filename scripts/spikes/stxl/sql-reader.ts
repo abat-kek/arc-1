@@ -1,18 +1,11 @@
 /** Explicit SQL-enabled research route for 816's SQL-line CONDENSE behavior. Never a fallback. */
 import type { AdtClient } from '../../../src/adt/client.js';
+import { quoteTableQueryValue } from '../../../src/adt/table-query.js';
 import { readStoredText, type TextKey } from './reader.js';
-
-const quote = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
 /** SQL CONCAT trims operand padding; CONCAT_WITH_SPACE restores the exact requested gap. */
 export function spacePreservingLiteral(value: string): string {
-  if (!/ {2}/u.test(value)) return quote(value);
-  const parts = value.split(/( +)/u);
-  let result = quote(parts[0] || ' ');
-  for (let index = 1; index < parts.length; index += 2) {
-    result = `concat_with_space( ${result}, ${quote(parts[index + 1] || ' ')}, ${parts[index].length} )`;
-  }
-  return result;
+  return quoteTableQueryValue(value, true);
 }
 
 export async function readStoredTextSql(client: Pick<AdtClient, 'runQuery'>, key: TextKey, sapClient: string) {

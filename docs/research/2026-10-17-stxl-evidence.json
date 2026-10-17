@@ -125,12 +125,48 @@
           },
           "rawTlineBytesCompared": true,
           "loneSurrogatesPreserved": true
+        },
+        "stored-text-semantics": {
+          "status": "pass",
+          "nativeCases": 13,
+          "readerSingles": 13,
+          "readerBatchInputs": 14,
+          "readerBatchResults": 14,
+          "discoveryHeaders": 9,
+          "literalUnderscore": true,
+          "literalPercent": true,
+          "freeSqlEnabled": false,
+          "nonItfPolicy": "native API supports the fixture; candidate deliberately rejects STXB storage"
+        },
+        "data-gated-spaces": {
+          "status": "pass",
+          "lines": 1,
+          "freeSQL": false,
+          "consistency": "reread-matched"
+        },
+        "cli": {
+          "status": "pass",
+          "commands": [
+            "read",
+            "discover",
+            "batch",
+            "search"
+          ],
+          "freeSQL": false,
+          "helperWrites": false
         }
       },
       "cleanup": {
-        "helperCount": 7,
+        "helperCount": 22,
         "allAbsent": true,
-        "syntheticStoredText": "deleted-and-absence-verified"
+        "syntheticStoredText": "deleted-and-absence-verified",
+        "semanticFixturePrefixes": 4,
+        "semanticTablesChecked": [
+          "STXH",
+          "STXL",
+          "STXB"
+        ],
+        "allSemanticPrefixesAbsent": true
       }
     },
     {
@@ -202,16 +238,52 @@
           },
           "rawTlineBytesCompared": true,
           "loneSurrogatesPreserved": true
+        },
+        "stored-text-semantics": {
+          "status": "pass",
+          "nativeCases": 13,
+          "readerSingles": 13,
+          "readerBatchInputs": 14,
+          "readerBatchResults": 14,
+          "discoveryHeaders": 9,
+          "literalUnderscore": true,
+          "literalPercent": true,
+          "freeSqlEnabled": false,
+          "nonItfPolicy": "native API supports the fixture; candidate deliberately rejects STXB storage"
+        },
+        "data-gated-spaces": {
+          "status": "pass",
+          "lines": 1,
+          "freeSQL": false,
+          "consistency": "reread-matched"
+        },
+        "cli": {
+          "status": "pass",
+          "commands": [
+            "read",
+            "discover",
+            "batch",
+            "search"
+          ],
+          "freeSQL": false,
+          "helperWrites": false
         }
       },
       "cleanup": {
-        "helperCount": 7,
+        "helperCount": 22,
         "allAbsent": true,
-        "syntheticStoredText": "deleted-and-absence-verified"
+        "syntheticStoredText": "deleted-and-absence-verified",
+        "semanticFixturePrefixes": 4,
+        "semanticTablesChecked": [
+          "STXH",
+          "STXL",
+          "STXB"
+        ],
+        "allSemanticPrefixesAbsent": true
       }
     }
   ],
-  "exclusions": "Existing corpus oracle excludes texts over 3000 lines. 816 ordinary exact-key query missed one repeated-space key; explicit SQL route subsequently passed.",
+  "exclusions": "Existing corpus oracle excludes texts over 3000 lines. The initial 816 exact-key query missed one repeated-space key; both the historical explicit SQL route and newer data-gated reader subsequently passed. Non-ITF is deliberately unsupported by the candidate reader.",
   "privateCorpusReplay": {
     "pass": 211,
     "failed": 0
@@ -221,5 +293,21 @@
     "reviewer": "Claude Code Opus 5.5 Max via GUI",
     "completed": true,
     "followup": "Trailer bound, raw Unicode oracles, segment guards and INT1 chunk limit; production integration gaps remain documented."
+  },
+  "followupReview": {
+    "reviewers": [
+      "Sol: SAP API semantics and live oracles",
+      "Sol: code quality and safety review",
+      "Luna: use-case research and synthetic semantic golden tests"
+    ],
+    "completed": true,
+    "noRemainingBlockersWithinDeclaredContract": true
+  },
+  "localValidation": {
+    "unitFiles": 317,
+    "unitTests": 9054,
+    "storedTextTests": 128,
+    "coreQueryTestsAdded": 3,
+    "workers": 4
   }
 }

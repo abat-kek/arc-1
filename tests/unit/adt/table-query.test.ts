@@ -104,6 +104,20 @@ describe('fitFreestyleSqlLines', () => {
 });
 
 describe('buildTableQuerySql', () => {
+  it('preserves repeated literal spaces only with the internal compatibility opt-in', () => {
+    const where = [{ field: 'TDNAME', op: '=', value: "  A'B  C" }];
+    expect(buildTableQuerySql('STXH', ['TDNAME'], where)).toContain("TDNAME = '  A''B  C'");
+    expect(buildTableQuerySql('STXH', ['TDNAME'], where, true)).toContain(
+      "TDNAME = concat_with_space( concat_with_space( ' ', 'A''B', 2 ), 'C', 2 )",
+    );
+  });
+
+  it('treats prefix wildcard and escape characters literally', () => {
+    expect(buildTableQuerySql('STXH', ['TDNAME'], [{ field: 'TDNAME', op: 'STARTS_WITH', value: "Z_%#'" }])).toBe(
+      "SELECT TDNAME FROM STXH WHERE TDNAME LIKE 'Z#_#%##''%' ESCAPE '#'",
+    );
+  });
+
   // ─── Basic SELECT ──────────────────────────────────────────────────
 
   it('builds SELECT * with no options', () => {

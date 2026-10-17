@@ -6,8 +6,30 @@
  */
 import { promisify } from 'node:util';
 import { inflateRaw } from 'node:zlib';
+import { TextReadError, type TextReadErrorCode } from './errors.js';
 
 const inflate = promisify(inflateRaw);
+const CONTAINER_HEADER_BYTES = 16;
+const COMPRESSION_HEADER_BYTES = 8;
+const TLINE_FORMAT_UNITS = 2;
+const TLINE_TEXT_UNITS = 132;
+const UTF16_BYTES_PER_UNIT = 2;
+const TLINE_ROW_BYTES = (TLINE_FORMAT_UNITS + TLINE_TEXT_UNITS) * UTF16_BYTES_PER_UNIT;
+// Empirical ceiling for the verified SAP-produced compressed profile; not a trailer grammar.
+const MAX_COMPRESSED_TRAILING_BYTES = 6;
+const MARKER = {
+  segment: 3,
+  containerEnd: 4,
+  characterField: 0xaa,
+  structureStart: 0xad,
+  structureEnd: 0xae,
+  fixedRow: 0xbb,
+  sizedRow: 0xbc,
+  rowEnd: 0xbd,
+  table: 0xbe,
+  tableEnd: 0xbf,
+} as const;
+
 export interface TextLine {
   format: string;
   text: string;
@@ -17,20 +39,36 @@ export interface DecodeLimits {
   maxOutputBytes: number;
   maxLines: number;
 }
+export interface UnpackedCluster {
+  version: number;
+  codePage: string;
+  compressed: boolean;
+  compressedTrailingBytes: number;
+  payload: Buffer;
+}
+export interface DecodedText {
+  version: number;
+  codePage: string;
+  compressed: boolean;
+  compressedTrailingBytes: number;
+  wellFormedUnicode: boolean;
+  lines: TextLine[];
+  outputBytes: number;
+}
 export const DEFAULT_LIMITS: Readonly<DecodeLimits> = Object.freeze({
   maxInputBytes: 2 * 1024 * 1024,
   maxOutputBytes: 4 * 1024 * 1024,
   maxLines: 10_000,
 });
 
-function fail(message: string): never {
-  throw new Error(`STXL: ${message}`);
+function fail(message: string, code: TextReadErrorCode = 'CORRUPT_CLUSTER'): never {
+  throw new TextReadError(code, message);
 }
 function checkLimits(limits: DecodeLimits): void {
   for (const name of Object.keys(DEFAULT_LIMITS) as Array<keyof DecodeLimits>) {
     const value = limits?.[name];
     if (!Number.isSafeInteger(value) || value < 1 || value > DEFAULT_LIMITS[name as keyof DecodeLimits]) {
-      fail(`invalid ${name}; limits may only narrow the hard ceiling`);
+      fail(`invalid ${name}; limits may only narrow the hard ceiling`, 'LIMIT_EXCEEDED');
     }
   }
 }
@@ -50,17 +88,29 @@ function uint(data: Buffer, offset: number, size: number): number {
   return range(data, offset, size).readUIntBE(0, size);
 }
 function textBytes(bytes: Buffer, codePage: string): string {
-  if (codePage !== '4103') fail(`unverified code page ${codePage}`);
+  if (codePage !== '4103') fail(`unverified code page ${codePage}`, 'UNSUPPORTED_PROFILE');
   // ABAP CHAR truncation can leave a lone surrogate. Preserve its code unit, as IMPORT does.
   // JSON.stringify escapes such units; callers must not silently replace them during encoding.
   return bytes.toString('utf16le');
 }
 
-export async function unpackCluster(data: Buffer, limits: DecodeLimits = DEFAULT_LIMITS) {
+/** Remove SAP's bit prefix while preserving the bounded input size for native zlib. */
+function reframeLzh(source: Buffer): Buffer {
+  const shift = 2 + (source[0] & 3);
+  const reframed = Buffer.alloc(source.length);
+  for (let i = 0; i < source.length; i++) {
+    reframed[i] = (source[i] >>> shift) | ((source[i + 1] ?? 0) << (8 - shift));
+  }
+  return reframed;
+}
+
+/** Validate the tested container profile and return its bounded decompressed payload. */
+export async function unpackCluster(data: Buffer, limits: DecodeLimits = DEFAULT_LIMITS): Promise<UnpackedCluster> {
   checkLimits(limits);
-  if (data.length > limits.maxInputBytes) fail('compressed input limit exceeded');
-  range(data, 0, 16);
-  if (data[0] !== 0xff || data[1] !== 6 || data[2] !== 2) fail('unverified container signature/version/byte order');
+  if (data.length > limits.maxInputBytes) fail('compressed input limit exceeded', 'LIMIT_EXCEEDED');
+  range(data, 0, CONTAINER_HEADER_BYTES);
+  if (data[0] !== 0xff || data[1] !== 6 || data[2] !== 2)
+    fail('unverified container signature/version/byte order', 'UNSUPPORTED_PROFILE');
   const version = data[1];
   const codePage = data.subarray(8, 12).toString('latin1');
   textBytes(Buffer.alloc(0), codePage); // Reject unknown code pages even for an empty table.
@@ -68,21 +118,17 @@ export async function unpackCluster(data: Buffer, limits: DecodeLimits = DEFAULT
   let payload: Buffer;
   let compressedTrailingBytes = 0;
   if (compression === 1) {
-    payload = data.subarray(16);
-    if (payload.length > limits.maxOutputBytes) fail('uncompressed output limit exceeded');
+    payload = data.subarray(CONTAINER_HEADER_BYTES);
+    if (payload.length > limits.maxOutputBytes) fail('uncompressed output limit exceeded', 'LIMIT_EXCEEDED');
   } else if (compression === 2) {
-    range(data, 16, 9);
-    if (data[20] !== 0x12 || data[21] !== 0x1f || data[22] !== 0x9d) fail('unsupported compression header');
-    const expected = data.readUInt32LE(16);
-    if (expected < 1 || expected > limits.maxOutputBytes) fail('declared output limit exceeded');
-    const source = data.subarray(24);
-    const shift = 2 + (source[0] & 3);
-    const reframed = Buffer.alloc(source.length);
-    for (let i = 0; i < source.length; i++) {
-      reframed[i] = (source[i] >>> shift) | ((source[i + 1] ?? 0) << (8 - shift));
-    }
+    range(data, CONTAINER_HEADER_BYTES, COMPRESSION_HEADER_BYTES + 1);
+    if (data[20] !== 0x12 || data[21] !== 0x1f || data[22] !== 0x9d)
+      fail('unsupported compression header', 'UNSUPPORTED_PROFILE');
+    const expected = data.readUInt32LE(CONTAINER_HEADER_BYTES);
+    if (expected < 1 || expected > limits.maxOutputBytes) fail('declared output limit exceeded', 'LIMIT_EXCEEDED');
+    const reframed = reframeLzh(data.subarray(CONTAINER_HEADER_BYTES + COMPRESSION_HEADER_BYTES));
     const firstBlockType = (reframed[0] >>> 1) & 3;
-    if (firstBlockType !== 1 && firstBlockType !== 2) fail('unsupported initial LZH block type');
+    if (firstBlockType !== 1 && firstBlockType !== 2) fail('unsupported initial LZH block type', 'UNSUPPORTED_PROFILE');
     let consumed: number;
     try {
       // Node's callback typings omit the info:true result shape.
@@ -100,17 +146,23 @@ export async function unpackCluster(data: Buffer, limits: DecodeLimits = DEFAULT
     compressedTrailingBytes = reframed.length - consumed;
     // Live SAP buffers have 1–6 residual bytes, sometimes nonzero. Their grammar is unverified.
     // Bound the opaque tail to reject appended stale chunks; this is not an integrity check.
-    if (!Number.isSafeInteger(consumed) || consumed < 1 || compressedTrailingBytes < 0 || compressedTrailingBytes > 6)
+    if (
+      !Number.isSafeInteger(consumed) ||
+      consumed < 1 ||
+      compressedTrailingBytes < 0 ||
+      compressedTrailingBytes > MAX_COMPRESSED_TRAILING_BYTES
+    )
       fail('excess compressed trailer bytes');
   } else {
-    return fail(`unsupported compression flag ${compression}`);
+    return fail(`unsupported compression flag ${compression}`, 'UNSUPPORTED_PROFILE');
   }
   return { version, codePage, compressed: compression === 2, compressedTrailingBytes, payload };
 }
 
-export async function decodeStxl(data: Buffer, limits: DecodeLimits = DEFAULT_LIMITS) {
-  const { version, codePage, compressed, compressedTrailingBytes, payload } = await unpackCluster(data, limits);
-  const charBytes = codePage.startsWith('410') ? 2 : 1;
+/** Parse one complete named TLINE table; every transition checks its required predecessor. */
+function parseTlinePayload(payload: Buffer, codePage: string, limits: DecodeLimits): TextLine[] {
+  // unpackCluster has already rejected all profiles except UTF-16LE / 4103.
+  const charBytes = UTF16_BYTES_PER_UNIT;
   const lines: TextLine[] = [];
   let p = 0;
   let descriptor = false;
@@ -130,33 +182,35 @@ export async function decodeStxl(data: Buffer, limits: DecodeLimits = DEFAULT_LI
       rowPending ||
       !descriptor ||
       declaredRows === undefined ||
-      length !== 134 * charBytes ||
+      length !== TLINE_ROW_BYTES ||
       rowBytes !== length ||
       fields.length !== 2 ||
-      fields[0] !== 2 * charBytes ||
-      fields[1] !== 132 * charBytes
+      fields[0] !== TLINE_FORMAT_UNITS * charBytes ||
+      fields[1] !== TLINE_TEXT_UNITS * charBytes
     )
       fail('unexpected TLINE row shape');
-    if (lines.length >= limits.maxLines) fail('line limit exceeded');
+    if (lines.length >= limits.maxLines) fail('line limit exceeded', 'LIMIT_EXCEEDED');
     const row = range(payload, offset, length);
     lines.push({
-      format: textBytes(row.subarray(0, 2 * charBytes), codePage).replace(/ +$/u, ''),
-      text: textBytes(row.subarray(2 * charBytes), codePage).replace(/ +$/u, ''),
+      format: textBytes(row.subarray(0, TLINE_FORMAT_UNITS * charBytes), codePage).replace(/ +$/u, ''),
+      text: textBytes(row.subarray(TLINE_FORMAT_UNITS * charBytes), codePage).replace(/ +$/u, ''),
     });
     rowPending = true;
   };
   while (p < payload.length) {
     const marker = payload[p];
-    if (ended) {
-      if (marker !== 0) fail('non-padding bytes after container end');
-      p++;
-      continue;
-    }
+    // Verified plain and inflated TLINE payloads end exactly at marker 04. CLUSTR has
+    // already removed storage padding; accepting zeros here could hide stale chunks.
+    if (ended) fail('non-padding bytes after container end (trailing padding is unsupported)');
     switch (marker) {
-      case 3: {
+      case MARKER.segment: {
         if (descriptor) fail('multiple tables in TLINE container');
         const nameOffset = 32;
-        if (uint(payload, p + 1, 1) !== 14 || uint(payload, p + 2, 1) !== 0 || uint(payload, p + 3, 4) !== 268)
+        if (
+          uint(payload, p + 1, 1) !== 14 ||
+          uint(payload, p + 2, 1) !== 0 ||
+          uint(payload, p + 3, 4) !== TLINE_ROW_BYTES
+        )
           fail('unexpected TLINE segment descriptor');
         if (range(payload, p + 12, 20).some((byte) => byte !== 0)) fail('unsupported segment header fields');
         segmentLength = uint(payload, p + 7, 4);
@@ -169,58 +223,59 @@ export async function decodeStxl(data: Buffer, limits: DecodeLimits = DEFAULT_LI
         descriptor = true;
         break;
       }
-      case 0xad:
+      case MARKER.structureStart:
         if (!descriptor || structureStarted || fields.length || declaredRows !== undefined)
           fail('misplaced structure start');
-        if (uint(payload, p + 3, 4) !== 268) fail('unexpected structure length');
+        if (uint(payload, p + 3, 4) !== TLINE_ROW_BYTES) fail('unexpected structure length');
         structureStarted = true;
         p += 7;
         break;
-      case 0xae:
+      case MARKER.structureEnd:
         if (!structureStarted || structureEnded || fields.length !== 2 || declaredRows !== undefined)
           fail('misplaced structure end');
-        if (uint(payload, p + 3, 4) !== 268) fail('unexpected structure length');
+        if (uint(payload, p + 3, 4) !== TLINE_ROW_BYTES) fail('unexpected structure length');
         structureEnded = true;
         p += 7;
         break;
-      case 0xaa: {
+      case MARKER.characterField: {
         if (!structureStarted || structureEnded || fields.length >= 2) fail('unexpected character descriptor');
         const length = uint(payload, p + 3, 4);
-        if (length !== (fields.length === 0 ? 4 : 264)) fail('unexpected TLINE field length');
+        if (length !== (fields.length === 0 ? TLINE_FORMAT_UNITS : TLINE_TEXT_UNITS) * charBytes)
+          fail('unexpected TLINE field length');
         fields.push(length);
         rowBytes += length;
         p += 7;
         break;
       }
-      case 0xbe:
+      case MARKER.table:
         if (!structureEnded || declaredRows !== undefined || lines.length) fail('misplaced table descriptor');
         if (uint(payload, p + 1, 4) !== rowBytes) fail('table row length mismatch');
         declaredRows = uint(payload, p + 5, 4);
-        if (declaredRows > limits.maxLines) fail('declared line limit exceeded');
+        if (declaredRows > limits.maxLines) fail('declared line limit exceeded', 'LIMIT_EXCEEDED');
         p += 9;
         break;
-      case 0xbc: {
+      case MARKER.sizedRow: {
         const length = uint(payload, p + 1, 4);
         emit(p + 5, length);
         p += 5 + length;
         break;
       }
-      case 0xbb:
+      case MARKER.fixedRow:
         emit(p + 1, rowBytes);
         p += 1 + rowBytes;
         break;
-      case 0xbd:
+      case MARKER.rowEnd:
         if (!rowPending || tableClosed) fail('misplaced row end');
         rowPending = false;
         p++;
         break;
-      case 0xbf:
+      case MARKER.tableEnd:
         if (declaredRows === undefined || tableClosed || rowPending || declaredRows !== lines.length)
           fail('misplaced table end');
         tableClosed = true;
         p++;
         break;
-      case 4:
+      case MARKER.containerEnd:
         if (!tableClosed) fail('container ended before table');
         if (segmentLength !== 0 && segmentLength !== p) fail('segment length mismatch');
         ended = true;
@@ -232,6 +287,13 @@ export async function decodeStxl(data: Buffer, limits: DecodeLimits = DEFAULT_LI
   }
   if (!descriptor || !ended) fail('missing TLINE descriptor or end marker');
   if (declaredRows !== undefined && declaredRows !== lines.length) fail('declared line count mismatch');
+  return lines;
+}
+
+/** Decode the verified stored-TLINE profile; returned lines retain ITF formatting codes. */
+export async function decodeStxl(data: Buffer, limits: DecodeLimits = DEFAULT_LIMITS): Promise<DecodedText> {
+  const { version, codePage, compressed, compressedTrailingBytes, payload } = await unpackCluster(data, limits);
+  const lines = parseTlinePayload(payload, codePage, limits);
   return {
     version,
     codePage,

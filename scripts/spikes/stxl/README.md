@@ -8,7 +8,52 @@ Verified profile: **FF06 / code page 4103 / little-endian / flat TLINE**, compre
 uncompressed EXPORT data. Other versions/code pages are rejected. It reads stored text lines;
 it does not implement the full semantics of `READ_TEXT` or render SAPscript/SmartForms.
 
-See [research and live evidence](../../../docs/research/2026-10-17-stxl-typescript-spike.md).
+See [research and live evidence](../../../docs/research/2026-10-17-stxl-typescript-spike.md),
+[READ_TEXT semantics](../../../docs/research/2026-10-17-stxl-read-text-semantics.md), and
+[use cases and discovery guidance](../../../docs/research/2026-10-17-stxl-use-cases.md).
+
+## Usable stored-text workflow
+
+`texts.ts` provides discovery, single reads, ordered batches, and phrase search over supplied keys.
+It uses the existing **data-preview gate with free SQL disabled**. It checks the configured object,
+ID, language, and default persistence handler; distinguishes missing headers from valid empty texts;
+and follows up to eight same-language references stored in STXH. Results contain the requested and
+resolved keys, root stored header, reference path, ITF lines, and explicit warnings/errors.
+
+After configuring the environment described below:
+
+```sh
+npx tsx scripts/spikes/stxl/texts.ts discover --object TEXT --prefix Z_ --language E
+npx tsx scripts/spikes/stxl/texts.ts read --object TEXT --name Z_EXAMPLE --id ST --language E
+npx tsx scripts/spikes/stxl/texts.ts batch --keys /private/text-keys.json
+npx tsx scripts/spikes/stxl/texts.ts search --keys /private/text-keys.json --phrase 'delivery instructions'
+```
+
+The key file is a JSON array, for example:
+
+```json
+[{"TDOBJECT":"TEXT","TDNAME":"Z_EXAMPLE","TDID":"ST","TDSPRAS":"E"}]
+```
+
+Use exact keys discovered in your system. `E`/`D` are internal SAP language keys; `EN`/`DE` are
+rejected. Leading/internal spaces matter. Prefixes are literal, including `%`, `_`, and `#`.
+Discovery returns at most 50 headers and a `more` flag; narrow the prefix when it is true. It does
+not provide stable pagination. Batches accept 1–25 keys and preserve order and duplicates. Search
+is case-sensitive, scans only that supplied batch, and returns at most 50 matching lines.
+
+Outputs are saved privately as `<label>-texts-<command>.json`; terminal output contains status only.
+The session shares the caller's response/admission budget, uses a 60-second timeout and a 120-query
+cap, and keeps the default 2 MiB cumulative response allowance. Those bounds may stop a batch before
+25 keys, particularly for large texts. Decoded batch output is also limited to 2 MiB/10,000 lines.
+Header and cluster rereads detect observed changes; `snapshotGuaranteed: false` remains explicit.
+
+This is a manual CLI/library spike, not a registered MCP tool. It rejects custom persistence,
+legacy ITCRF reference containers, and non-ITF/STXB text. Memory, archives, upgrade stores,
+SAPscript INCLUDE expansion, and rendering remain outside the contract.
+
+Code entry points are deliberately separate: `text-key.ts` validates identities,
+`adt-text-source.ts` handles guarded extraction/session budgets, `stored-text.ts` handles semantics,
+`decoder.ts` parses binary containers, and `texts.ts` handles the CLI. No reader executes ABAP.
 
 ## Offline validation
 
@@ -16,7 +61,7 @@ Use the repository's supported Node version; this investigation used Node 24.19.
 
 ```sh
 npm ci
-npx vitest run tests/unit/spikes/stxl.test.ts
+npx vitest run tests/unit/spikes
 npm run typecheck
 ```
 
@@ -24,6 +69,8 @@ npm run typecheck
 750, 758, and 816. Expected SHA-256 values come from the independently returned ABAP TLINE
 table, normalized by removing fixed-width ASCII space padding. Small plain fixtures are also
 included. The ABAP generator asserts kernel IMPORT round-trip equality before returning data.
+The semantic fixtures separately preserve synthetic native READ_TEXT results on 758/816 for
+normal, blank, empty, missing, referenced, and non-ITF texts.
 
 ## Live reproduction
 
@@ -41,18 +88,20 @@ STXL_ALLOW_HELPERS=true npx tsx scripts/spikes/stxl/unicode-edges.ts
 STXL_ALLOW_HELPERS=true npx tsx scripts/spikes/stxl/corpus.ts
 STXL_ALLOW_HELPERS=true STXL_CORPUS_LANGUAGE=E npx tsx scripts/spikes/stxl/corpus.ts
 STXL_ALLOW_HELPERS=true npx tsx scripts/spikes/stxl/roundtrip.ts
+STXL_ALLOW_HELPERS=true npx tsx scripts/spikes/stxl/semantics-live.ts
 ```
 
 `probe.ts` reads STXL through ADT. Set `STXL_PREVIEW_MODE=ddic` to check the alternative DDIC
 preview endpoint. The isolated client enables data preview; it does not change a deployed MCP
 server's settings. `reader.ts` itself never changes a caller's safety configuration.
 
-To read one existing stored text with no helper writes:
+The original low-level decoder probe remains available for exact STXL extraction without header
+semantics. Prefer `texts.ts` above for a complete classic stored-text read:
 
 ```sh
 export STXL_TEXT_KEY='{"TDOBJECT":"TEXT","TDNAME":"YOUR_TEXT","TDID":"ST","TDSPRAS":"E"}'
 npx tsx scripts/spikes/stxl/read-text.ts
-# Explicit alternative when the SQL space workaround is needed; requires free-SQL authorization:
+# Historical research alternative; the newer texts.ts handles these keys through the data gate:
 STXL_ALLOW_FREE_SQL=true STXL_QUERY_ROUTE=sql npx tsx scripts/spikes/stxl/read-text.ts
 ```
 
@@ -63,6 +112,8 @@ They create, activate, execute, and delete uniquely named `$TMP` classes. `round
 creates one unique synthetic standard text, compares its 37 STXL chunks with the oracle, then
 deletes it and verifies absence from STXH/STXL. This write capability belongs only to test
 setup/cleanup. The candidate reader is read-only.
+`semantics-live.ts` creates unique synthetic texts, compares native READ_TEXT/READ_TEXT_TABLE with
+the TypeScript pipeline, then deletes its fixture keys and verifies absence from STXH/STXL/STXB.
 
 On the tested 750 system the data-preview endpoints returned 404. Kernel validation still works:
 
@@ -94,11 +145,9 @@ oracle (`STXL_REUSE_ORACLE=true`) is an explicit test convenience, not a product
   with `wellFormedUnicode: false`. Use JSON serialization to retain these units; ordinary UTF-8
   encoding of the raw string would replace them. `unicode-edges.ts` checks raw TLINE bytes against
   kernel IMPORT, including NUL, U+FFFF, trailing tabs and non-ASCII spaces.
-- SAP 816's SQL-line CONDENSE changes repeated spaces inside literal keys. Ordinary exact-key
-  queries can therefore miss a stored text. The spike does not silently broaden its selection.
-  `readStoredTextSql` in `sql-reader.ts` is an explicit alternative requiring the existing free-SQL
-  opt-in. It reconstructs gaps with `CONCAT_WITH_SPACE` and recovered the affected text on both
-  758 and 816. It never changes client safety settings or automatically replaces a failed read.
+- SAP 816's SQL-line CONDENSE changes repeated spaces inside ordinary quoted keys. The new adapter
+  opts into a literal-preserving `CONCAT_WITH_SPACE` encoding in the guarded table-query builder;
+  both 758 and 816 pass with free SQL disabled. Existing callers retain their default SQL shape.
 - Production integration must retain data scope, table blocklists, per-user identity, shared
   response/time budgets, and audit behavior. The public extension facade currently does not
   expose the guarded `runTableQuery` method.

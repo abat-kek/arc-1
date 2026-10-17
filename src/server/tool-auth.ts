@@ -1,5 +1,5 @@
 import { getActionPolicy, hasRequiredScope } from '../authz/policy.js';
-import { pruneQueryDefinition } from '../handlers/long-text-tool.js';
+import { pruneQueryDefinition } from '../handlers/query-tool.js';
 import type { ToolDefinition } from '../handlers/tools.js';
 import { isActionDenied } from './deny-actions.js';
 

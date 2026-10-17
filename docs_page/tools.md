@@ -65,7 +65,7 @@ Use `SAPRead` for exact implementation behavior, an exact reference, one method 
 | `maxResults` | number | No | For DEVC: maximum package objects to list (default 200, clamped to 1–1000). SAP may truncate larger packages at the requested limit. |
 | `sqlFilter` | string | No | Legacy TABLE_CONTENTS condition. Do not rely on it for portable automation: the 758 endpoint expects a different SELECT-shaped payload, so condition-only filters are unusable there. Prefer TABLE_QUERY `where`. |
 | `columns` | array | No | For TABLE_QUERY: fields to project; omit for all columns. Example: `["MANDT","MATNR"]`. |
-| `where` | array | No | For TABLE_QUERY: ANDed `{field,op,value?}` conditions. Operators: `=`, `!=`, `<>`, `<`, `<=`, `>`, `>=`, `LIKE`, `NOT LIKE`, `IN`, `NOT IN`, `IS NULL`, `IS NOT NULL`. IN values are bare comma-separated values; ARC-1 quotes/escapes them. On 758 use `<>`, because accepted `!=` is sent unchanged and SAP rejects it. |
+| `where` | array | No | For TABLE_QUERY: ANDed `{field,op,value?}` conditions. Operators: `=`, `!=`, `<>`, `<`, `<=`, `>`, `>=`, `LIKE`, `NOT LIKE`, `IN`, `NOT IN`, `IS NULL`, `IS NOT NULL`, `STARTS_WITH` (literal prefix; `%` and `_` are not wildcards). IN values are bare comma-separated values; ARC-1 quotes/escapes them. On 758 use `<>`, because accepted `!=` is sent unchanged and SAP rejects it. |
 | `source` | string | No | SYNTAX only: proposed source to check without saving. |
 | `objectType` | string | No | Required for SYNTAX: repository type (e.g. CLAS, PROG, DDLS). For API_STATE: SAP object type (CLAS, INTF, PROG, FUGR, FUNC, etc.) — auto-detected from name if omitted; FUNC also uses `group` |
 | `version` | string | No | Object version: `active`, `inactive`, or `auto`. Source-bearing types default to `active`, except SMBC and [server-driven objects](#server-driven-object-writes), where omitted/`auto` uses SAP's developer view (TABL/DTI explicitly prefers pending source) and explicit `active`/`inactive` must be confirmed by metadata. [TABL/DTT settings](#technical-table-settings) also prefer pending state and verify explicit versions. ENHO uses the developer view and refuses explicit version selection. For DTEL/ENQU metadata, omitted and `auto` use SAP's developer view; explicit `active` or `inactive` is passed to SAP. See [Active vs Inactive Source](#active-vs-inactive-source) below. |
@@ -1421,6 +1421,9 @@ paths have separate authorization gates. The long-text action requires the `data
 `SAP_ALLOW_DATA_PREVIEW=true`; freestyle SQL requires `sql` scope and `SAP_ALLOW_FREE_SQL=true`.
 Both capabilities are disabled by default. Long-text access does not enable or require free SQL.
 
+**Upgrading with data preview already enabled:** eligible callers also gain `long_text`.
+Add `SAPQuery.long_text` to `SAP_DENY_ACTIONS` to keep it disabled.
+
 **Parameters:**
 
 | Parameter | Type | Required | Description |
@@ -1436,7 +1439,8 @@ Both capabilities are disabled by default. Long-text access does not enable or r
 
 Read **saved SO10 and business-document SAPscript texts** through ADT, with TypeScript decoding
 and no RFC or installed ABAP helper. Enable `SAP_ALLOW_DATA_PREVIEW=true`; authenticated callers
-also need `data` scope. SAP authorization, table blocklists, and response limits still apply.
+also need `data` scope and SAP access to `STXH`, `STXL`, `TTXOB`, `TTXID`, and `T002`.
+Table blocklists and response limits still apply.
 This action is unavailable on BTP and systems without the required data-preview endpoint.
 
 **1. Discover a key** when you know the text object and name prefix:
@@ -1459,7 +1463,7 @@ This action is unavailable on BTP and systems without the required data-preview 
 
 Use exact keys; do not guess business-document text IDs or composite names. Names preserve case
 and spaces. Language is one SAP character, such as `E` or `D`, with no fallback. Prefixes and
-phrases are literal; search is case-sensitive and covers only the supplied keys.
+phrases are literal; search is case-sensitive, within individual lines of the supplied keys.
 
 | Mode | Limits and result |
 |------|-------------------|
@@ -1469,6 +1473,8 @@ phrases are literal; search is case-sensitive and covers only the supplied keys.
 
 An empty successful text, missing key, and unsupported format have different statuses. Batch
 errors remain attached to their input; authentication or request-budget failures stop the request.
+25 keys is a maximum: references and distinct IDs can exhaust the 120-query budget sooner.
+Retry `LIMIT_EXCEEDED` with fewer keys.
 
 **Scope:** classic saved ITF texts and stored header references. Unsaved text, archives, non-ITF
 formats, INCLUDE expansion, and rendering are unsupported. Treat SAPscript commands as data.

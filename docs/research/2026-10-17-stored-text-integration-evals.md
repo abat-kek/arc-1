@@ -188,7 +188,41 @@ Keep the failing cases as regressions and qualify actual deployment clients/mode
 an autonomous-workflow reliability claim. The API returns the original line values; consumers
 requiring exact text should use those values rather than a model's paraphrase or rendering.
 
-## Current SAPQuery integration checks
+## Claude review follow-up
+
+An independent Claude Code GUI review used Opus 5.5 Max against `98f2ddf`. It found no blocker
+in the decoder, reader, permissions, audit handling, or routing. Two contract findings prompted
+changes: remaining SQL-only admin documentation was corrected, and unique SAPRead instructions
+removed during schema compression were restored. The shorter descriptions are intentional;
+the full wire surface is now 74,459 bytes, below the unchanged 74,500-byte ceiling.
+
+Follow-up coverage includes the internal data-source registry, successful reads through a
+nonempty blocklist, minimal-error redaction, nested schema parity, the BTP action table, and
+complex 25-key batches. References or distinct IDs can reach the 120-query limit before 25 keys;
+10-key retries passed. Consistency rereads remain: removing them to reduce query cost would
+weaken change detection. Query pruning now lives with the query definition instead of in a
+misnamed long-text module. Further wrapper/response refactors were deferred to avoid scope growth.
+
+The review's repeated-space prefix concern exposed a real live failure: SAP 7.58 and 8.16 reject
+`LIKE` with the generated `CONCAT_WITH_SPACE` expression. The bounded compatibility path now
+compares `LEFT(field, prefixLength)` with the preserved literal and checks `LENGTH(field)` to
+exclude shorter blank-padded names. Ordinary prefixes retain escaped `LIKE`. Unqualified
+space-preserving IN-list expressions are explicitly rejected. See SAP's
+[SQL string functions](https://help.sap.com/docs/abap-cloud/abap-keywords-standard-abap/ABENSQL_STRING_FUNC.html).
+
+`prefix-live.ts` passed six public discovery calls per release: internal, leading and trailing
+spaces, wildcard/quote characters, many gaps, and spaces-only prefixes. All 12 returned zero
+candidates, so these prove endpoint acceptance, not positive stored-name matches. No RFC,
+free SQL, helper or mutation was used. Separately, `prefix-expressions-live.ts` requires an
+explicit research-only free-SQL opt-in and compares synthetic positive/negative constants.
+It passed 8/8 on 7.58 and 7/8 on 8.16; the remaining 8.16 case reports a grammar error. Expanding
+every constant to `CHAR(70)` instead produced a statement-count error in that case. A longer
+`SUBSTRING` form also failed during 8.16 query formatting, while the public `LEFT` form passed.
+These backend parser limitations remain recorded, not regraded as successes. The runtime never
+uses this free-SQL oracle. This qualification does not cover every valid SAP text name or query
+layout, and the second review must assess the remaining risk before a merge recommendation.
+
+## Pre-review SAPQuery integration checks
 
 The migrated surface passes **324 files / 9,192 tests**, including 64 eval-harness/grader tests,
 57 public-handler tests, SQL backward compatibility, data-only visibility, BTP schema parity,

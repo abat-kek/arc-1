@@ -158,7 +158,7 @@ export async function handleSAPQuery(
   args: Record<string, unknown>,
   minimalErrors: boolean,
 ): Promise<ToolResult> {
-  if (args.action === 'long_text') return handleLongText(client, args.longText);
+  if (args.action === 'long_text') return handleLongText(client, args.longText, minimalErrors);
   const sql = String(args.sql ?? '');
   const maxRows = Number(args.maxRows ?? 100);
   const effectiveMaxRows = clampPreviewRows(maxRows);

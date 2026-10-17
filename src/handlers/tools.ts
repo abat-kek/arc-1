@@ -92,7 +92,7 @@ function isBtpMode(config: ServerConfig): boolean {
 const SAPREAD_DESC_ONPREM =
   'Read SAP ABAP source, metadata and syntax results. ' +
   'For source purpose, explanations, specs, reviews or pre-change context, prefer SAPContext first. DDIC metadata: omit format (default text); structured is CLAS-only for ordinary reads. ' +
-  'TABLE_QUERY: structured multi-column filters; needs data preview. TABLE_CONTENTS supports a single-column filter. ' +
+  'TABLE_QUERY: multi-column filters, data preview required; CDS needs SAP_BASIS 752+. TABLE_CONTENTS: single-column filter. INACTIVE_OBJECTS: no name. TABL/DTT: technical settings. ' +
   'SYNTAX: read-only SAP check (objectType+name, optional source for unsaved text). CLAS: method="*" for signatures, method="NAME" for one body, or grep. Global class declaration/implementation: MAIN (omit include). definitions/implementations contain local helpers.';
 
 const SAPREAD_DESC_BTP =
@@ -397,7 +397,7 @@ export function getToolDefinitions(
             description:
               'Repository or metadata type. TABL includes structures. KTD aliases SKTD; MESSAGES aliases MSAG. ' +
               (btp ? '' : 'FTG2 aliases FEATURE_TOGGLE. ') +
-              'SYNTAX requires objectType+name. Server-driven objects are discovery-gated. TABL/DTI index names use TABLE~INDEX. ' +
+              'SYNTAX requires objectType+name. Server-driven: discovery-gated XML metadata, AFF JSON source; DTSC/DSFD/DTDC/DRTY use DDL text. ENQU: JSON. TABL/DTI: TABLE~INDEX, prefers pending JSON. ' +
               'DESD external schema; EVTB/EVTO event binding/object; CSNM CSN model; COTA communication target; DTSC/DTDC static/dynamic cache; DSFD scalar function; UIAD launchpad descriptor; DRTY CDS type; APLO log object; SAJC/SAJT job catalog/template.',
           },
           name: { type: 'string', description: 'Object name (e.g., ZTEST_PROGRAM, ZCL_ORDER, MARA)' },
@@ -540,8 +540,8 @@ export function getToolDefinitions(
             type: 'array',
             description:
               'For TABLE_QUERY: structured WHERE conditions, ANDed together. Each item: {field, op, value?}. ' +
-              'Ops: =, <>, <, <=, >, >=, LIKE, NOT LIKE, IN, NOT IN, IS NULL, IS NOT NULL; use <> because 758 rejects !=. ' +
-              'For IN/NOT IN: use bare comma-separated values; do NOT quote them. ARC-1 quotes and escapes values, e.g. "261,262". No subqueries. ' +
+              'Ops: =, <>, <, <=, >, >=, LIKE, NOT LIKE, IN, NOT IN, IS NULL, IS NOT NULL; STARTS_WITH: literal prefix. Use <>; 758 rejects !=. ' +
+              'IN/NOT IN: bare comma-separated values, e.g. "261,262". ARC-1 quotes/escapes them; no subqueries. ' +
               'Example: [{"field":"MATNR","op":"=","value":"300006888"},{"field":"BUDAT_MKPF","op":">=","value":"20250101"}].',
             items: {
               type: 'object',

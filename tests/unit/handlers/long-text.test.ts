@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AdtApiError } from '../../../src/adt/errors.js';
 import { defaultSafetyConfig } from '../../../src/adt/safety.js';
-import { LongTextInputSchema } from '../../../src/handlers/long-text-input.js';
+import { LONG_TEXT_PROPERTY, LongTextInputSchema } from '../../../src/handlers/long-text-input.js';
 import { DEFAULT_CONFIG } from '../../../src/server/types.js';
 import { createLongTextFixture, type FixtureTextKey } from '../../helpers/long-text-fixture.js';
 import { AdtClient, mockFetch } from './setup-undici-mock.js';
@@ -66,6 +66,30 @@ afterEach(() => {
 
 describe('SAPQuery long_text nested input contract', () => {
   const key = { object: 'TEXT', name: '  ZÄ  Hinweis', id: 'ST', language: 'E' };
+  it('keeps nested wire properties, key requirements, modes and limits aligned with runtime validation', () => {
+    const shape = LongTextInputSchema.out.shape;
+    expect(Object.keys(LONG_TEXT_PROPERTY.properties).sort()).toEqual(Object.keys(shape).sort());
+    expect(LONG_TEXT_PROPERTY.properties.mode.enum).toEqual(shape.mode.options);
+    const wireKey = LONG_TEXT_PROPERTY.properties.keys.items;
+    expect(Object.keys(wireKey.properties).sort()).toEqual(Object.keys(shape.keys.unwrap().element.shape).sort());
+    expect(wireKey.required.toSorted()).toEqual(Object.keys(wireKey.properties).sort());
+    for (const [field, property] of Object.entries(wireKey.properties)) {
+      const read = (value: string) => ({ mode: 'read', keys: [{ ...key, [field]: value }] });
+      expect(LongTextInputSchema.safeParse(read('X'.repeat(property.maxLength))).success).toBe(true);
+      expect(LongTextInputSchema.safeParse(read('X'.repeat(property.maxLength + 1))).success).toBe(false);
+      expect(LongTextInputSchema.safeParse(read('')).success).toBe(false);
+      const missing = { ...key } as Record<string, string>;
+      delete missing[field];
+      expect(LongTextInputSchema.safeParse({ mode: 'read', keys: [missing] }).success).toBe(false);
+    }
+    const { maxItems } = LONG_TEXT_PROPERTY.properties.keys;
+    expect(LongTextInputSchema.safeParse({ mode: 'read', keys: Array(maxItems).fill(key) }).success).toBe(true);
+    expect(LongTextInputSchema.safeParse({ mode: 'read', keys: Array(maxItems + 1).fill(key) }).success).toBe(false);
+    const { maximum } = LONG_TEXT_PROPERTY.properties.limit;
+    const discover = { mode: 'discover', object: 'TEXT', namePrefix: 'Z' };
+    expect(LongTextInputSchema.safeParse({ ...discover, limit: maximum }).success).toBe(true);
+    expect(LongTextInputSchema.safeParse({ ...discover, limit: maximum + 1 }).success).toBe(false);
+  });
   it('accepts strict-client null padding only in optional control fields', () => {
     expect(
       LongTextInputSchema.parse({
@@ -110,6 +134,42 @@ describe('SAPQuery long_text nested input contract', () => {
 });
 
 describe('SAPQuery long_text public dispatch with real source orchestration and decoder', () => {
+  it.each(['references', 'distinct IDs'])('bounds a 25-key batch with %s and allows a smaller retry', async (kind) => {
+    const { client, fixture } = setup();
+    const header = fixture.tables.STXH.find((row) => row.TDNAME === fixture.keys.invoice.name)!;
+    const cluster = fixture.tables.STXL.find((row) => row.TDNAME === fixture.keys.invoice.name)!;
+    const keys = Array.from({ length: 25 }, (_, index) => {
+      const key = {
+        ...fixture.keys.invoice,
+        name: `Z_BATCH_${index}`,
+        id: kind === 'distinct IDs' ? `I${index}` : 'ST',
+      };
+      fixture.tables.STXH.push({
+        ...header,
+        TDNAME: key.name,
+        TDID: key.id,
+        ...(kind === 'references'
+          ? { TDREF: 'X', TDREFOBJ: 'TEXT', TDREFNAME: fixture.keys.invoice.name, TDREFID: 'ST' }
+          : {}),
+      });
+      if (kind === 'distinct IDs') {
+        fixture.tables.TTXID.push({ TDOBJECT: 'TEXT', TDID: key.id, HANDLER_CLASS: '' });
+        fixture.tables.STXL.push({ ...cluster, TDNAME: key.name, TDID: key.id });
+      }
+      return key;
+    });
+    const result = await handleToolCall(client, config, 'SAPQuery', readArgs(keys), auth(['data']));
+    expect(result.isError).toBe(true);
+    expect(JSON.parse(result.content[0]!.text)).toMatchObject({ code: 'LIMIT_EXCEEDED' });
+    expect(fixture.calls).toHaveLength(120);
+    fixture.calls.length = 0;
+    const retried = await payload(
+      await handleToolCall(client, config, 'SAPQuery', readArgs(keys.slice(0, 10)), auth(['data'])),
+    );
+    expect(retried.items).toHaveLength(10);
+    expect(retried.items.every((item) => item.status === 'ok')).toBe(true);
+    expect(fixture.calls.length).toBeLessThan(120);
+  });
   it('discovers reusable lower-case keys and reads the selected key without guessing', async () => {
     const { client, fixture } = setup();
     const found = await payload(

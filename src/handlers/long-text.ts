@@ -1,6 +1,8 @@
 /** Model-facing projection of the qualified classic store; binary and codec details stay internal. */
 import type { AdtClient } from '../adt/client.js';
+import { DataSourcePolicyError } from '../adt/data-source-policy.js';
 import { AdtApiError } from '../adt/errors.js';
+import { internalOperationDenial } from '../adt/internal-data-operations.js';
 import { checkOperation, OperationType } from '../adt/safety.js';
 import {
   type ClassicTextBatchItem,
@@ -65,7 +67,7 @@ function publicItem(item: ClassicTextBatchItem) {
   };
 }
 
-export async function handleLongText(client: AdtClient, raw: unknown): Promise<ToolResult> {
+export async function handleLongText(client: AdtClient, raw: unknown, minimalErrors: boolean): Promise<ToolResult> {
   checkOperation(client.safety, OperationType.Query, 'ReadLongText');
   if (isBtpSystem())
     return errorResult(
@@ -122,6 +124,8 @@ export async function handleLongText(client: AdtClient, raw: unknown): Promise<T
       );
     });
   } catch (error) {
+    if (error instanceof DataSourcePolicyError)
+      return errorResult(internalOperationDenial('stored_text', error, minimalErrors));
     if (error instanceof TextReadError)
       return errorResult(toolJson(failure({ code: error.code, message: error.message })));
     if (
@@ -132,7 +136,7 @@ export async function handleLongText(client: AdtClient, raw: unknown): Promise<T
       return errorResult(
         toolJson({
           code: 'UNSUPPORTED_PLATFORM',
-          message: 'The required ADT data-preview endpoint is unavailable.',
+          message: "This system's ADT data preview does not support the stored-text query (HTTP 404).",
           hint: 'No RFC/helper fallback is used. Check target capability; do not interpret this as a missing text.',
         }),
       );

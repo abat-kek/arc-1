@@ -89,7 +89,7 @@ sequence.
 | [FEAT-05](#feat-05) | Safe rename and extract refactorings | P3 | L | Needs research | Developer workflow |
 | [FEAT-21](#feat-21) | ABAP F1 documentation | P3 | S | Needs research | Developer workflow |
 | [FEAT-86](#feat-86) | Broader historical transport coverage | P2 | L | Needs research | Developer workflow |
-| [FEAT-88](#feat-88) | Current-caller policy explanations | P2 | M | Ready | Safety / UX |
+| [FEAT-88](#feat-88) | Action-specific policy prerequisites | P3 | M | Needs research | Safety / UX |
 | [FEAT-23](#feat-23) | Recursive program include reading | P2 | M | Needs research | Developer workflow |
 | [FEAT-30](#feat-30) | ABAP cleaner integration | P3 | L | Revisit on trigger | Developer workflow |
 | [FEAT-66](#feat-66) | Interactive confirmation for destructive actions | P3 | L | Blocked | Safety / UX |
@@ -492,20 +492,20 @@ unavailable evidence. Whole-object PROG/CLAS reviews also retain non-source scop
 historical adapters are verified; a 404 alone remains insufficient.
 
 <a id="feat-88"></a>
-### FEAT-88 — Current-caller policy explanations
+### FEAT-88 — Action-specific policy prerequisites
 
-- **Priority / effort / status:** P2 / M / Ready
+- **Priority / effort / status:** P3 / M / Needs research
 - **Category:** Safety / UX
 
-**Idea.** Explain why a proposed operation is denied, allowed by ARC-1, or still unresolved.
+**Remaining gap.** Current-caller `SAPDiagnose.explain_policy` covers scope, deny rules, configured
+and effective safety, selected-target grants/ceiling, cached capabilities and simple existing-object
+packages. Creation, structural ownership, hierarchy-dependent package rules and SQL lineage remain
+explicitly unresolved; execution keeps its normal fail-closed guards.
 
-**Why it remains.** A local prototype reuses evaluators but only resolves selected existing-object
-package checks. Creation, structural ownership and SQL lineage need action-specific treatment.
-No explanation action is included in the transport-review change.
-
-**Resume with.** Review parity with dispatch/safety/target/package enforcement, avoid hidden inventory
-and keep SAP authorization unverified. Never execute a proposed mutation to test permissions.
-[POL-01 acceptance](https://github.com/arc-mcp/arc-1/blob/main/docs/research/adt-vscode-1.2/evidence/ARC1_RESEARCH_HANDOFF.md#pol-01--explain-the-current-callers-effective-policy).
+**Resume with.** Repeated real troubleshooting cases where one of those unknowns prevents a useful
+explanation. Reuse the action's actual prerequisite evaluator under bounded, authorized reads; do
+not duplicate an approximate policy engine or run a mutation to test permission. No broader scope
+or SAP authorization certification is planned. [Current contract](authorization.md#explain-a-proposed-operation).
 
 <a id="feat-23"></a>
 ### FEAT-23 — Recursive program include reading

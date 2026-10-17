@@ -659,6 +659,43 @@ Assigning under only `sap.default` while logging in via another origin is one ca
 
 ---
 
+## Explain a proposed operation
+
+In builds containing this feature, ask for the current caller's ARC-1 checks before an operation:
+
+```json
+{
+  "action": "explain_policy",
+  "proposedTool": "SAPWrite",
+  "proposedArgs": { "action": "delete", "type": "PROG", "name": "ZREPORT" }
+}
+```
+
+Send this to `SAPDiagnose`. The proposed operation is **never executed**. The explanation itself
+requires `read` scope and respects `SAP_DENY_ACTIONS`. It uses the already selected connection;
+on aggregate endpoints, supply that call's normal outer `target`. It cannot inspect another user
+or enumerate their target grants. Proposed arguments are limited to 64 KiB.
+
+| Check | What it establishes |
+|---|---|
+| `scope` / `denyRule` | Required role scope and matching server action denial |
+| `serverCeiling` / `effectiveSafety` | Configured safety gates and the caller's further restrictions |
+| `targetGrant` / `targetCeiling` | Selected-target grant and the multi-target mutation-free boundary |
+| `feature` | Cached capability evidence, when the action declares a feature gate |
+| `package` | Actual metadata package for supported simple updates/deletes, never the supplied package |
+| `arguments` / `operationPrerequisites` / `dataSources` | Schema validity and checks that still require execution-time evidence |
+
+`denied` means at least one evaluated guard blocks the proposal. `unresolved` means evidence is
+missing or prerequisites remain. `allowed` means only that the evaluated ARC-1 checks passed;
+SAP authorization, object existence, readiness and future execution are not certified. Every
+execution repeats its normal checks.
+
+Package resolution reads metadata only after local gates pass and only when a package restriction
+exists. This first version supports simple `SAPWrite update/delete` for PROG, CLAS, INTF, DDLS,
+DOMA, DTEL, TABL and TTYP. Creation, contained objects, hierarchy-dependent rules and SQL lineage
+remain unresolved. Feature evidence does not test SAP authority. No permission-testing mutation,
+SQL query or extra discovery probe is performed.
+
 ## References
 
 - [Configuration Reference](configuration-reference.md) - every flag and env var

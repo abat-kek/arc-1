@@ -2056,7 +2056,9 @@ administrators can disable them with `SAP_DENY_ACTIONS`.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `action` | string | Yes | `syntax`, `unittest`, `unittest_ci`, `atc`, `atc_ci`, `atc_variants`, `cds_testcases`, `dumps`, `traces`, `trace_start`, `trace_requests`, `trace_cancel`, `system_messages`, `gateway_errors`, `object_state`, `quickfix`, `apply_quickfix`, `odata_perf`, `cds_sql`, `sql_trace_state`, `set_sql_trace_state`, `sql_trace_directory`, or `authorization_trace` |
+| `action` | string | Yes | `explain_policy`, `syntax`, `unittest`, `unittest_ci`, `atc`, `atc_ci`, `atc_variants`, `cds_testcases`, `dumps`, `traces`, `trace_start`, `trace_requests`, `trace_cancel`, `system_messages`, `gateway_errors`, `object_state`, `quickfix`, `apply_quickfix`, `odata_perf`, `cds_sql`, `sql_trace_state`, `set_sql_trace_state`, `sql_trace_directory`, or `authorization_trace` |
+| `proposedTool` | string | For explain_policy | Built-in intent tool to explain on the current caller/connection |
+| `proposedArgs` | object | For explain_policy | Proposed arguments, at most 64 KiB; never executed. [Result states and limitations](authorization.md#explain-a-proposed-operation) |
 | `name` | string | No | Object or package name (required for syntax/unittest/object_state/quickfix/apply_quickfix, and atc without objects; the CDS entity / DDLS source name for `cds_testcases` and `cds_sql`) |
 | `objects` | array | No | ATC only: 1–20 `{type,name}` entries instead of top-level `name`, `type`, or `url`. Supported: `CLAS`, `INTF`, `PROG`, `FUGR`, `DDLS`, `DCLS`, `BDEF`, `DDLX`, `SRVD`, `SRVB`, `TABL`, `DTEL`, `DOMA`. `TABL` includes tables and structures (`TABL/DT` and `TABL/DS` aliases). Names and type aliases are normalized; duplicates execute once. No package expansion or per-item system selection. `PROG` is on-premises only. |
 | `url` | string | No | For `odata_perf`: the host-relative OData path to probe (from the Fiori app's Network tab), e.g. `/sap/opu/odata4/sap/.../Entity?$filter=...`. Must be a path on the SAP system ARC-1 connects to — absolute URLs are rejected. |

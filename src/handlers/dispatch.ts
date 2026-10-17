@@ -51,6 +51,7 @@ import { handleSAPLint } from './lint.js';
 import { handleSAPManage } from './manage.js';
 import { handleSAPNavigate } from './navigate.js';
 import { canonicalTablType, normalizeObjectType, normalizeTypeArgsForValidation } from './object-types.js';
+import { explainPolicy } from './policy-explanation.js';
 import { handleSAPQuery } from './query.js';
 import { handleSAPRead } from './read.js';
 import { getToolSchema } from './schemas.js';
@@ -654,7 +655,11 @@ export function getToolRegistry(): ToolRegistry {
       : handleSAPNavigate(ctx.client, ctx.args, ctx.config.minimalErrors),
   );
   reg('SAPLint', (ctx) => handleSAPLint(ctx.client, ctx.args, ctx.config));
-  reg('SAPDiagnose', (ctx) => handleSAPDiagnose(ctx.client, ctx.args, ctx.config.minimalErrors));
+  reg('SAPDiagnose', (ctx) =>
+    ctx.args.action === 'explain_policy'
+      ? explainPolicy(ctx.client, ctx.config, ctx.args, ctx.authInfo)
+      : handleSAPDiagnose(ctx.client, ctx.args, ctx.config.minimalErrors),
+  );
   reg('SAPTransport', (ctx) => handleSAPTransport(ctx.client, ctx.args, ctx.config));
   reg('SAPGit', (ctx) => handleSAPGit(ctx.client, ctx.args, ctx.authInfo));
   reg('SAPContext', (ctx) => handleSAPContext(ctx.client, ctx.args, ctx.cache, ctx.cacheSecurity));

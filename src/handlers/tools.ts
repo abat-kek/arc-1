@@ -1133,6 +1133,7 @@ export function getToolDefinitions(
       name: 'SAPDiagnose',
       description:
         'ABAP diagnostics and runtime analysis. Actions:\n' +
+        '- "explain_policy": explain current caller gates for built-in proposedTool/proposedArgs (64 KiB max) on this connection; never executes the proposal or certifies SAP authorization.\n' +
         '- "syntax": compatibility check; when available prefer SAPRead(type="SYNTAX", objectType, name, version?, source?).\n' +
         '- "unittest": harmless ABAP Unit for CLAS/PROG/FUGR or DEVC (exact; includeSubpackages recurses).\n' +
         '- "unittest_ci": harmless package tests with source reconciliation; empty/incomplete runs fail.\n' +
@@ -1159,6 +1160,7 @@ export function getToolDefinitions(
             type: 'string',
             enum: [
               'syntax',
+              'explain_policy',
               'unittest',
               'unittest_ci',
               'atc',
@@ -1183,6 +1185,8 @@ export function getToolDefinitions(
               'authorization_trace',
             ],
           },
+          proposedTool: { type: 'string', minLength: 1, maxLength: 40 },
+          proposedArgs: { type: 'object' },
           name: {
             type: 'string',
             description: 'syntax/unittest/atc/object_state object name; cds_testcases/cds_sql CDS entity or DDLS name.',

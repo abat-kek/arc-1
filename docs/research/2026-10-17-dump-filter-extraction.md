@@ -37,6 +37,15 @@ constraints remain documented and unit-tested, but those actions were not model-
 Current full catalog: 74,420 bytes / approximately 18,605 tokens; BTP: 70,591 / 17,648.
 The optional unknown-datatype message improvement is deferred; unsupported types already fail closed.
 
+[Final Claude Opus 5.5 Max review](dump-filter-extraction/claude-final-review.md) of `027159e3`:
+**ready for a draft; no must-fix defects**. Its immutable export passed 915 focused tests in 14
+files, typecheck, lint, policy, budgets and strict docs. It reproduced the two fail-before cases
+and verified all outer/inner hashes and 24 manual classifications. The full-suite caveat remains.
+
+Review of the review: the optional claim that Llama "earlier" used `MESSAGE_TYPE_X` as an attribute
+is not supported by these two archived runs: the exploratory trace uses `runtimeError`, the
+corrected trace `MESSAGE_TYPE`. We retain the raw observations and do not adopt that extra claim.
+
 ## Live qualification
 
 The [final-code probe](dump-filter-extraction/evidence/live-290622c8.json) used `290622c8`,

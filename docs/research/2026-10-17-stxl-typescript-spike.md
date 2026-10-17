@@ -1,7 +1,8 @@
 # STXL long texts in TypeScript: feasibility spike
 
-Date: 2026-10-17. Base: ARC-1 1.6.0, `041a9e48`. Status: working research implementation,
-not an exposed MCP feature. Runtime implementation: TypeScript and Node's built-in zlib;
+Date: 2026-10-17. Base: ARC-1 1.6.0, `041a9e48`. Status: integrated as `SAPRead LONG_TEXT` in
+PR #1012; see the [production contract](../../docs_page/tools.md#stored-sapscript-long-texts).
+Runtime implementation: TypeScript and Node's built-in zlib;
 no RFC, Python, SAP SDK, or ABAP companion is required by the candidate reader.
 
 ## Decision
@@ -11,12 +12,12 @@ ADT queries return complete STXL binary cells on the tested 758 and 816 systems.
 SAP bit-framing adjustment, native `inflateRaw` decompresses those streams. A strict container
 parser recovers formatting codes and text lines exactly against independent SAP oracles.
 
-The follow-up now provides a usable manual **discover → read → batch → bounded phrase search**
+The follow-up provides a **discover → read → batch → bounded phrase search**
 workflow. It validates configured keys/default persistence, handles stored STXH references and
 empty texts, preserves duplicate batch requests, and detects observed header/chunk changes.
 Both 758 and 816 pass integrated comparisons with native READ_TEXT and READ_TEXT_TABLE.
 
-Keep it a spike until the production MCP integration is agreed. A classic stored-text reader is
+A classic stored-text reader is
 narrower than `READ_TEXT`: SAP's API also handles text memory, archives, legacy references, and
 other persistence modes. Decoding whichever STXL row happens to exist is insufficient.
 [SAP READ_TEXT documentation](https://help.sap.com/saphelp_snc70/helpdata/EN/d6/0db8c8494511d182b70000e829fbfe/content.htm?no_cache=true).
@@ -25,7 +26,7 @@ This can address the stored SO10/text portion of
 [#1000](https://github.com/arc-mcp/arc-1/issues/1000), which proposes a GET-only companion for
 SO10, SAPscript forms, and SmartForms. It does not decode form layouts or establish an STXFCONT
 contract. FEAT-76 concerns parameterized extension services; it is not already a native STXL
-decoder plan. FEAT-86 tracks the remaining native-reader qualification separately.
+decoder plan. FEAT-86 tracks broader persistence/profile qualification separately.
 The detailed [semantic investigation](2026-10-17-stxl-read-text-semantics.md) explains the API
 differences. [Use-case research](2026-10-17-stxl-use-cases.md) recommends business-document/master-data
 text reads first, followed by metadata discovery, SO10 lookup, and bounded phrase search. These
@@ -49,7 +50,7 @@ priorities are inferred from public requests, not measured search volumes.
 - The public open-rfc repository was checked for reusable compression work; no STXL/LZH decoder
   was found. It is not a dependency. No private open-rfc research or captures are copied here.
 
-The implementation and runnable probes are in
+The implementation is in `src/adt/stored-text/`; runnable research probes remain in
 [`scripts/spikes/stxl`](../../scripts/spikes/stxl/README.md). Only synthetic fixtures are committed.
 Existing text bytes, standard source, identities, and raw live responses remain in private local
 artifacts. An independent Claude Code Opus 5.5 Max research/review was completed through the GUI.
@@ -209,14 +210,14 @@ references are supported; legacy ITCRF references, archives, text memory, non-IT
 and alternate/upgrade persistence remain outside the contract. No ABAP Cloud / BTP system was
 qualified for this classic-table path.
 
-## Production follow-up
+## Production integration
 
-Promote the tested **classic stored long-text read**, exact key required. Keep the tested profile
-explicit and return unsupported-profile errors for everything else. Add a core client operation
-behind `data` scope and `allowDataPreview`, with both STXH/STXL blocklist checks, current-user SAP
-identity, a single cumulative response/time budget, and normal audit coverage. A `read`-only
-extension cannot silently gain table-data capability. The existing extension client facade does
-not expose `runTableQuery`, so this cannot simply be pasted into an extension today.
+The tested classic stored-text reader is exposed as `SAPRead(type="LONG_TEXT")`, with discovery,
+ordered batch reads, and bounded phrase search. It requires `data` scope and `allowDataPreview`,
+checks every table against existing blocklists, uses the current SAP identity and cumulative
+request budgets, and redacts business content/keys from audit sinks. It is hidden when data is
+disabled, scope/deny rules prohibit it, or BTP is selected/discovered. The implementation remains
+strict about its qualified profile and never falls back to RFC, free SQL, or helper installation.
 
 The manual adapter already shares the caller's cumulative response/admission scope, cancellation,
 and identity, checks every table through existing safety gates, and caps each session at 120
@@ -225,12 +226,13 @@ headers at 50 and search caps matches at 50. Large inputs can exhaust the existi
 before reaching these counts. Tests cover blocked tables, disabled data preview, cancellation,
 inherited scope, request limits, semantic failures, and response accounting.
 
-Before exposing it, add normal MCP dispatch/audit wiring and capability detection. Preserve honest
+Public dispatch passed discovery/read/batch/search on 758 and 816 with writes/free SQL disabled;
+750 returned an explicit unsupported-platform error for the missing preview endpoint. Preserve honest
 consistency and integrity claims: matching rereads are change detection, not a transaction snapshot;
 compressor trailers are bounded but not authenticated. Get independent fixtures before expanding
 versions/code pages or persistence. Keep the companion option in #1000 for broader form/API semantics.
 
-## Local validation
+## Earlier spike validation
 
 The stored-text focused suites have 128 tests: SAP golden fixtures, fixed-width text fidelity, malformed headers,
 unsupported profiles, truncation, output/line/input limits, decompression expansion, lone UTF-16
@@ -240,8 +242,9 @@ data-preview/free-SQL safety gates, header/reference semantics, discovery, cumul
 sanitized semantic goldens. Three additional core tests cover opt-in literal encoding and prefix
 escaping. The stricter final parser was also replayed against all 211 successful private corpus captures.
 
-Typecheck, build, lint, policy validation, and size/schema-budget checks pass. The full suite passes
+At the manual-spike checkpoint, typecheck, build, lint, policy validation, and size/schema-budget checks passed. The full suite passed
 with four workers: **317 files / 9,054 tests**. The initial phase's unconstrained run had four timing failures
 in existing CLI/shutdown subprocess tests; all 54 tests in those two files passed when rerun alone,
-and the subsequent full runs passed. No MCP tool-schema snapshot changed. Core changes are limited
-to the guarded query builder/client options described above; no new MCP operation is registered.
+and the subsequent full runs passed. That checkpoint changed no MCP tool-schema snapshot and registered
+no new operation. The later production `LONG_TEXT` integration changes the exposed schema; its final
+validation and model evidence are recorded in the [integration report](2026-10-17-stored-text-integration-evals.md).

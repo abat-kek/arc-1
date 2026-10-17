@@ -33,6 +33,7 @@ import { AdtClient, mockFetch } from './setup-undici-mock.js';
 function readArgs(type: string): Record<string, unknown> {
   const base: Record<string, unknown> = { type, name: 'ZARC1_X' };
   if (type === 'SYNTAX') return { type, objectType: 'CLAS', name: 'ZCL_TEST' };
+  if (type === 'LONG_TEXT') return { type, longText: { mode: 'discover', object: 'TEXT', namePrefix: 'Z_' } };
   if (type === 'VERSION_SOURCE') {
     base.versionUri = '/sap/bc/adt/programs/programs/ZTEST/source/main/versions/1/00000/content';
   }
@@ -45,7 +46,7 @@ const { resetCachedFeatures } = await import('../../../src/handlers/feature-cach
 
 // allowWrites registers SAPWrite (the BTP/onprem type matrix this file checks); the other gate
 // flags don't affect the type enums, so they're left at their defaults.
-const onpremFull: ServerConfig = onprem({ allowWrites: true });
+const onpremFull: ServerConfig = onprem({ allowWrites: true, allowDataPreview: true });
 const btpFull: ServerConfig = btp({ allowWrites: true });
 
 function typeEnum(config: ServerConfig, toolName: string): string[] {

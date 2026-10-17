@@ -1,6 +1,7 @@
 # STXL TypeScript spike
 
-Manual research code; it is not registered as an MCP tool or included in the npm runtime.
+Research scripts and compatibility exports for the production reader in `src/adt/stored-text/`.
+The MCP entry point is [SAPRead LONG_TEXT](../../../docs_page/tools.md#stored-sapscript-long-texts).
 The reader uses guarded ADT table queries, then a bounded TypeScript parser and Node's built-in
 zlib. It requires no RFC, SAP SDK, Python, AMDP, or installed ABAP companion.
 
@@ -47,13 +48,15 @@ cap, and keeps the default 2 MiB cumulative response allowance. Those bounds may
 25 keys, particularly for large texts. Decoded batch output is also limited to 2 MiB/10,000 lines.
 Header and cluster rereads detect observed changes; `snapshotGuaranteed: false` remains explicit.
 
-This is a manual CLI/library spike, not a registered MCP tool. It rejects custom persistence,
+The manual CLI remains useful for research; production MCP calls use `LONG_TEXT`. Both reject custom persistence,
 legacy ITCRF reference containers, and non-ITF/STXB text. Memory, archives, upgrade stores,
 SAPscript INCLUDE expansion, and rendering remain outside the contract.
 
-Code entry points are deliberately separate: `text-key.ts` validates identities,
-`adt-text-source.ts` handles guarded extraction/session budgets, `stored-text.ts` handles semantics,
-`decoder.ts` parses binary containers, and `texts.ts` handles the CLI. No reader executes ABAP.
+Production entry points are deliberately separate: `src/adt/stored-text/key.ts` validates identities,
+`source.ts` handles guarded extraction/session budgets, `reader.ts` handles semantics, and
+`decoder.ts` parses binary containers. The spike files re-export these modules; `texts.ts` handles
+the manual CLI. `integration-live.ts` verifies the public dispatch path with read-only requests.
+No reader executes ABAP.
 
 ## Offline validation
 

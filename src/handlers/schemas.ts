@@ -29,6 +29,7 @@ import { MAX_GREP_PATTERN_LENGTH } from '../context/grep.js';
 import { CI_PACKAGES_SCHEMA } from './diagnose-fields.js';
 import { sourcePreconditionError } from './editable-source.js';
 import { FUNCTION_PROCESSING_TYPES, FUNCTION_UPDATE_TASK_KINDS } from './function-processing.js';
+import { LongTextInputSchema, validateLongTextReadOptions } from './long-text-input.js';
 import { CLASS_WRITE_INCLUDES, KNOWN_BASE_TYPES } from './object-types.js';
 import { LiveRelationsInput, relationNumber } from './relation-input.js';
 import {
@@ -93,6 +94,7 @@ function validateSapReadInput(
   },
   ctx: { addIssue: (issue: { code: 'custom'; path: string[]; message: string }) => void },
 ): void {
+  validateLongTextReadOptions(input, ctx);
   if (input.type === 'SYNTAX') {
     for (const key of ['name', 'objectType'] as const) {
       if (!input[key]?.trim()) ctx.addIssue({ code: 'custom', path: [key], message: `SYNTAX requires ${key}.` });
@@ -244,6 +246,7 @@ const TableQueryWhereItemSchema = z.object({
 export const SAPReadSchema = z
   .object({
     type: z.enum(SAPREAD_TYPES_ONPREM),
+    longText: LongTextInputSchema.optional(),
     name: z.string().optional(),
     /** Set to "diff" for a unified source diff between two versions (uses from/to). */
     action: z.enum(['diff']).optional(),

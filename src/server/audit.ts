@@ -564,9 +564,24 @@ function redactPayloadValue(value: unknown): string {
   return '[REDACTED]';
 }
 
+/** Long-text keys and phrases are business data, including on requests rejected before validation. */
+function summarizeLongTextArgs(value: unknown): unknown {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return '[REDACTED stored-text parameters]';
+  const input = value as Record<string, unknown>;
+  const mode =
+    typeof input.mode === 'string' && ['discover', 'read', 'search'].includes(input.mode) ? input.mode : 'invalid';
+  // Accept our existing summary too: sanitizeArgs and the final sink redactor both run.
+  const keyCount = Array.isArray(input.keys) ? input.keys.length : input.keyCount;
+  return {
+    mode,
+    ...(typeof keyCount === 'number' && Number.isSafeInteger(keyCount) && keyCount >= 0 ? { keyCount } : {}),
+  };
+}
+
 function redactValue(key: string, value: unknown, state: RedactionState, depth: number, mode: RedactionMode): unknown {
   if (depth > MAX_REDACTION_DEPTH || state.remainingEntries <= 0) return REDACTION_LIMIT_MARKER;
   state.remainingEntries -= 1;
+  if (canonicalKey(key) === 'longtext') return summarizeLongTextArgs(value);
   if (isSensitiveKey(key)) return '[REDACTED]';
   if (mode === 'audit-event' && PAYLOAD_BODY_KEYS.has(canonicalKey(key))) {
     if (value == null) return value;
@@ -591,6 +606,19 @@ function redactValue(key: string, value: unknown, state: RedactionState, depth: 
     return result;
   }
   if (value && typeof value === 'object') {
+    const input = value as Record<string, unknown>;
+    const inputType = Array.isArray(input.type) && input.type.length === 1 ? input.type[0] : input.type;
+    if (typeof inputType === 'string' && /^LONG_TEXT$/iu.test(inputType)) {
+      // Include malformed invocations too: old-style top-level name/phrase fields must not
+      // become a business-data logging path before LONG_TEXT validation rejects them.
+      const params =
+        input.params && typeof input.params === 'object' ? (input.params as Record<string, unknown>) : undefined;
+      return {
+        type: 'LONG_TEXT',
+        ...(input.action === 'read' ? { action: 'read' } : {}),
+        longText: summarizeLongTextArgs(input.longText ?? params?.longText),
+      };
+    }
     if (state.seen.has(value)) return REDACTION_LIMIT_MARKER;
     state.seen.add(value);
     const result: Record<string, unknown> = {};

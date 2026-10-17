@@ -123,7 +123,8 @@ system-wide full-text index from a single read call.
 
 ## ARC-1 workflow recommendation
 
-Expose a small read flow, consistent with the spike's safety and scope constraints. These prompt
+The integrated [SAPRead LONG_TEXT](../../docs_page/tools.md#stored-sapscript-long-texts) implements
+discovery, ordered reads, and bounded phrase search. The broader business-oriented prompt
 examples use placeholders deliberately; they do not assume a customer PO text ID or universal
 TDNAME layout:
 
@@ -134,8 +135,8 @@ TDNAME layout:
    construction is unknown, return candidates or ask the user to select; do not invent an ID or
    append a guessed item number.
 2. **Read**: “Read the selected text for PO `<PO_NUMBER>` item `<ITEM_NUMBER>` in `<LANGUAGE>`.”
-   Pass the exact discovered tuple to a proposed
-   `SAPRead(type="STORED_TEXT", object, name, id, language, format?)`. Require the exact tuple;
+   Pass the exact discovered tuple to
+   `SAPRead(type="LONG_TEXT", longText={mode:"read",keys:[{object,name,id,language}]})`. Require the exact tuple;
    return an explicit unsupported profile/format status. Label it as stored text, not
    READ_TEXT-equivalent.
 3. **Batch**: “For these `<N>` PO keys, discover item text candidates in `<LANGUAGE>`, then read
@@ -150,9 +151,10 @@ TDNAME layout:
 
 For a classic ABAP caller, `SELECT_TEXT` returns matching `THEAD` headers and `READ_TEXT` reads a
 selected tuple with SAP's broader semantics. ARC-1's native stored reader can mirror the staged
-workflow over its guarded data path, with `TEXT_HEADERS`/`STORED_TEXT` as proposed names rather than
-existing MCP operations. The manual `texts.ts` spike now implements this staged workflow with
-bounded single/batch reads and literal phrase search; target-specific business-key presets remain proposed.
+workflow over its guarded data path. The final MCP contract uses `LONG_TEXT` with `discover`,
+`read`, or `search` modes; the earlier `TEXT_HEADERS`/`STORED_TEXT` names were proposals only.
+Target-specific business-key presets, customizing descriptions, and search context windows remain
+proposals; the current search returns matching ITF lines and exact keys.
 
 The discovery step and stored read should remain data-authorized, audited, and tied to the current
 SAP identity. Scope results to caller-provided document keys/filters, enforce result and cumulative

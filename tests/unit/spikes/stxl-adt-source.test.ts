@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
-import { withStoredTextSession } from '../../../scripts/spikes/stxl/adt-text-source.js';
-import type { StoredTextSource } from '../../../scripts/spikes/stxl/text-types.js';
 import { AdtClient } from '../../../src/adt/client.js';
 import { AdtApiError, AdtNetworkError, AdtResponseLimitError, AdtSafetyError } from '../../../src/adt/errors.js';
 import { defaultSafetyConfig } from '../../../src/adt/safety.js';
+import { withStoredTextSession } from '../../../src/adt/stored-text/source.js';
+import type { StoredTextSource } from '../../../src/adt/stored-text/types.js';
 import { getCurrentContext, requestContext } from '../../../src/server/context.js';
 
 const key = { TDOBJECT: 'TEXT', TDNAME: '  Z_TEXT', TDID: 'ST', TDSPRAS: 'E' };

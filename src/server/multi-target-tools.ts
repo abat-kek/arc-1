@@ -2,6 +2,7 @@
 
 import { isOperationAllowed, OperationType, type OperationTypeCode } from '../adt/safety.js';
 import { getActionPolicy, invocationPolicyKey } from '../authz/policy.js';
+import { pruneLongTextDefinition } from '../handlers/long-text-tool.js';
 import type { ToolDefinition } from '../handlers/tools.js';
 import type { TargetDescriptor } from './destination-registry.js';
 import { TARGET_CATALOG_MAX_OFFSET, TARGET_CATALOG_MAX_QUERY_LENGTH } from './multi-target-catalog.js';
@@ -133,17 +134,20 @@ function pruneDefinition(tool: ToolDefinition, config: ServerConfig): ToolDefini
   const prunedProperties = actionRule
     ? Object.fromEntries(Object.entries(properties).filter(([name]) => !actionRule.omittedProperties.has(name)))
     : properties;
-  return {
-    ...tool,
-    annotations: { ...tool.annotations, readOnlyHint: true, destructiveHint: false },
-    inputSchema: {
-      ...schema,
-      properties: {
-        ...prunedProperties,
-        [field]: { ...definition, enum: values },
+  return pruneLongTextDefinition(
+    {
+      ...tool,
+      annotations: { ...tool.annotations, readOnlyHint: true, destructiveHint: false },
+      inputSchema: {
+        ...schema,
+        properties: {
+          ...prunedProperties,
+          [field]: { ...definition, enum: values },
+        },
       },
     },
-  };
+    values,
+  );
 }
 
 export function multiTargetToolDefinitions(tools: ToolDefinition[], config: ServerConfig): ToolDefinition[] {

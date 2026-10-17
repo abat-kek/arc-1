@@ -34,6 +34,7 @@ import { logger } from '../server/logger.js';
 import { type CacheSecurityContext, inactiveListUserKey, invalidateInactiveList } from './cache-security.js';
 import { readEditableSource } from './editable-source.js';
 import { getCachedFeatures, isBtpSystem } from './feature-cache.js';
+import { handleLongText } from './long-text.js';
 import {
   detectLocalHandlerInclude,
   functionModuleObjectUrl,
@@ -172,6 +173,9 @@ export async function handleSAPRead(
   const type = normalizeObjectType(String(args.type ?? ''));
   const name = String(args.name ?? '');
   const requestedVersion = (args.version ?? 'active') as RequestedSourceVersion;
+
+  // Business text uses the data-authorized store, never repository source caching or draft resolution.
+  if (type === 'LONG_TEXT') return handleLongText(client, args.longText);
 
   const hasLineRange = args.lineStart !== undefined || args.lineEnd !== undefined;
   if (hasLineRange) {

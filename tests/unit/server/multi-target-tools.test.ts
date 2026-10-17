@@ -36,6 +36,17 @@ function property(tool: ToolDefinition, name: string): Record<string, unknown> {
 }
 
 describe('multi-target tool surface', () => {
+  it('removes LONG_TEXT-specific guidance when the effective target denies data preview', () => {
+    const enabled = { ...DEFAULT_CONFIG, allowDataPreview: true };
+    const definitions = getToolDefinitions(enabled);
+    const hidden = multiTargetToolDefinitions(definitions, DEFAULT_CONFIG).find((tool) => tool.name === 'SAPRead')!;
+    expect(property(hidden, 'type').enum).not.toContain('LONG_TEXT');
+    expect(hidden.inputSchema.properties).not.toHaveProperty('longText');
+    expect(JSON.stringify(hidden)).not.toMatch(/LONG_TEXT|longText|saved SO10|stored business long texts/u);
+    const allowed = multiTargetToolDefinitions(definitions, enabled).find((tool) => tool.name === 'SAPRead')!;
+    expect(property(allowed, 'type').enum).toContain('LONG_TEXT');
+    expect(allowed.inputSchema.properties).toHaveProperty('longText');
+  });
   it('keeps only the explicitly reviewed mutation-free tools and actions', () => {
     const tools = multiTargetToolDefinitions(getToolDefinitions(DEFAULT_CONFIG), DEFAULT_CONFIG);
     expect(tools.map((tool) => tool.name)).toEqual([

@@ -9,6 +9,9 @@ documented by SAP, traced through authorized source reads, or identified below a
 Proposed oracle cases remain separate from executed evidence. The companion spike report remains
 the authority for the earlier codec/corpus counts.
 
+The qualified subset is now integrated as [SAPRead LONG_TEXT](../../docs_page/tools.md#stored-sapscript-long-texts).
+See [integration and model evaluation](2026-10-17-stored-text-integration-evals.md) for public dispatch evidence.
+
 ## Decision and proposed contract
 
 Expose a **classic stored ITF text reader**, not a replacement for READ_TEXT. The codec can recover
@@ -288,7 +291,7 @@ The final run uses four temporary classes per release, all deleted through the h
   Legacy ITCRF, memory, archives, custom handlers, and upgrade overlays remain source/documentation
   boundaries rather than newly qualified native-reader features.
 - The candidate supports complete-header references with an eight-hop bound and rejects ITCRF
-  legacy storage. Production integration should preserve that explicit boundary.
+  legacy storage. Production integration preserves that explicit boundary.
 - The candidate warns on stored/decoded line-count mismatch and rejects changed headers/chunks.
   Native SAP is
   permissive about missing/failed body imports; the strict codec should continue to reject
@@ -303,5 +306,5 @@ The final run uses four temporary classes per release, all deleted through the h
 - The full production THEAD-normalization and native validation/exception precedence are outside
   a raw-header contract. Preserve source metadata and explicit operation semantics first.
 
-Roadmap impact: research narrows FEAT-86's remaining semantic qualification; no runtime feature
-is completed by this document. FEAT-76 remains unrelated to the native codec contract.
+Roadmap impact: FEAT-86 now covers additional unsupported profiles and persistence; the qualified
+classic subset is integrated separately in PR #1012. FEAT-76 remains unrelated to the native codec contract.

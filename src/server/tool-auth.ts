@@ -1,4 +1,5 @@
 import { getActionPolicy, hasRequiredScope } from '../authz/policy.js';
+import { pruneLongTextDefinition } from '../handlers/long-text-tool.js';
 import type { ToolDefinition } from '../handlers/tools.js';
 import { isActionDenied } from './deny-actions.js';
 
@@ -21,7 +22,7 @@ function pruneToolByPolicy(tool: ToolDefinition, scopes: string[], denyActions: 
     return hasRequiredScope(scopes, policy.scope) && !isActionDenied(tool.name, value, denyActions);
   });
 
-  return {
+  const pruned = {
     ...tool,
     inputSchema: {
       ...schema,
@@ -34,6 +35,7 @@ function pruneToolByPolicy(tool: ToolDefinition, scopes: string[], denyActions: 
       },
     },
   };
+  return pruneLongTextDefinition(pruned, filtered);
 }
 
 function hasNonEmptyActionOrTypeEnum(tool: ToolDefinition): boolean {

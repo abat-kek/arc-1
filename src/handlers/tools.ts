@@ -16,6 +16,8 @@ import * as DtelFields from './data-element-fields.js';
 import { SAPDIAGNOSE_ADDITIONAL_INPUTS } from './diagnose-fields.js';
 import * as FuncProcessing from './function-processing.js';
 import { getHyperfocusedToolDefinition } from './hyperfocused.js';
+import { LONG_TEXT_DESCRIPTION, LONG_TEXT_PROPERTY } from './long-text-input.js';
+import { pruneLongTextDefinition } from './long-text-tool.js';
 import { CLASS_WRITE_INCLUDES } from './object-types.js';
 import { addLiveRelationsDefinition } from './relation-tool.js';
 import {
@@ -89,10 +91,11 @@ function isBtpMode(config: ServerConfig): boolean {
 }
 
 const SAPREAD_DESC_ONPREM =
-  'Read SAP ABAP source, metadata or syntax-check results. For purpose, explanations, specs, reviews or pre-change context, prefer SAPContext first. DDIC metadata: omit format (default text); structured is CLAS-only for ordinary reads. ' +
-  'Types: PROG, CLAS, INTF, FUNC, FUGR (expand_includes=true for all include sources), INCL, DDLS, DCLS, DDLX, BDEF, SRVD, SRVB, SKTD/KTD (KTD aliases SKTD), TABL (covers both transparent tables AND DDIC structures — no separate STRU type), TABL/DTT (technical settings), TTYP, VIEW, DOMA, DTEL, TRAN, TABLE_CONTENTS (single-column filter), TABLE_QUERY (multi-column WHERE via the freestyle endpoint; gated by allowDataPreview; CDS views need SAP_BASIS 752+), DEVC, SOBJ (BOR — method param reads one method), SYSTEM, COMPONENTS, MSAG, TEXT_ELEMENTS, VARIANTS, BSP, BSP_DEPLOY, API_STATE (contract states C0-C4; objectType for non-class), INACTIVE_OBJECTS (no name; pending-activation list), AUTH, FEATURE_TOGGLE, ENHO, VERSIONS, VERSION_SOURCE. AUTH/FEATURE_TOGGLE/VERSIONS/VERSION_SOURCE are on-prem only. ' +
-  'SYNTAX: read-only SAP check (objectType+name, optional source for unsaved text). CLAS: method="*" for signatures, method="NAME" for one body, or grep. Global class declaration/implementation: MAIN (omit include). definitions/implementations contain local helpers. ' +
-  'grep: case-insensitive regex; returns matching lines, context and line numbers, with owning class/method for CLAS.';
+  'Read SAP ABAP source, metadata, syntax results or stored business long texts. ' +
+  LONG_TEXT_DESCRIPTION +
+  'For source purpose, explanations, specs, reviews or pre-change context, prefer SAPContext first. DDIC metadata: omit format (default text); structured is CLAS-only for ordinary reads. ' +
+  'TABLE_QUERY: structured multi-column filters; needs data preview. TABLE_CONTENTS supports a single-column filter. ' +
+  'SYNTAX: read-only SAP check (objectType+name, optional source for unsaved text). CLAS: method="*" for signatures, method="NAME" for one body, or grep. Global class declaration/implementation: MAIN (omit include). definitions/implementations contain local helpers.';
 
 const SAPREAD_DESC_BTP =
   'Read SAP ABAP source, metadata or syntax-check results (BTP ABAP Environment). For purpose, explanations, specs, reviews or pre-change context, prefer SAPContext first. DDIC metadata: omit format (default text); structured is CLAS-only for ordinary reads. ' +
@@ -410,10 +413,13 @@ export function getToolDefinitions(
             type: 'string',
             enum: btp ? SAPREAD_TYPES_BTP : SAPREAD_TYPES_ONPREM,
             description:
-              'Object or metadata type. TABL includes DDIC structures; KTD aliases SKTD (Knowledge Transfer Documents). SYNTAX checks objectType+name. Server-driven objects use discovery-gated XML metadata and AFF JSON source (DTSC/DSFD/DTDC/DRTY use DDL text). DESD logical external schema; EVTB event binding; EVTO event object; CSNM CSN model; COTA communication target; DTSC static cache; DTDC dynamic cache; DSFD scalar function; UIAD launchpad descriptor; DRTY CDS type; APLO log object; SAJC/SAJT job catalog/template; TABL/DTI secondary index named TABLE~INDEX (read prefers pending JSON). Deprecated: MESSAGES→MSAG.' +
-              (btp ? ' ENQU lock object as JSON.' : ' FTG2→FEATURE_TOGGLE. ENQU lock object as JSON.'),
+              'Repository or metadata type. TABL includes structures. KTD aliases SKTD; MESSAGES aliases MSAG. ' +
+              (btp ? '' : 'LONG_TEXT uses longText, not name. FTG2 aliases FEATURE_TOGGLE. ') +
+              'SYNTAX requires objectType+name. Server-driven objects are discovery-gated. TABL/DTI index names use TABLE~INDEX. ' +
+              'DESD external schema; EVTB/EVTO event binding/object; CSNM CSN model; COTA communication target; DTSC/DTDC static/dynamic cache; DSFD scalar function; UIAD launchpad descriptor; DRTY CDS type; APLO log object; SAJC/SAJT job catalog/template.',
           },
           name: { type: 'string', description: 'Object name (e.g., ZTEST_PROGRAM, ZCL_ORDER, MARA)' },
+          ...(btp ? {} : { longText: LONG_TEXT_PROPERTY }),
           action: {
             type: 'string',
             enum: ['diff'],
@@ -432,20 +438,17 @@ export function getToolDefinitions(
           },
           fromLabel: {
             type: 'string',
-            description:
-              'action="diff" optional display label for the OLD side in the summary and patch header, e.g. "DNT-6-6: Validate discounts (DS7K900123)". Does not affect source resolution.',
+            description: 'Diff OLD-side display label; does not change source resolution.',
           },
           toLabel: {
             type: 'string',
-            description:
-              'action="diff" optional display label for the NEW side in the summary and patch header, e.g. "active" or "inactive draft". Does not affect source resolution.',
+            description: 'Diff NEW-side display label; does not change source resolution.',
           },
           include: {
             type: 'string',
             description:
-              'TABL: indexes lists native secondary indexes. CLAS: omit include or use main for the global declaration + implementation; definitions/implementations select local helper classes, macros/testclasses their own sections. Explicit include wins over method auto-routing. ' +
-              'For DDLS: use include="elements" for the CDS field catalog (key fields, aliases, associations, expression types) instead of raw DDL. ' +
-              'For VERSIONS (CLAS): include selects the class include history to query (main, definitions, implementations, macros, testclasses). BSP: case-sensitive path; name may also be APP/path.' +
+              'TABL: indexes. CLAS: omit include or use main for global class; definitions/implementations are local helpers; macros/testclasses as named. Explicit include wins over method routing. ' +
+              'DDLS: elements returns field catalog (keys, aliases, associations, types). VERSIONS CLAS: selects include history. BSP: case-sensitive path; name also accepts APP/path.' +
               // TEXT_ELEMENTS does not exist on BTP — keep the BTP surface byte-identical.
               (btp ? '' : ' TEXT_ELEMENTS: symbols|selections|headings; omit for pool (CLAS: symbols).'),
           },
@@ -465,11 +468,10 @@ export function getToolDefinitions(
             type: 'string',
             maxLength: MAX_GREP_PATTERN_LENGTH,
             description:
-              'Regex pattern (case-insensitive) to search within the object source. Returns only matching lines with 1-based line numbers and ±3 context lines, instead of the full source — token-efficient. ' +
-              'For CLAS, matches are annotated with the owning class/method; combine with include= to scope a section, but do NOT combine with method= (use grep to find, then method= to read). ' +
+              'Case-insensitive source regex: matching lines, 1-based numbers and ±3 context; invalid regex becomes literal. CLAS adds owning class/method; include scopes a section. Never combine with method. ' +
               'Works for source-bearing types (CLAS, INTF, DDLS, DCLS, BDEF, SRVD, SRVB, SKTD/KTD, DDLX, TABL' +
               (btp ? '' : ', PROG, FUNC, FUGR, INCL, VIEW') +
-              '). Falls back to a literal search when the pattern is not valid regex.',
+              ').',
           },
           lineStart: {
             type: 'integer',
@@ -491,7 +493,7 @@ export function getToolDefinitions(
                 expand_includes: {
                   type: 'boolean',
                   description:
-                    'For FUGR type only. When true, recursively expands the function group include tree — the main source plus all nested INCLUDEs (the FUNCTION...ENDFUNCTION bodies live in nested LZ<grp>U01/U02 includes, so a flat one-level walk misses them). Each block is prefixed with a "=== name ===" marker; depth/count-capped. Dynpros and GUI status are not included (ADT does not expose them over REST).',
+                    'FUGR only: expand main and nested includes to reach function bodies. Blocks have "=== name ===" markers; depth/count-capped. Excludes dynpros and GUI status.',
                 },
               }),
           format: {
@@ -509,7 +511,7 @@ export function getToolDefinitions(
           includeSignature: {
             type: 'boolean',
             description:
-              'For FUNC type only. When true, response is JSON: {source, signature: {importing[], exporting[], changing[], tables[], exceptions[], raising[]}, processingType?, updateTaskKind?} — each parameter parsed into {kind, name, type, byValue?, default?, optional?}; processingType reports rfc/update/normal. Default false (returns plain source body).',
+              'FUNC only: return JSON {source,signature,processingType?,updateTaskKind?}. Signature groups importing/exporting/changing/tables/exceptions/raising parameters. Default false: raw source.',
           },
           force_refresh: {
             type: 'boolean',
@@ -1773,5 +1775,9 @@ export function getToolDefinitions(
     if (annotations) tool.annotations = { ...annotations };
   }
 
-  return withStrictSchemas(tools);
+  return withStrictSchemas(
+    config.allowDataPreview && resolvedFeatures?.systemType !== 'btp'
+      ? tools
+      : tools.map((tool) => pruneLongTextDefinition(tool)),
+  );
 }

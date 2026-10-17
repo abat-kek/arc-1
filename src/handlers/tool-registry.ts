@@ -86,6 +86,7 @@ const SAPREAD_TYPE_TABLE = [
   { type: 'ENQU', btp: true },
   { type: 'TABLE_CONTENTS', btp: true },
   { type: 'TABLE_QUERY', btp: true },
+  { type: 'LONG_TEXT', btp: false },
   { type: 'DEVC', btp: true },
   { type: 'SOBJ', btp: false },
   { type: 'SYSTEM', btp: true },

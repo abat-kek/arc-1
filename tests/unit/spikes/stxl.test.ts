@@ -2,11 +2,12 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { deflateRawSync } from 'node:zlib';
 import { describe, expect, it, vi } from 'vitest';
-import { DEFAULT_LIMITS, type DecodeLimits, decodeStxl, unpackCluster } from '../../../scripts/spikes/stxl/decoder.js';
-import { assembleChunks, keyFilters, readStoredText } from '../../../scripts/spikes/stxl/reader.js';
+import { readStoredText } from '../../../scripts/spikes/stxl/reader.js';
 import { readStoredTextSql, spacePreservingLiteral } from '../../../scripts/spikes/stxl/sql-reader.js';
 import { AdtClient } from '../../../src/adt/client.js';
 import { defaultSafetyConfig } from '../../../src/adt/safety.js';
+import { assembleChunks, keyFilters } from '../../../src/adt/stored-text/chunks.js';
+import { DEFAULT_LIMITS, type DecodeLimits, decodeStxl, unpackCluster } from '../../../src/adt/stored-text/decoder.js';
 
 type Fixture = {
   basis: string;

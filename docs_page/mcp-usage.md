@@ -43,6 +43,12 @@ SELECT carrid, COUNT(*) as cnt FROM sflight GROUP BY carrid ORDER BY cnt DESC
 
 ### Object Type Coverage (SAPRead)
 
+For saved SO10 or business-document long texts, use `SAPRead(type="LONG_TEXT", longText=...)`.
+Discover known object/name prefixes when ID or language is unknown, then reuse returned keys
+unchanged in `mode="read"`. Use `mode="search"` only for a supplied key list. Do not guess a
+document's configured text ID or composite name. Text memory, archives, and rendered forms are
+outside this capability. See [the contract and examples](tools.md#stored-sapscript-long-texts).
+
 | Object Type | Read | Notes |
 |-------------|:----:|-------|
 | PROG (Program) | **Y** | Full support |
@@ -63,6 +69,7 @@ SELECT carrid, COUNT(*) as cnt FROM sflight GROUP BY carrid ORDER BY cnt DESC
 | COMPONENTS | **Y** | Installed software components |
 | MSAG | **Y** | Message class texts (canonical TADIR R3TR type; deprecated alias: `MESSAGES`) |
 | TEXT_ELEMENTS | **Y** | Program, class, or function-group text elements (`objectType`) |
+| LONG_TEXT | **Y** | Saved classic SAPscript texts, on-prem data-preview opt-in; distinct from TEXT_ELEMENTS |
 | VARIANTS | **Y** | Program variants |
 
 ---

@@ -308,6 +308,120 @@
     "unitTests": 9054,
     "storedTextTests": 128,
     "coreQueryTestsAdded": 3,
-    "workers": 4
+    "workers": 4,
+    "phase": "manual-spike checkpoint"
+  },
+  "productionIntegration": {
+    "date": "2026-10-17",
+    "route": "SAPRead LONG_TEXT",
+    "systems": [
+      {
+        "label": "758",
+        "status": "pass",
+        "readonly": true,
+        "freeSqlEnabled": false,
+        "helperWritesEnabled": false,
+        "publicCalls": 4,
+        "stages": [
+          {
+            "stage": "read",
+            "status": "pass",
+            "count": 3
+          },
+          {
+            "stage": "discover",
+            "status": "pass",
+            "count": 1
+          },
+          {
+            "stage": "batch",
+            "status": "pass",
+            "count": 3
+          },
+          {
+            "stage": "search",
+            "status": "pass",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "label": "816",
+        "status": "pass",
+        "readonly": true,
+        "freeSqlEnabled": false,
+        "helperWritesEnabled": false,
+        "publicCalls": 4,
+        "stages": [
+          {
+            "stage": "read",
+            "status": "pass",
+            "count": 3
+          },
+          {
+            "stage": "discover",
+            "status": "pass",
+            "count": 1
+          },
+          {
+            "stage": "batch",
+            "status": "pass",
+            "count": 3
+          },
+          {
+            "stage": "search",
+            "status": "pass",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "label": "750",
+        "status": "pass",
+        "readonly": true,
+        "freeSqlEnabled": false,
+        "helperWritesEnabled": false,
+        "publicCalls": 1,
+        "stages": [
+          {
+            "stage": "capability",
+            "status": "unsupported-cleanly",
+            "code": "UNSUPPORTED_PLATFORM"
+          }
+        ]
+      }
+    ],
+    "notes": [
+      "Public handleToolCall dispatch; classic stored ITF scope only.",
+      "No RFC, free SQL, SAP writes, or helper installation in integration probes.",
+      "No business text, names, hosts, credentials, or SAP standard source retained here."
+    ],
+    "nativeOracleLineComparison": {
+      "systems": [
+        "758",
+        "816"
+      ],
+      "matched": true,
+      "fields": [
+        "TDFORMAT",
+        "TDLINE"
+      ],
+      "source": "Previously captured private READ_TEXT oracle; exact comparison after fixed-width ASCII-space unpadding."
+    },
+    "localValidation": {
+      "unitFiles": 324,
+      "unitTests": 9166,
+      "evalHarnessTests": 64,
+      "publicHandlerTests": 46,
+      "workers": 4,
+      "typecheck": "pass",
+      "build": "pass",
+      "lint": "pass",
+      "policy": "pass",
+      "schemaAndFileBudgets": "pass",
+      "package": "pass",
+      "toolWireBytesFull": 74456,
+      "existingWireCeilingsUnchanged": true
+    }
   }
 }

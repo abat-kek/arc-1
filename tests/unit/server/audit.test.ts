@@ -14,6 +14,49 @@ describe('Audit Events', () => {
       expect(sanitizeArgs(args)).toEqual({ type: 'FUNC', name: 'ZHELLO', includeSignature: true });
     });
 
+    it('audits LONG_TEXT mode and counts without keys, prefixes, phrases or extra business data', () => {
+      const privateData = 'private-business-data-sentinel';
+      const args = {
+        type: 'LONG_TEXT',
+        name: privateData,
+        phrase: privateData,
+        longText: { mode: 'search', namePrefix: privateData, keys: [{ name: privateData }], phrase: privateData },
+      };
+      const safe = sanitizeArgs(args);
+      expect(safe).toEqual({ type: 'LONG_TEXT', longText: { mode: 'search', keyCount: 1 } });
+      const rawEvent: ToolCallStartEvent = {
+        timestamp: '',
+        level: 'info',
+        event: 'tool_call_start',
+        tool: 'SAPRead',
+        args: safe,
+      };
+      const event = redactAuditEvent(rawEvent);
+      expect(event).toMatchObject({ args: safe });
+      expect(JSON.stringify(event)).not.toContain(privateData);
+      expect(JSON.stringify(redactAuditEvent({ ...rawEvent, args }))).not.toContain(privateData);
+    });
+
+    it('protects hyperfocused nested and malformed LONG_TEXT parameters before validation', () => {
+      const privateData = 'private-text-argument-sentinel';
+      for (const args of [
+        {
+          action: 'read',
+          params: { type: 'LONG_TEXT', name: privateData, longText: { mode: 'discover', namePrefix: privateData } },
+        },
+        {
+          action: 'read',
+          type: 'LONG_TEXT',
+          params: { longText: { mode: 'search', phrase: privateData, keys: [{ name: privateData }] } },
+        },
+        { type: 'LONG_TEXT', longText: privateData },
+        { type: ['LONG_TEXT'], name: privateData, longText: { mode: 'read', keys: [{ name: privateData }] } },
+        { type: 'LONG_TEXT', longText: { mode: privateData, keys: [{ name: privateData }] } },
+        { long_text: { mode: 'read', keys: [{ name: privateData }] } },
+      ])
+        expect(JSON.stringify(sanitizeArgs(args))).not.toContain(privateData);
+    });
+
     it('redacts sensitive keys', () => {
       const args = { password: 'secret', token: 'abc123', type: 'PROG' };
       const result = sanitizeArgs(args);

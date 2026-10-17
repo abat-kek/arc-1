@@ -1,14 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
-import { TextReadError } from '../../../scripts/spikes/stxl/errors.js';
-import type { TextKey } from '../../../scripts/spikes/stxl/reader.js';
+import { TextReadError } from '../../../src/adt/stored-text/errors.js';
 import {
   type ClassicTextBatchItem,
   findTextMatches,
   readClassicText,
   readClassicTextBatch,
-} from '../../../scripts/spikes/stxl/stored-text.js';
-import type { StoredTextHeader, StoredTextSource } from '../../../scripts/spikes/stxl/text-types.js';
+} from '../../../src/adt/stored-text/reader.js';
+import type { StoredTextHeader, StoredTextSource, TextKey } from '../../../src/adt/stored-text/types.js';
 
 type Fixture = { cases: Array<{ name: string; compressed: string; plain?: string; lines: number }> };
 const fixture = JSON.parse(

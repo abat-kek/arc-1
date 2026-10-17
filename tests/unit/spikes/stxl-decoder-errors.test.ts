@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_LIMITS, decodeStxl } from '../../../scripts/spikes/stxl/decoder.js';
-import { TextReadError } from '../../../scripts/spikes/stxl/errors.js';
+import { DEFAULT_LIMITS, decodeStxl } from '../../../src/adt/stored-text/decoder.js';
+import { TextReadError } from '../../../src/adt/stored-text/errors.js';
 
 const fixture = JSON.parse(readFileSync(new URL('../../fixtures/stxl/sap-758.json', import.meta.url), 'utf8')) as {
   cases: Array<{ plain?: string; compressed: string }>;

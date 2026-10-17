@@ -1,10 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { TextReadError } from '../../../scripts/spikes/stxl/errors.js';
-import type { TextKey } from '../../../scripts/spikes/stxl/reader.js';
-import { findTextMatches, readClassicText, readClassicTextBatch } from '../../../scripts/spikes/stxl/stored-text.js';
-import type { StoredTextHeader, StoredTextSource, TextDiscovery } from '../../../scripts/spikes/stxl/text-types.js';
+import { TextReadError } from '../../../src/adt/stored-text/errors.js';
+import { findTextMatches, readClassicText, readClassicTextBatch } from '../../../src/adt/stored-text/reader.js';
+import type { StoredTextHeader, StoredTextSource, TextDiscovery, TextKey } from '../../../src/adt/stored-text/types.js';
 
 type GoldenCase = {
   id: string;

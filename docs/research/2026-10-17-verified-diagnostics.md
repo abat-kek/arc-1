@@ -2,7 +2,7 @@
 
 **Revision note:** this document preserves the original implementation and review record.
 The later policy removal, empty native-report correction and local-model value evaluation
-are tracked in the [value-evaluation plan](../plans/2026-10-17-diagnostic-value-evals.md).
+are tracked in the [completed value review](2026-10-17-diagnostic-value-evaluation.md).
 Earlier approvals and test counts apply only to the revisions named below.
 
 [Plan and review](../plans/2026-10-17-verified-diagnostics.md) ·

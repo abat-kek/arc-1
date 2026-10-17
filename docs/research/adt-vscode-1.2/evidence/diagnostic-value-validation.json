@@ -88,5 +88,87 @@
       "bytes": 1986
     }
   },
-  "srcTreeUnchangedSinceIntegrationInput": true
+  "srcTreeUnchangedSinceIntegrationInput": true,
+  "followup": {
+    "productRevision": "552b02c38597d2578b70f2d14d5926cab671aa90",
+    "productChangesSinceInitialValidation": "Tool descriptions and the invalid-filter recovery hint only. Native single-report correctness correction was already in the full-suite run.",
+    "focusedGuidanceTests": 91,
+    "finalFixtureGraderTests": 26,
+    "gates": [
+      "build",
+      "typecheck",
+      "lint (3 informational suggestions)",
+      "validate:policy",
+      "check:sizes",
+      "strict documentation build"
+    ],
+    "logs": {
+      "arc1-value-close-policy.log": {
+        "bytes": 151,
+        "sha256": "b95a5610acdb1e657df63078101349caa7f589baac5ccc24eae975e056e6eabe"
+      },
+      "arc1-value-close-sizes.log": {
+        "bytes": 1986,
+        "sha256": "0553caaa4ffce1f1e533271932cb3fbcba395dd119fd3ebab7661da987d2b7dc"
+      },
+      "arc1-value-close-lint.log": {
+        "bytes": 3722,
+        "sha256": "b701a6637acd5983b67bfe915b1aa86c75183f70504f8422574673bace433d64"
+      },
+      "arc1-value-close-build.log": {
+        "bytes": 286,
+        "sha256": "c78ed4a0e0425213bab417881c6d34ccf5edf57bc4ecabb71c66ebacfc3b399e"
+      },
+      "arc1-value-close-docs.log": {
+        "bytes": 2222,
+        "sha256": "8bd6178fe93b858e7d726f5fa3f77a7a8753d0a8977af1738a4bc0c791f31817"
+      },
+      "arc1-value-close-typecheck.log": {
+        "bytes": 121,
+        "sha256": "c70d78135d6fb7358b349ef78fa0bba647122295c10fc75aea4e0834b67f5066"
+      }
+    }
+  },
+  "standaloneCorrectnessFix": {
+    "pr": "https://github.com/arc-mcp/arc-1/pull/1019",
+    "revision": "bb984bd4",
+    "base": "79088b16c6fe64f2b07802646a769607335f4d5d",
+    "tests": {
+      "before": {
+        "failed": 2,
+        "passed": 2
+      },
+      "after": {
+        "files": 3,
+        "passed": 230
+      }
+    },
+    "gates": [
+      "typecheck",
+      "check:sizes",
+      "strict documentation build"
+    ],
+    "logs": {
+      "arc1-empty-native-after.log": {
+        "bytes": 18514,
+        "sha256": "dd2e58c5d4d6a2aa56091924b9402b80da20cd0376e2be24895d5af9c2e46432"
+      },
+      "arc1-empty-native-before.log": {
+        "bytes": 1722,
+        "sha256": "1e546f977eed54cf55a682297c45b792d8d405edc5cac7137f994ef45eed799a"
+      },
+      "arc1-empty-native-sizes.log": {
+        "bytes": 1987,
+        "sha256": "1f97c60a933f27e7c4d4605c25d3f23dc4322b15a6b1bd3375177a3dc8311c2e"
+      },
+      "arc1-empty-native-typecheck.log": {
+        "bytes": 121,
+        "sha256": "2b1e8ca5f9ac0740e7509cb1ced735eee298880b787a3b0044b5b7a34a2e8f24"
+      },
+      "arc1-empty-native-docs.log": {
+        "bytes": 2228,
+        "sha256": "0667c93067417e9c9e91da9ec3729e250730602fe555755023152b14d9867126"
+      }
+    }
+  }
 }

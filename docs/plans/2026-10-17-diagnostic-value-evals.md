@@ -148,3 +148,7 @@ the corrected normalization/fixture and concise descriptions. This fast local mo
 uses the same prompts, seed, limits and final grader. This is an explicitly
 post-feedback confirmation, not a replacement for the original 32 trials or an
 independent statistical replication. Retain both protocols and all raw results.
+
+Final scoring accepts an actual unsupported-log reason as useful explanation, provided the
+matching unsupported result was retrieved. It still rejects an unrelated earlier argument error.
+Both forms are regression-tested. [Results and decision](../research/2026-10-17-diagnostic-value-evaluation.md).

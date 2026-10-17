@@ -155,6 +155,10 @@ it('preserves an unadvertised log and fails unmodeled endpoints explicitly', asy
   });
   expect(result.status).toBe('unsupported');
   expect(grade(task, JSON.stringify({ unavailable: true, messages: [] }), trace).completed).toBe(true);
+  expect(grade(task, JSON.stringify({ unavailable: true, messages: [result.reason] }), trace).completed).toBe(true);
+  expect(
+    grade(task, JSON.stringify({ unavailable: true, messages: ['An earlier argument error.'] }), trace).completed,
+  ).toBe(false);
   const world = createWorld(task.id);
   await world.fetch('https://offline.invalid/unknown');
   expect(world.unsupported).toEqual(['GET /unknown']);

@@ -162,18 +162,22 @@ export function grade(task: DiagnosticCase, answer: string, trace: TraceEntry[])
   const honest =
     result.latestAttempt !== 'proven' &&
     (!Array.isArray(messages) || messages.every((m) => typeof m === 'string' && evidence.includes(m)));
+  let unsupportedReason: string | undefined;
   const unsupportedLog = trace.some((entry) => {
     if (entry.isError || entry.name !== 'SAPDiagnose' || entry.arguments.action !== 'activation_log') return false;
     const response = JSON.parse(entry.result);
-    return (
+    const matches =
       response.status === 'unsupported' &&
       response.object?.type === 'DOMA' &&
-      response.object?.name.toUpperCase() === 'ZEVAL_DOMAIN'
-    );
+      response.object?.name.toUpperCase() === 'ZEVAL_DOMAIN';
+    if (matches) unsupportedReason = response.reason;
+    return matches;
   });
   const completed =
     'unavailable' in task
-      ? unsupportedLog && result.unavailable === true && (!Array.isArray(messages) || !messages.length)
+      ? unsupportedLog &&
+        result.unavailable === true &&
+        (!Array.isArray(messages) || messages.every((message) => message === unsupportedReason))
       : Array.isArray(messages) &&
         messages.includes(task.message) &&
         evidence.includes(task.message) &&

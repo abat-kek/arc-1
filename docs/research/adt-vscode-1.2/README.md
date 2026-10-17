@@ -162,7 +162,7 @@ with explicit limits, and independent review evidence.
 | Transport review | [Draft #1008](https://github.com/arc-mcp/arc-1/pull/1008) | Three Claude review rounds; final approval; eight-request pilot |
 | SQL notebook | [Draft #1009](https://github.com/arc-mcp/arc-1/pull/1009) | Allowed/denied live run; exact strings; three review rounds; final approval and 52 focused checks |
 | Policy explanation | [Deferred #1010](https://github.com/arc-mcp/arc-1/pull/1010); [extraction #1016](https://github.com/arc-mcp/arc-1/pull/1016) | Historical reviews prove implementation correctness, not product value. Normal errors remain the workflow. |
-| Diagnostics | [Draft #1011](https://github.com/arc-mcp/arc-1/pull/1011) · [validation](../2026-10-17-verified-diagnostics.md) | Native reads on 758; earlier correctness reviews at recorded revisions; local-model value comparison now determines the recommendation |
+| Diagnostics | [Draft #1011](https://github.com/arc-mcp/arc-1/pull/1011) · [validation](../2026-10-17-verified-diagnostics.md) | [48-trial value review](../2026-10-17-diagnostic-value-evaluation.md): narrow gains, failed freshness control; keep draft. Independent correctness fix: [#1019](https://github.com/arc-mcp/arc-1/pull/1019) |
 | Broader transport history | Research remains deferred | [Pilot follow-up](evidence/history-pilot-summary.json): no text history relation, current-only entries, one inaccessible archived domain revision |
 
 These are draft changes, not a released feature promise. Merge the stack in order after maintainer
@@ -173,4 +173,4 @@ review. No measured preparation-time saving or blanket cross-release qualificati
 - **POL-01:** deferred; the runtime feature is removed from #1011. Keep only #1016.
 - **SYN-01 / FEED-01 / DDIC-01:** evaluated independently with the
   [predeclared local-model comparison](../../plans/2026-10-17-diagnostic-value-evals.md).
-  Earlier Claude approvals apply to their recorded revisions, not subsequent changes.
+  The [completed value review](../2026-10-17-diagnostic-value-evaluation.md) keeps #1011 in draft; the local-model evidence does not justify a broad rollout. Earlier Claude approvals apply to their recorded revisions, not subsequent changes.

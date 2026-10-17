@@ -242,8 +242,9 @@ export async function listDumps(
     signal: getCurrentContext()?.signal,
     responseBudget: new DataResponseBudget(2 * 1024 * 1024, 'dumps'),
   };
+  const user = options?.user?.trim();
   const filters = options?.filters
-    ? [...options.filters, ...(options.user ? [{ attribute: 'user', operator: 'equals', values: [options.user] }] : [])]
+    ? [...options.filters, ...(user ? [{ attribute: 'user', operator: 'equals', values: [user] }] : [])]
     : undefined;
   const compiled = filters ? compileDumpFilters(await readDumpFeedSchema(http, safety, request), filters) : undefined;
   const wanted = clampMaxResults(options?.maxResults, DEFAULT_DUMP_MAX_RESULTS, MAX_DUMP_RESULTS_CAP);

@@ -158,7 +158,7 @@ it('compiles advertised filters while retaining legacy user and time bounds', as
     'SAPDiagnose',
     {
       action: 'dumps',
-      user: 'DEVELOPER',
+      user: ' DEVELOPER ',
       from: '2026-10-17',
       to: '2026-10-17T23:59:59Z',
       maxResults: 1,

@@ -120,3 +120,7 @@ and the updated combined-tree results follow below.
 After completing placeholder parity, **335 focused schema/dispatch/syntax/policy tests**, typecheck
 and file/schema budgets passed. Four falsy-placeholder cases failed before the shared predicate
 was used by both syntax entry points and the new diagnostic allowlists.
+
+The legacy `user` filter now retains its whitespace normalization when combined with typed
+filters. Its regression failed before correction; all 267 focused tests and typecheck passed.
+This adds one line to the existing paginator (21 lines total above its original budget).

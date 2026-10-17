@@ -1488,15 +1488,17 @@ Every part carries the evidence behind its diff — read `baselineStatus` before
 
 | `baselineStatus` | Meaning |
 |---|---|
-| `prior-revision` | The diff is what this transport changed. |
+| `prior-revision` | Attributed source-part pair; inspect CTS scope and history completeness before attributing individual hunks. |
 | `prior-revision-unverified` | A predecessor exists, but the "after" side was only guessed — it may belong to another change. |
-| `no-prior-snapshot` | Created in this transport. |
-| `baseline-ambiguous` | No usable baseline. An all-additions block is **not** proof of creation. |
+| `no-prior-snapshot` | No predecessor found; this does **not** prove creation in this transport. |
+| `baseline-ambiguous` | Missing or uncertain baseline chronology. Candidate hunks are **not** proof of creation. |
 | `baseline-unavailable` | The read failed. Never report this as unchanged. |
 
-Objects with no source revision feed (domains, data elements, function-group sources, …) are returned
-with an `inventoryReason` instead of parts: they are in scope, just not diffable. Long diffs are
-truncated per part with `diffTruncated: true`; `added`/`removed` still reflect the full change.
+Objects without a verified historical adapter (domains, data elements, function-group sources, …)
+return an `inventoryReason`: they remain in scope. Failed selected class parts remain visible, and
+text-pool components have an explicit coverage gap. Long diffs set `diffTruncated`; statistics remain
+complete only when `statisticsComplete` is true. See [Transport reviews](review-workflows.md) for
+source modes, JSON/HTML reports, bounds and continuation.
 
 **Parameters:**
 
@@ -1504,6 +1506,8 @@ truncated per part with `diffTruncated: true`; `added`/`removed` still reflect t
 |-----------|------|----------|-------------|
 | `action` | string | Yes | `list`, `get`, `diff`, `create`, `release`, `delete`, `remove_object`, `reassign`, `release_recursive`, `check`, `history`, `layers`, or `targets` (the last two are advertised only when transport support is enabled) |
 | `id` | string | No | Transport request ID, e.g. `A4HK900123` (for get/diff/release/delete/remove_object/reassign/release_recursive) |
+| `reviewMode` | string | No | For `diff`: `legacy` (default), `released`, `active`, or `draft`. Released mode never substitutes current work. |
+| `continuation` | string | No | For `diff`: reuse the previous page's token with `offset` and the same mode to detect inventory/caller/target changes. |
 | `offset` | number | No | For `diff`: index of the first object to diff (default 0). Page with `limit`. |
 | `limit` | number | No | For `diff`: objects per call (default 20, max 40 — the same ceiling SAP's own transport-diff tool uses). |
 | `description` | string | No | Transport description text (required for create) |

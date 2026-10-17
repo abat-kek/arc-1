@@ -1,0 +1,9 @@
+{
+  "extension": "1.2.0",
+  "bundleSha256": "783f99a7623a5b2c2d2eb6a3d84e6e3428d2c48429020d12267d324777ae7b03",
+  "exampleSha256": "1e365ed7995b2457bff6e690a6a944b0f80d6c0df0e45d35995a0dbbb40ec031",
+  "serializerRoundTrip": "pass",
+  "cells": 3,
+  "destinationBindings": 0,
+  "note": "Actual installed serializer evaluated in isolation with minimal NotebookData/NotebookCellData stubs. No extension activation or SAP calls. Not a stable-format guarantee."
+}

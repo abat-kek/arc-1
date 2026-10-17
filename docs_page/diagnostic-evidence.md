@@ -54,7 +54,8 @@ attributes and operators. Then submit typed filters:
 }
 ```
 
-Filters are ANDed; there are at most eight, including an optional legacy `user` filter. Each
+An empty optional `filters` list is treated as omitted. Nonempty filters are ANDed; there are at
+most eight, including an optional legacy `user` filter. Each
 attribute, operator and operand count must be advertised. Datetimes use valid UTC
 `YYYYMMDDHHMMSS`; reversed ranges are refused. String values are bounded ASCII identifiers/patterns
 with spaces, `_`, `/`, `$`, `.`, `*` and `-`; quotes, backslashes and grammar delimiters are refused.

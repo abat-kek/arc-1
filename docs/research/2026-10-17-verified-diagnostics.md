@@ -108,7 +108,7 @@ The independent review and additional regressions identified four small correcti
 |---|---|
 | Namespaced Dictionary URIs refused | Reuse the existing canonical path guard with raw encoded namespace separators for owner, advertised log and retained references. Traversal and nested encodings remain rejected. The real-dispatch regression failed before correction. |
 | Nested report/message evidence could disappear | Continue traversing matched nodes; nested errors cannot pass and nested foreign/duplicate reports remain incomplete. Two regressions failed before correction. |
-| Empty strict-client batch filler broke ordinary SAPRead calls | Match existing SAPDiagnose normalization for `objects: []` on ordinary reads and explicit single-object syntax checks. Genuine empty batches and nonempty conflicting selections still fail. Three real-dispatch regressions failed before correction. |
+| Empty strict-client batch filler broke ordinary SAPRead calls | Match existing SAPDiagnose normalization for `objects: []` on ordinary reads and explicit single-object syntax checks. Empty diagnostic filter lists are treated as omitted, including legacy unfiltered dumps; nonempty filters on unrelated actions still fail. Genuine empty batches and nonempty conflicting selections remain errors. Real-dispatch regressions failed before correction. |
 | Diagnostic byte limits suggested SQL fixes | Preserve the stable error code and give advice for syntax batches, schemas, dump windows and logs. Normal/minimal-error regressions failed before correction. |
 
 The guide now explicitly states that the 30-second / 2-MiB dump-list bounds also apply without

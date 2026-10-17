@@ -52,6 +52,19 @@ it('keeps an explicit single-object syntax check when objects is an empty placeh
   expect(JSON.parse(result.content[0].text)).toMatchObject({ checked: true });
   expect(JSON.parse(result.content[0].text)).not.toHaveProperty('requestedObjectCount');
 });
+it('treats empty optional filters as omitted on diagnostic calls', async () => {
+  for (const args of [{ action: 'feed_schema' }, { action: 'syntax', objects }, { action: 'dumps' }]) {
+    mockFetch.mockClear();
+    const result = await handleToolCall(client(), DEFAULT_CONFIG, 'SAPDiagnose', { ...args, filters: [] }, reader);
+    expect(result.isError).toBeUndefined();
+    if (args.action === 'dumps') {
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const url = new URL(String(mockFetch.mock.calls[0]?.[0]));
+      expect(url.pathname).toBe('/sap/bc/adt/runtime/dumps');
+      expect(url.searchParams.has('$query')).toBe(false);
+    }
+  }
+});
 it.each(['SAPRead', 'SAPDiagnose'])(
   'runs one native batch through %s with read scope and normalized aliases',
   async (tool) => {
@@ -81,6 +94,7 @@ it.each([
   ['SAPDiagnose', { action: 'syntax', objects, source: 'REPORT x.' }],
   ['SAPDiagnose', { action: 'syntax', objects: [{ type: 'DOMA', name: 'SPRAS' }] }],
   ['SAPDiagnose', { action: 'feed_schema', url: '/arbitrary' }],
+  ['SAPDiagnose', { action: 'feed_schema', filters: [{ attribute: 'user', operator: 'equals', values: ['X'] }] }],
   ['SAPDiagnose', { action: 'activation_log', type: 'CLAS', name: 'X' }],
   ['SAPDiagnose', { action: 'activation_log', type: 'DOMA', name: '../X' }],
   ['SAPDiagnose', { action: 'dumps', id: 'x', filters: [{ attribute: 'user', operator: 'equals', values: ['X'] }] }],

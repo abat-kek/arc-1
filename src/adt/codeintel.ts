@@ -130,7 +130,7 @@ export async function findReferences(
  * - Accept: application/vnd.sap.adt.repository.usagereferences.result.v1+xml
  *
  * The response uses a tree structure with `referencedObject` > `adtObject` elements.
- * If objectType is provided, it's included in the request body as a filter.
+ * The legacy objectType body field is ignored by tested SAP systems; callers must filter results themselves.
  */
 export async function findWhereUsed(
   http: AdtHttpClient,

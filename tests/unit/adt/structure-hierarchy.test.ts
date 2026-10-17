@@ -118,7 +118,9 @@ define structure zbase {
       expect(result.summary).toMatchObject({ includes: 1, appends: 0, unresolved: 0 });
       expect(post).toHaveBeenCalledTimes(1);
       expect(result.warnings).toEqual(
-        expect.arrayContaining(['Where-used endpoint unavailable for ZBASE; append structures were not resolved.']),
+        expect.arrayContaining([
+          'Where-used endpoint unavailable for ZBASE; append discovery was skipped for the rest of the tree.',
+        ]),
       );
     });
 
@@ -139,7 +141,7 @@ define structure zbase {
       const result = await buildStructureHierarchy(client, 'ZBASE');
       expect(result.tree.children).toEqual([{ structure: 'ZINC', attribute: null, kind: 'include', children: [] }]);
       expect(result.warnings).toEqual([
-        'Where-used returned 51 structure candidates for ZBASE, exceeding the append scan limit of 50; append discovery is incomplete.',
+        'Where-used returned 51 structure candidates for ZBASE, exceeding the append scan limit of 50; append discovery was skipped for the rest of the tree.',
       ]);
       expect(post).toHaveBeenCalledTimes(1);
       expect(client.getTabl).toHaveBeenCalledTimes(2);

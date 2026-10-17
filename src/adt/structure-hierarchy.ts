@@ -183,7 +183,9 @@ async function findExtensionRefs(
     collectCandidates(await findWhereUsed(client.http, client.safety, baseObjectUrl));
   } catch (err) {
     if (isUnavailableWhereUsedError(err)) {
-      warnings.push(`Where-used endpoint unavailable for ${baseName}; append structures were not resolved.`);
+      warnings.push(
+        `Where-used endpoint unavailable for ${baseName}; append discovery was skipped for the rest of the tree.`,
+      );
       disableAppendDiscovery();
     } else {
       throw err;
@@ -193,7 +195,7 @@ async function findExtensionRefs(
   // Every candidate needs a source read; large where-used lists otherwise fan out into thousands of requests.
   if (candidates.size > MAX_APPEND_CANDIDATES) {
     warnings.push(
-      `Where-used returned ${candidates.size} structure candidates for ${baseName}, exceeding the append scan limit of ${MAX_APPEND_CANDIDATES}; append discovery is incomplete.`,
+      `Where-used returned ${candidates.size} structure candidates for ${baseName}, exceeding the append scan limit of ${MAX_APPEND_CANDIDATES}; append discovery was skipped for the rest of the tree.`,
     );
     disableAppendDiscovery();
     return [];

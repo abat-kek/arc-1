@@ -5,10 +5,10 @@ wrong MIME type and root element. Its parser expected reference counts that the
 native response does not contain. This prevented append discovery and added a
 failed request to CDS guidance.
 
-The reviewed fix removes that helper and its invented fixture. Both callers use
-one ordinary where-used query. Structure discovery filters TABL/DS candidates and
-confirms `extend type <base> with` in each candidate source. CDS guidance retains
-deduplication. Actual endpoint absence still produces a structure warning;
+The reviewed fix removes that helper and its invented fixture. CDS guidance uses
+one ordinary where-used query and retains deduplication. Structure discovery uses
+one query per visited node, filters actual TABL/DS results and confirms
+`extend type <base> with` in each candidate source. Actual endpoint absence still produces a structure warning;
 authorization failures still propagate. More than 50 candidates stop append discovery
 with an explicit incomplete-result warning; includes are retained. No new tool
 parameters are added.
@@ -20,9 +20,16 @@ structures. Reading every TABL candidate would cause thousands of requests.
 Transparent tables cannot be append structures (verified TABL/DS contract), and
 scanning over 50 structure candidates now stops with a warning instead of silently
 returning a complete-looking empty result. This is a bounded bug fix; native scope
-filtering remains a separate feature.
+filtering remains a separate feature. The guarded T000 call completed in 12 seconds
+with only its root source read. The CI regression case BAPIRET2 returned 72 structure
+candidates and completed in 15 seconds with only its root source read, below the
+integration test's 30-second timeout. These timings are from 816, not latency guarantees.
 
 ## Live evidence, 17 October 2026
+
+Disposable append creation was unavailable through the tested ADT routes. The two
+positive append cases below use existing objects read-only; append discovery is
+not live-verified on BTP or 750.
 
 - 758: `/AIF/FHEAD` has append `/AIF/ECATT`. Main returned zero appends with a
   scope warning; the fix returns the append with no warning.

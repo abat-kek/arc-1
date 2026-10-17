@@ -1,7 +1,7 @@
 /**
  * CDS impact + pre-write hint helpers.
  *
- * Downstream-impact bucketing/ordering, where-used scoping, the update/delete/activation
+ * Downstream-impact bucketing/ordering, where-used lookups, the update/delete/activation
  * dependency hints, and the CDS reserved-keyword guard. Shared by the SAPWrite, SAPActivate and
  * SAPContext handlers.
  */
@@ -70,6 +70,7 @@ interface CdsOrderedObject {
 }
 
 const CDS_ORDERABLE_TYPES = new Set(['DDLS', 'DCLS', 'DDLX', 'BDEF', 'SRVD', 'SRVB']);
+
 function formatCdsImpactBuckets(downstream: CdsImpactDownstream, maxNames = 4): string[] {
   const lines: string[] = [];
 

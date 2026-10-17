@@ -353,9 +353,12 @@ create it with source. Creation succeeds, but activation/update/delete can recei
 from the default metadata URL while `?version=inactive` returns its metadata and package.
 A fresh client and `Cache-Control: no-cache` did not resolve this. Native activation after
 verifying the inactive object's package allowed cleanup. The no-pre-delete control activated.
+The pre-delete case's forced read returned the creation template; persistence of the supplied
+inactive source was not checked. The control's delete hit a text-pool LOCK 404 until a later
+source update and activation, so only its activation succeeded without recovery.
 
-**Resume with.** Reproduce default/active/inactive metadata across releases and trace the SAP
-response before changing package resolution. Preserve fail-closed package checks. Unique E2E
+**Resume with.** Verify source persistence and default/active/inactive metadata across releases;
+trace the SAP response before changing package resolution. Preserve fail-closed package checks. Unique E2E
 fixtures avoid the pre-delete, but do not fix this runtime gap; do not add a skip for it.
 
 <a id="sec-14"></a>

@@ -276,3 +276,16 @@ it('cancels between pages without a further request', async () => {
   });
   expect(paths()).toHaveLength(2);
 });
+it.each(['feed_schema', 'dumps'])('ignores all harmless cross-action defaults for %s', async (action) => {
+  const result = await call({
+    action,
+    ...(action === 'dumps' ? { filters: [filter] } : {}),
+    includeSubpackages: false,
+    includeReportXml: false,
+    packages: [],
+    packageTrees: [],
+    objects: [],
+    sections: [],
+  });
+  expect(result.isError).toBeUndefined();
+});

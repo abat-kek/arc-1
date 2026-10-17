@@ -60,3 +60,14 @@ Plan review: Claude Opus 5.5 Max approved the scope with four explicit condition
 transport compatibility, diagnostic limit advice, filter-only dependencies, and one proven wire
 encoding with narrower values. Optional equality result rechecking is deferred: it would assume
 SAP case/matching semantics. Positive and negative live controls remain required.
+
+## Fixed model check protocol (before execution)
+
+Use the existing #1011 harness in a scratch export of `44d649da`, with the actual main
+`498c12bb` catalog and candidate catalog. The baseline executes only old catalog inputs through
+the unchanged production routes; this is a catalog/workflow comparison, not two deployed servers.
+Add exactly two adjacent-day TIME_OUT rows to the synthetic world. Keep the original prompts,
+strict grader, seed 1700, temperature 0, 32k requested context and 2,048 output tokens.
+Run installed Qwen3.6 35B MLX and Llama3.1 8B once per arm for `syntax-one`, `dumps-recent`, and
+`dumps-target` (12 trials). Stop the entire run after 15 minutes; retain any partial trial.
+No prompt tuning or success-driven reruns. Report JSON grades separately from manual fact review.

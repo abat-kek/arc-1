@@ -1119,6 +1119,8 @@ export const SAPDiagnoseSchema = z
   .strict()
   .superRefine((input, ctx) => {
     validateDumpFilterInputs(input, ctx);
+    // These actions have a complete allowlist above, including harmless strict-client defaults.
+    if (input.action === 'feed_schema' || (input.action === 'dumps' && input.filters !== undefined)) return;
     const ci = input.action === 'atc_ci' || input.action === 'unittest_ci';
     if (ci) {
       const count = (input.packages?.length ?? 0) + (input.packageTrees?.length ?? 0);

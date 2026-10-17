@@ -307,4 +307,44 @@ describe('multi-target principal-propagation retry', () => {
     expect(fullProbe).toHaveBeenCalledTimes(2);
     expect(getCachedFeatures('A4H/100')?.rap?.available).toBe(true);
   });
+
+  it.each([
+    ['gcts', '/sap/bc/cts_abapvcs/system', 404],
+    ['ui5repo', '/sap/opu/odata/UI5/ABAP_REPOSITORY_SRV', 200],
+    ['abapGit', '/sap/bc/adt/abapgit/repos', 404],
+  ] as const)(
+    'retains %s evidence without treating denied ADT probes as complete',
+    async (feature, endpoint, status) => {
+      const current = registry();
+      resolveRuntimeSubaccountPpDestination.mockResolvedValue({
+        destination: DESTINATION,
+        authTokens: { sapConnectivityAuth: 'Bearer per-user-assertion' },
+      });
+      vi.spyOn(AdtClient.prototype, 'getSystemInfo').mockResolvedValue('{"sid":"A4H","client":"100"}');
+      let authorized = false;
+      let fullProbes = 0;
+      vi.spyOn(AdtHttpClient.prototype, 'get').mockImplementation(async (path) => {
+        if (path === '/sap/bc/adt/ddic/sysinfo/hanainfo') fullProbes++;
+        if (path === endpoint && status === 404) throw new AdtApiError('Not found', 404, path);
+        if (!authorized && path !== endpoint) throw new AdtApiError('Forbidden', 403, path);
+        return { statusCode: 200, headers: {}, body: '<root/>' };
+      });
+      const server = createServer(buildAggregateToolSurfaceConfig(DEFAULT_CONFIG, current.targets), {
+        btpConfig: BTP_CONFIG,
+        multiTarget: { mode: 'aggregate', registry: current, instanceConfig: DEFAULT_CONFIG },
+      });
+      const call = requestHandler(server);
+      const request = {
+        method: 'tools/call',
+        params: { name: 'SAPRead', arguments: { type: 'SYSTEM', target: 'A4H/100' } },
+      };
+      await call(request, { authInfo: READ_AUTH });
+      expect(getCachedFeatures('A4H/100')?.[feature]?.available).toBe(status === 200);
+      expect(getCachedFeatures('A4H/100')?.rap).toBeUndefined();
+      authorized = true;
+      await call(request, { authInfo: { ...READ_AUTH, extra: { userName: 'AUTHORIZED_USER' } } });
+      expect(fullProbes).toBe(2);
+      expect(getCachedFeatures('A4H/100')?.rap?.available).toBe(true);
+    },
+  );
 });

@@ -22,6 +22,8 @@ interface FeatureStore {
 }
 
 const FEATURE_KEYS = ['hana', 'abapGit', 'gcts', 'rap', 'amdp', 'ui5', 'transport', 'ui5repo', 'flp'] as const;
+// Non-ADT endpoints can respond independently of the caller's ADT access.
+const ADT_FEATURE_KEYS = ['hana', 'abapGit', 'rap', 'amdp', 'ui5', 'transport'] as const;
 
 /** Key for single-target mode. Multi-target feature state uses the public SID/client ID. */
 const DEFAULT_KEY = '';
@@ -61,12 +63,12 @@ export function hasCompletedFeatureProbe(destination?: string): boolean {
   return storeFor(destination).probeComplete;
 }
 
-/** Config-only/auth-only results stay retryable; unrelated successful SAP evidence survives. */
+/** Config-only probes stay retryable; safe partial facts do not imply every feature is known. */
 export function cacheProbedFeatures(features: ResolvedFeatures, perUser: boolean, destination?: string): void {
   if (cacheFeatureEvidence(features, perUser, destination)) storeFor(destination).probeComplete = true;
 }
 
-/** Share safe facts; return whether SAP supplied any conclusive backend evidence. */
+/** Share safe facts and report whether they can complete this identity's full probe. */
 export function cacheFeatureEvidence(
   features: Partial<ResolvedFeatures>,
   perUser: boolean,
@@ -94,11 +96,13 @@ export function cacheFeatureEvidence(
     if (evidence.discoveryMap) store.discovery = evidence.discoveryMap;
   }
   return !!(
-    evidence.textSearch ||
+    evidence.textSearch?.available ||
     evidence.discoveryMap ||
     evidence.abapRelease ||
     evidence.systemTypeSource === 'probe' ||
-    FEATURE_KEYS.some((key) => evidence[key]?.mode === 'auto')
+    // One shared identity may retain its denials; PP needs positive ADT evidence.
+    (!perUser && (evidence.textSearch || FEATURE_KEYS.some((key) => evidence[key]?.mode === 'auto'))) ||
+    ADT_FEATURE_KEYS.some((key) => evidence[key]?.mode === 'auto' && evidence[key]?.available)
   );
 }
 

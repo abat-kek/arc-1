@@ -240,7 +240,9 @@ it.each([false, true])('labels real data-source policy refusals blocked, minimal
   }
 });
 it.each([
-  errorResult('DATA_RESPONSE_TOO_LARGE: the configured byte allowance was exceeded.'),
+  errorResult(
+    JSON.stringify({ error: 'DATA_RESPONSE_TOO_LARGE', message: 'The configured byte allowance was exceeded.' }),
+  ),
   textResult('x'.repeat(4 * 1024 * 1024 + 1)),
 ])('keeps known response limits incomplete', async (reply) => {
   const run = await runNotebook(notebook, connection(vi.fn().mockResolvedValue(reply)));

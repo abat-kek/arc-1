@@ -26,6 +26,28 @@ beforeEach(() => {
     }),
   );
 });
+it.each(['SAPRead', 'SAP'])('ignores an empty batch placeholder on an ordinary %s read', async (tool) => {
+  const adt = client();
+  const getProgram = vi.spyOn(adt, 'getProgram').mockResolvedValue({ source: 'REPORT zdemo.' });
+  const params = { type: 'PROG', name: 'ZDEMO', version: 'active', objects: [] };
+  const args = tool === 'SAPRead' ? params : { action: 'read', params };
+  const result = await handleToolCall(adt, DEFAULT_CONFIG, tool, args, reader);
+  expect(result.isError).toBeUndefined();
+  expect(result.content[0].text).toBe('REPORT zdemo.');
+  expect(getProgram).toHaveBeenCalledTimes(1);
+});
+it('keeps an explicit single-object syntax check when objects is an empty placeholder', async () => {
+  const result = await handleToolCall(
+    client(),
+    DEFAULT_CONFIG,
+    'SAPRead',
+    { type: 'SYNTAX', objectType: 'PROG', name: 'ZDEMO', objects: [] },
+    reader,
+  );
+  expect(result.isError).toBeUndefined();
+  expect(JSON.parse(result.content[0].text)).toMatchObject({ checked: true });
+  expect(JSON.parse(result.content[0].text)).not.toHaveProperty('requestedObjectCount');
+});
 it.each(['SAPRead', 'SAPDiagnose'])(
   'runs one native batch through %s with read scope and normalized aliases',
   async (tool) => {

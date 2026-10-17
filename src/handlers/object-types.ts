@@ -273,6 +273,16 @@ export function normalizeTypeArgsForValidation(
   const cleaned = stripLlmEmptyValues(args);
   switch (toolName) {
     case 'SAPRead':
+      // Match SAPDiagnose's strict-client filler handling; an actual empty batch still fails.
+      if (
+        Array.isArray(cleaned.objects) &&
+        cleaned.objects.length === 0 &&
+        (normalizeObjectType(String(cleaned.type ?? '')) !== 'SYNTAX' ||
+          cleaned.name !== undefined ||
+          cleaned.objectType !== undefined)
+      ) {
+        delete cleaned.objects;
+      }
       return {
         ...cleaned,
         type: normalizeObjectType(String(cleaned.type ?? '')),

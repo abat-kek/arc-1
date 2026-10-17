@@ -33,6 +33,7 @@ implementation code is redistributed.
 | Scalar-count evidence | [Keep the original sanitized fixture](https://github.com/arc-mcp/arc-1/blob/62eb17b456cd57908cdac2a508082027ed5d88f7/tests/fixtures/json/notebook-scalars-758.json) on the source branch. Add only the zero-match case through the public dispatcher, real XML parser and query handler. |
 | `flight.notebook.json`, document schema/importer | Reject. Native `.abapsql` already expresses the needed Markdown/SQL cells. |
 | Runner, CLI, assertions, result export and HTML | Reject. They duplicate editor execution and add a new completeness contract without measured user benefit. |
+| Runner plumbing | Drop its AGENTS.md/dev-guide rows, `sql-notebooks.md`, CLI-guide additions, navigation entry and size budgets with the runner. They do not serve native notebook authoring. |
 | Scalar aggregate detector | Reject. Existing SAPQuery preserves native metrics; a partial SQL parser would add maintenance and semantic risk. Explain the counts instead. |
 | Workflow error classifier / private-file helpers | No consumer on main. Their fixes serve the unmerged workflows, not existing query behavior. Frozen source remains available for #1008 review. |
 | Eight-transport pilot | Useful historical evidence for #1008, unrelated to authoring. [Preserved pilot](https://github.com/arc-mcp/arc-1/blob/62eb17b456cd57908cdac2a508082027ed5d88f7/docs/research/2026-10-17-transport-pilot.md); do not repeat its SAP calls or claim customer savings. |
@@ -96,16 +97,19 @@ The short guide remains separate from the large tools reference.
 
 [Final review of `7387683f`](notebook-extraction/claude-final-review.md): **no must-fix
 defects; ready to merge and close #1009 afterward**, subject to final checks. Claude
-independently passed 372 focused tests, 72 docs/snapshot tests and all static gates.
+independently passed 372 focused tests, 72 docs/snapshot tests, typecheck, Biome
+on the changed test, size/policy checks and strict docs. It did not run the build
+or full-repository lint; those passed in our checks.
 In separate private copies, dropping zero-count rows or deriving a `truncated`
 flag from unequal counts made only the new regression fail (371/372 still passed).
 This substantiates its value without claiming a production bug was fixed.
 
-The review predated the full-suite results above. Its local-green condition needs
-to be read with the unchanged-main reproduction and green CI, not treated as a
-claim that the local full run passed. Optional doc refinements now name 758,
-record the grouped count, correct the plan's test scope and enumerate runner
-plumbing. GUI open/save remains an optional, explicitly unverified check.
+[Evidence follow-up](notebook-extraction/claude-evidence-review.md) accepted green
+dual-Node CI plus the unchanged-main reproduction in place of a green local full
+run. Its two documentation corrections are applied: enumerate runner plumbing
+and name only the checks Claude actually ran. The local full run did not pass.
+Optional doc refinements name 758, record the grouped count and correct the plan's
+test scope. GUI open/save remains an optional, explicitly unverified check.
 
 The reviewer corrected its earlier statement about an unbound cell: Run and Check
 Cell Syntax first prompt for a system. The guide never relied on the earlier

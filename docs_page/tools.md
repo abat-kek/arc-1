@@ -1477,6 +1477,7 @@ phrases are literal; search is case-sensitive, within individual lines of the su
 An empty successful text, missing key, and unsupported format have different statuses. Batch
 errors remain attached to their input; authentication or request-budget failures stop the request.
 25 keys is a maximum: references and distinct IDs can exhaust the 120-query budget sooner.
+Table-blocklist checks also add SAP requests and can reach the time limit sooner.
 Retry `LIMIT_EXCEEDED` with fewer keys.
 
 **Scope:** classic saved ITF texts and stored header references. Unsaved text, archives, non-ITF

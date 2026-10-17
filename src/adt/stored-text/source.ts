@@ -141,9 +141,9 @@ export async function withStoredTextSession<T>(
         corrupt('malformed stored query row');
       return result.rows;
     } catch (error) {
+      checkSession();
       if (error instanceof TextReadError) throw error;
       if (error instanceof AdtError) throw error;
-      if (signal.aborted) throw new TextReadError('LIMIT_EXCEEDED', 'stored-text time limit exceeded');
       throw new AdtNetworkError('stored-text query failed');
     }
   }

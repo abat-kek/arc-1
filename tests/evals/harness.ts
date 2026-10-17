@@ -22,7 +22,6 @@ import type {
   LLMProvider,
   LLMToolCall,
   Message,
-  MockResponseRule,
   ScenarioScore,
   ToolDefinitionForLLM,
 } from './types.js';
@@ -265,7 +264,7 @@ export async function runScenario(
           toolContent = `[tool error] ${err instanceof Error ? err.message : String(err)}`;
         }
       } else {
-        toolContent = getMockResponse(scenario, toolCall, turn);
+        toolContent = getMockResponse(scenario, toolCall);
       }
 
       signal?.throwIfAborted();
@@ -328,14 +327,8 @@ export async function runScenario(
   };
 }
 
-function mockRuleMatches(rule: MockResponseRule, toolCall: LLMToolCall, turn: number): boolean {
-  return (rule.turn === undefined || rule.turn === turn) && matchesExpectedToolCall(toolCall, rule);
-}
-
-/** Choose the first matching rule, then fall back to legacy tool-name mocks. */
-function getMockResponse(scenario: EvalScenario, toolCall: LLMToolCall, turn: number): string {
-  const rule = scenario.mockResponseRules?.find((candidate) => mockRuleMatches(candidate, toolCall, turn));
-  if (rule) return rule.response;
+/** Static tool-name mocks for scenarios that do not need a fixture executor. */
+function getMockResponse(scenario: EvalScenario, toolCall: LLMToolCall): string {
   if (!scenario.mockResponses) {
     return JSON.stringify({ status: 'ok', message: `Mock response for ${toolCall.name}` });
   }

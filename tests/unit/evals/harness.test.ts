@@ -98,7 +98,7 @@ describe('eval harness scenario pass requirements', () => {
     expect(score.passed).toBe(false);
   });
 
-  it('scores an ordered multi-turn trace and selects mocks by turn and arguments', async () => {
+  it('scores an ordered multi-turn trace using a scenario executor', async () => {
     const readKey = { object: 'EKKO', name: '4500000010', id: 'F01', language: 'E' };
     const scenario = {
       id: 'long-text-discover-read',
@@ -110,23 +110,8 @@ describe('eval harness scenario pass requirements', () => {
         [{ tool: 'SAPQuery', requiredArgs: { action: 'long_text', longText: { mode: 'discover' } } }],
         [{ tool: 'SAPQuery', requiredArgs: { action: 'long_text', longText: { mode: 'read' } } }],
       ],
-      mockResponseRules: [
-        {
-          tool: 'SAPQuery',
-          turn: 1,
-          requiredArgs: { action: 'long_text', longText: { mode: 'discover' } },
-          response: 'discovery fixture',
-        },
-        {
-          tool: 'SAPQuery',
-          turn: 2,
-          requiredArgs: {
-            action: 'long_text',
-            longText: { mode: 'read', keys: [readKey] },
-          },
-          response: 'read fixture',
-        },
-      ],
+      mockToolExecutor: async (_tool: string, args: Record<string, unknown>) =>
+        (args.longText as { mode: string }).mode === 'discover' ? 'discovery fixture' : 'read fixture',
       finalAnswer: { required: [/read fixture/i], forbidden: [/not found/i], requireNonEmpty: true },
       requireFullParameters: true,
     };

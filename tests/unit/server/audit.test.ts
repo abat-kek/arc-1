@@ -37,7 +37,7 @@ describe('Audit Events', () => {
       expect(JSON.stringify(redactAuditEvent({ ...rawEvent, args }))).not.toContain(privateData);
     });
 
-    it('protects hyperfocused nested, malformed and former-route text parameters before validation', () => {
+    it('protects hyperfocused nested and malformed text parameters before validation', () => {
       const privateData = 'private-text-argument-sentinel';
       for (const args of [
         {
@@ -63,7 +63,6 @@ describe('Audit Events', () => {
         { type: 'LONG_TEXT', longText: privateData },
         { action: 'long_text', name: privateData, longText: privateData },
         { action: ['long_text'], name: privateData, longText: { mode: 'read', keys: [{ name: privateData }] } },
-        { type: ['LONG_TEXT'], name: privateData, longText: { mode: 'read', keys: [{ name: privateData }] } },
         { type: 'LONG_TEXT', longText: { mode: privateData, keys: [{ name: privateData }] } },
         { long_text: { mode: 'read', keys: [{ name: privateData }] } },
       ])

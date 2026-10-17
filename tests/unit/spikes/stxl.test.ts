@@ -8,6 +8,7 @@ import { AdtClient } from '../../../src/adt/client.js';
 import { defaultSafetyConfig } from '../../../src/adt/safety.js';
 import { assembleChunks, keyFilters } from '../../../src/adt/stored-text/chunks.js';
 import { DEFAULT_LIMITS, type DecodeLimits, decodeStxl, unpackCluster } from '../../../src/adt/stored-text/decoder.js';
+import { withStoredTextSession } from '../../../src/adt/stored-text/source.js';
 
 type Fixture = {
   basis: string;
@@ -316,12 +317,14 @@ describe('STXL spike: bounded ADT chunk reader', () => {
     expect(assembleChunks(rows, key, '001').equals(bytes)).toBe(true);
     expect(() => assembleChunks([...rows, { ...rows[0], SRTF2: '256' }], key, '001')).toThrow('excessive');
     let offset = 0;
-    const query = vi.fn().mockImplementation(async () => {
-      const result = { rows: rows.slice(offset, offset + 32) };
+    const client = new AdtClient({ baseUrl: 'https://sap.invalid', client: '001' });
+    const query = vi.spyOn(client, 'runTableQuery').mockImplementation(async () => {
+      const result = { columns: [], rows: rows.slice(offset, offset + 32) };
       offset += 32;
       return result;
     });
-    expect((await readStoredText({ runTableQuery: query }, key, '001')).chunks).toBe(256);
+    const actual = await withStoredTextSession(client, '001', (source) => source.readCluster(key));
+    expect(actual?.equals(bytes)).toBe(true);
     expect(query).toHaveBeenCalledTimes(8);
   });
 

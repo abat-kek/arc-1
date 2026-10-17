@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AdtApiError } from '../../../src/adt/errors.js';
+import { throwIfRequestCancelled } from '../../../src/adt/http-deadline.js';
 import { defaultSafetyConfig } from '../../../src/adt/safety.js';
 import { LONG_TEXT_PROPERTY, LongTextInputSchema } from '../../../src/handlers/long-text-input.js';
 import { DEFAULT_CONFIG } from '../../../src/server/types.js';
@@ -10,7 +11,7 @@ const { handleToolCall } = await import('../../../src/handlers/dispatch.js');
 const { resetCachedFeatures, setCachedFeatures } = await import('../../../src/handlers/feature-cache.js');
 const { getToolDefinitions } = await import('../../../src/handlers/tools.js');
 const { filterToolsByAuthScope } = await import('../../../src/server/server.js');
-const { getCurrentContext } = await import('../../../src/server/context.js');
+const { getCurrentContext, requestContext } = await import('../../../src/server/context.js');
 
 type Item = {
   index: number;
@@ -134,6 +135,36 @@ describe('SAPQuery long_text nested input contract', () => {
 });
 
 describe('SAPQuery long_text public dispatch with real source orchestration and decoder', () => {
+  it.each(['session deadline', 'caller cancellation'])(
+    'reports an in-flight %s with the limit hint',
+    async (reason) => {
+      const { client, fixture, query } = setup();
+      const controller = new AbortController();
+      if (reason === 'session deadline') vi.spyOn(AbortSignal, 'timeout').mockReturnValue(controller.signal);
+      query.mockImplementationOnce(async () => {
+        controller.abort(
+          new DOMException('Query interrupted', reason === 'session deadline' ? 'TimeoutError' : 'AbortError'),
+        );
+        // Use the real transport cancellation helper: it wraps the signal as AdtNetworkError.
+        throwIfRequestCancelled({ signal: getCurrentContext()?.signal });
+        throw new Error('Expected the active query to be cancelled');
+      });
+      const result = await requestContext.run(
+        {
+          requestId: 'REQ-stored-text-cancel',
+          signal: reason === 'caller cancellation' ? controller.signal : undefined,
+        },
+        () => handleToolCall(client, config, 'SAPQuery', readArgs([fixture.keys.invoice]), auth(['data'])),
+      );
+      expect(result.isError).toBe(true);
+      expect(JSON.parse(result.content[0]!.text)).toMatchObject({
+        code: 'LIMIT_EXCEEDED',
+        hint: expect.stringContaining('fewer/smaller texts'),
+      });
+      expect(query).toHaveBeenCalledOnce();
+      expect(mockFetch).not.toHaveBeenCalled();
+    },
+  );
   it.each(['references', 'distinct IDs'])('bounds a 25-key batch with %s and allows a smaller retry', async (kind) => {
     const { client, fixture } = setup();
     const header = fixture.tables.STXH.find((row) => row.TDNAME === fixture.keys.invoice.name)!;

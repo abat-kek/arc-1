@@ -105,6 +105,7 @@ sequence.
 | [FEAT-50](#feat-50) | ADT type-probe fixture coverage | P3 | XS each | Contributor-driven | Diagnostics |
 | [FEAT-32](#feat-32) | Stable data-preview pagination | P3 | M | Needs research | Data access |
 | [FEAT-86](#feat-86) | Additional stored-text profiles and persistence | P3 | M | Needs research | Data access |
+| [FEAT-87](#feat-87) | Preserve repeated spaces in general data queries | P2 | S | Needs research | Data access |
 | [FEAT-36](#feat-36) | Type information | P3 | S | Blocked | Code intelligence |
 | [FEAT-79](#feat-79) | DDIC-aware dependency context | P2 | M | Needs research | Code intelligence |
 | [FEAT-42](#feat-42) | Additional CI output formats | P3 | XS | Revisit on trigger | CI |
@@ -844,6 +845,20 @@ identity, data gates/blocklists, cumulative budgets, and content-redacted audit 
 rereads are not a snapshot; opaque compressor trailers are not authenticated. Keep
 [#1000](https://github.com/arc-mcp/arc-1/issues/1000)'s broader companion-service option and FEAT-76's
 parameterized-service work separate. No RFC or dynamically executed ABAP fallback belongs in the reader.
+
+<a id="feat-87"></a>
+### FEAT-87 — Preserve repeated spaces in general data queries
+
+- **Priority / effort / status:** P2 / S / Needs research
+- **Category:** Data access
+
+**Remaining gap.** The tested 816 ADT preview handler condenses repeated spaces inside SQL
+literals. General `TABLE_QUERY` and free-SQL predicates can therefore match a different key.
+The stored-text reader preserves its own literals; the general query paths still need a fix.
+
+**Resume with.** Positive and negative live cases for leading, internal and trailing spaces in
+equality, LIKE and IN predicates. Preserve existing query semantics and safety gates; qualify the
+backend grammar before generalizing the stored-text workaround.
 
 <a id="feat-36"></a>
 ### FEAT-36 — Type information

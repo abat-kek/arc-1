@@ -1,7 +1,8 @@
 # Stored-text research probes
 
 The production entry point is [SAPQuery `long_text`](../../../docs_page/tools.md#stored-sapscript-long-texts).
-These manual probes reuse `src/adt/stored-text/`; they are not another runtime implementation.
+These manual probes reuse the production decoder and chunk assembly in `src/adt/stored-text/`.
+`reader.ts` retains a raw codec-comparison loop; `texts.ts` and public probes use production sessions.
 See the [design and qualification report](../../../docs/research/2026-10-17-stored-text-integration-evals.md)
 for supported profiles, SAP semantics, evidence, and remaining limits. MIT attribution is in [NOTICE](NOTICE).
 

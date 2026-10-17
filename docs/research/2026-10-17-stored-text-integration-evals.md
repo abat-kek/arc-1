@@ -111,8 +111,9 @@ inspected 750 catalog; that observation is not a claim about every 750 installat
 ## Decoder and extraction boundaries
 
 There is one codec in `src/adt/stored-text/`: `key.ts` validates identity, `source.ts` handles
-guarded extraction and budgets, `reader.ts` handles headers/references, and `decoder.ts` parses
-the container. Research wrappers reuse these modules.
+guarded extraction and budgets, `chunks.ts` assembles chunks, `reader.ts` handles headers/references,
+and `decoder.ts` parses the container. Research probes reuse the decoder and chunk assembly;
+the raw codec-comparison probe retains its own bounded extraction loop.
 
 The qualified container is FF06, byte-order flag 02, code page 4103 (UTF-16LE), with one TLINE
 table. Other versions/code pages are rejected. Observed CLUSTD cells contain all 7,902 bytes;
@@ -139,7 +140,9 @@ On the tested 816 backend, SQL-line `CONDENSE` alters repeated spaces inside lit
 stored-text adapter uses the internal `preserveLiteralSpaces` option with `CONCAT_WITH_SPACE`.
 Repeated-space prefixes compare `LEFT(TDNAME,n)` and `LENGTH(TDNAME)`; ordinary prefixes use
 escaped LIKE. Unqualified space-preserving IN lists are refused. Public `TABLE_QUERY` exposes
-literal `STARTS_WITH`, but ordinary callers retain their prior equality/LIKE behavior.
+literal `STARTS_WITH`. General `TABLE_QUERY` and free-SQL literals with repeated spaces are still
+condensed on the tested 816 system and can match different rows. That pre-existing behavior is
+outside this stored-text fix and tracked separately as [FEAT-87](../../docs_page/roadmap.md#feat-87).
 
 One research-only expanded-constant SQL case still fails on 816: the oracle applies LEFT/LENGTH
 to nested constants rather than to a field. It passed 8/8 cases on 758 and 7/8 on 816. The runtime
@@ -194,15 +197,16 @@ It is **not a score for the final payload**. Manual findings include rendering l
 scores, corrected grades, failures and full traces are retained; none were silently dropped.
 Exact-content consumers should use returned line values, not a model's rendering or paraphrase.
 
-Local validation at `101ccaa1`: **326 files / 9,229 tests** passed in a fresh two-worker run without
+Historical local validation at `101ccaa1`: **326 files / 9,229 tests** passed in a fresh two-worker run without
 retries. Typecheck, build, lint, policy checks, strict docs build, package inspection and schema/file
 budgets passed. GitHub CI, including SAP integration and E2E, was green. The full wire surface was
 74,459 bytes under the unchanged 74,500-byte ceiling; SAPRead descriptions were deliberately
 shortened, with unique operational hints retained and regression-tested.
 
-Two Opus 5.5 Max reviews of the implementation and fixes found no remaining code blocker at
-`e9c7104c`; runtime code was unchanged at `101ccaa1`. The accepted query-budget tradeoff and
-research-oracle failure are disclosed above. A finite passing suite does not establish full
+Release review also exposed an in-flight timeout being reported as a connectivity failure. The
+session check now runs before rethrowing transport errors; public-dispatch tests cover deadlines
+and cancellation, while ordinary network errors retain their classification. The query-budget
+tradeoff and research-oracle failure remain disclosed above. A finite passing suite does not establish full
 READ_TEXT parity or autonomous-model reliability. Qualify the actual deployment model before
 making such a claim; contributor trials add landscape coverage without being a separate feature mode.
 

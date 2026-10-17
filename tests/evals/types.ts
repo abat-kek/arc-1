@@ -43,22 +43,6 @@ export interface ExpectedToolCall {
   argumentPatterns?: Record<string, { required?: RegExp[]; forbidden?: RegExp[] }>;
 }
 
-/** A fixture response selected for a particular tool invocation and model turn. */
-export interface MockResponseRule {
-  tool: string;
-  /** One-based model/tool-result round: 1 is the initial prompt. */
-  turn?: number;
-  /** Subset of tool arguments that must match exactly (strings ignore case). */
-  requiredArgs?: Record<string, unknown>;
-  /** Values matched recursively and case-sensitively. */
-  exactArgs?: Record<string, unknown>;
-  requiredArgKeys?: string[];
-  /** Same missing/undefined/null property-path constraint as ExpectedToolCall. */
-  absentArgPaths?: string[][];
-  argumentPatterns?: Record<string, { required?: RegExp[]; forbidden?: RegExp[] }>;
-  response: string;
-}
-
 /** Assertions on the final user-facing assistant response. */
 export interface FinalAnswerExpectation {
   required?: RegExp[];
@@ -107,9 +91,6 @@ export interface EvalScenario {
    * Use "*" as a catch-all fallback.
    */
   mockResponses?: Record<string, string>;
-
-  /** Argument/turn-specific responses, checked before legacy `mockResponses`. */
-  mockResponseRules?: MockResponseRule[];
 
   /** Scenario-owned deterministic executor for realistic mock-backed handler flows. */
   mockToolExecutor?: (tool: string, arguments_: Record<string, unknown>) => Promise<string>;

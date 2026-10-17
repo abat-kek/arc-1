@@ -258,7 +258,11 @@ describe('stored-text ADT source', () => {
 
   it('preserves typed infrastructure/policy errors and sanitizes unknown query failures', async () => {
     const { client, query } = setup();
-    for (const error of [new AdtSafetyError('blocked'), new AdtApiError('denied', 403, '/test')]) {
+    for (const error of [
+      new AdtSafetyError('blocked'),
+      new AdtApiError('denied', 403, '/test'),
+      new AdtNetworkError('connection failed without cancellation'),
+    ]) {
       query.mockRejectedValue(error);
       await expect(withStoredTextSession(client, '001', (source) => source.readHeader(key))).rejects.toBe(error);
     }

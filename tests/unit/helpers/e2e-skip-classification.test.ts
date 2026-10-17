@@ -90,3 +90,31 @@ it('only skips batch preflight when every failure is an explicit collection refu
   expect(classify('preflight', [domain, { ...skipped, creation: 'unknown' }])).toBeNull();
   expect(classify('preflight', [skipped])).toBeNull();
 });
+
+import { batchCreateResult, batchEntryResult, failBatchEntry } from '../../../src/handlers/write/batch-results.js';
+
+it('does not let a rejected batch manifest fall through to legacy summary matching', () => {
+  const domain = batchEntryResult(0, 'DOMA', 'ZDOMAIN', '$TMP');
+  failBatchEntry(domain, 'preflight', DOMA_WRITE_UNAVAILABLE_HINT);
+  const dtel = batchEntryResult(1, 'DTEL', 'ZDTEL', '$TMP');
+  failBatchEntry(dtel, 'preflight', 'Data element ZDTEL does not exist');
+  expect(
+    classifyToolErrorSkip(
+      batchCreateResult([domain, dtel], {
+        preflight: true,
+        activateAtEnd: false,
+        warnings: [],
+      }),
+    ),
+  ).toBeNull();
+
+  failBatchEntry(dtel, 'create', 'Not authorized');
+  expect(
+    classifyToolErrorSkip(
+      batchCreateResult([dtel], {
+        activateAtEnd: false,
+        warnings: [],
+      }),
+    ),
+  ).toBeNull();
+});

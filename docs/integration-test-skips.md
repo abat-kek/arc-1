@@ -84,6 +84,10 @@ Only a verified collection refusal is a backend skip. Authentication errors and 
 - Optional `ZCL_ABAPGIT_HASH` coverage and `ZC_FBCLUBTP` documentation are missing-fixture skips when absent. A "No Knowledge Transfer Document" response does not pass the decoded-content test.
 - A 404 from `/packages/valuehelps/transportlayers` skips that value-help test only; other transport tests still run.
 
+Program lifecycle tests use unique names and require successful activation. The separately reproduced
+7.50 metadata gap after an absent-program pre-delete remains [COMPAT-18](../docs_page/roadmap.md#compat-18),
+not an unsupported-backend skip.
+
 ### Root cause: DTEL v2 content-type 415 on older releases
 
 ARC-1 originally posted DTEL create/update with `Content-Type: application/vnd.sap.adt.dataelements.v2+xml; charset=utf-8`. Older SAP_BASIS releases (pre-7.52) only accept the v1 MIME type `…dataelements.v1+xml` — same XML body, different MIME version suffix.

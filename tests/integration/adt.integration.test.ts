@@ -318,14 +318,8 @@ describe('ADT Integration Tests', () => {
 
   // ─── getSubpackages (repository/nodestructure) ────────────────────
   //
-  // Direct-child enumeration of a DEVCLASS. Backs `allowedPackages`
-  // subtree rules (`ZFOO/**`). The PREVIOUS implementation used
-  // `informationsystem/search?packageName=X&objectType=DEVC/K`, which
-  // live S/4HANA 2023 silently ignores the `packageName` filter on —
-  // returning ~1000 unrelated packages instead of children. The fix
-  // uses `POST /sap/bc/adt/repository/nodestructure`, which matches
-  // `SELECT devclass FROM tdevc WHERE parentcl = ?` exactly. These
-  // tests are the missing safety net that would have caught the bug.
+  // Direct children back allowedPackages subtree rules. The old search endpoint
+  // ignored packageName and returned unrelated packages; nodestructure must not.
   describe('getSubpackages (repository/nodestructure)', () => {
     it('returns the stable direct children of SABP_UNIT', async () => {
       // Other direct children differ between 750, 758 and 816.

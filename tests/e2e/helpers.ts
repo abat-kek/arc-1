@@ -272,6 +272,7 @@ export function classifyToolErrorSkip(result: ToolResult): string | null {
       ) {
         return 'Backend feature not supported on this SAP system: batch fixture requires an unavailable ADT collection';
       }
+      return null;
     } catch {
       // A malformed manifest is not evidence of an unsupported backend.
       return null;

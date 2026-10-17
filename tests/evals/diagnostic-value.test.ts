@@ -201,7 +201,10 @@ it('compares diagnostic task outcomes with installed local models', async () => 
                 let isError: boolean;
                 if (!validate?.(args) || (arm === 'baseline' && baselineRefuses(name, args))) {
                   result = JSON.stringify({
-                    error: 'Tool or arguments not available in this catalog.',
+                    error:
+                      arm === 'baseline' && baselineRefuses(name, args)
+                        ? 'objects is only supported for atc and cannot be combined with name, type, or url.'
+                        : 'Tool or arguments not available in this catalog.',
                     details: validate?.errors,
                   });
                   isError = true;

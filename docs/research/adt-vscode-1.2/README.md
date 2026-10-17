@@ -18,7 +18,7 @@ This is the durable index for the research, including ideas we deliberately defe
 |---|---|---|
 | SAP extension | Marketplace Version History refreshed on October 17: **1.2.0**, published October 16; installed `sapse.adt-vscode-1.2.0-darwin-arm64` | A client feature does not establish backend availability |
 | ARC-1 release | **v1.6.0** published October 17 at 11:21 UTC; [release PR #970](https://github.com/arc-mcp/arc-1/pull/970) merged during this work | Main and deployed connectors are separate baselines |
-| ARC-1 main | `041a9e48` (includes #1006, #1007 and release #970) | Recheck before each implementation slice |
+| ARC-1 main | `79088b16` revalidated for the diagnostic value review; initial implementation used `041a9e48` | Combined-tree tests recorded separately from branch tests |
 | Original research | `9775645400fdb27f37aff486f14fe9845ecf8639`; 181 unit tests and eight synthetic observations | Observation probes are not assertions or live coverage |
 | Existing local prototype | `codex/post-1-6-review-workflows`; 67 uncommitted files preserved | Includes later stages; not shipped or included wholesale in the transport PR |
 | Live prototype evidence | A4H/001, SAP_BASIS 758 SP02, local CLI over HTTPS 443 | Does not prove 750, 816, BTP or the deployed connector |
@@ -150,8 +150,8 @@ demand remain hypotheses until measured.
 
 The [eight-request transport pilot](../2026-10-17-transport-pilot.md) records actual coverage gaps
 and bounded metrics. The [follow-up plan](../../plans/2026-10-17-adt-followups.md) separates the
-implemented notebook, policy and diagnostic slices. Read the guides for
-[notebooks](../../../docs_page/sql-notebooks.md), [policy](../../../docs_page/authorization.md#explain-a-proposed-operation)
+notebook and diagnostic slices and the deferred policy proposal. Read the guides for
+[notebooks](../../../docs_page/sql-notebooks.md), [authorization](../../../docs_page/authorization.md)
 and [diagnostics](../../../docs_page/diagnostic-evidence.md). Each draft has tests, live observations
 with explicit limits, and independent review evidence.
 
@@ -162,7 +162,7 @@ with explicit limits, and independent review evidence.
 | Transport review | [Draft #1008](https://github.com/arc-mcp/arc-1/pull/1008) | Three Claude review rounds; final approval; eight-request pilot |
 | SQL notebook | [Draft #1009](https://github.com/arc-mcp/arc-1/pull/1009) | Allowed/denied live run; exact strings; three review rounds; final approval and 52 focused checks |
 | Policy explanation | [Deferred #1010](https://github.com/arc-mcp/arc-1/pull/1010); [extraction #1016](https://github.com/arc-mcp/arc-1/pull/1016) | Historical reviews prove implementation correctness, not product value. Normal errors remain the workflow. |
-| Diagnostics | [Draft #1011](https://github.com/arc-mcp/arc-1/pull/1011) · [validation](../2026-10-17-verified-diagnostics.md) | Native reads on 758; two Claude review rounds; final approval and 1,632 focused tests; full stack passes 9,103 tests against release 1.6.0 |
+| Diagnostics | [Draft #1011](https://github.com/arc-mcp/arc-1/pull/1011) · [validation](../2026-10-17-verified-diagnostics.md) | Native reads on 758; earlier correctness reviews at recorded revisions; local-model value comparison now determines the recommendation |
 | Broader transport history | Research remains deferred | [Pilot follow-up](evidence/history-pilot-summary.json): no text history relation, current-only entries, one inaccessible archived domain revision |
 
 These are draft changes, not a released feature promise. Merge the stack in order after maintainer

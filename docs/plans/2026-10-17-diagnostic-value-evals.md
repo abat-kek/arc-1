@@ -100,3 +100,31 @@ any scores, address [P1 and E1–E3](../research/adt-vscode-1.2/evidence/diagnos
 Preserve all exploratory output directories and rerun the same full task matrix.
 The final run uses Qwen 3 30B and Llama 3.1 8B with catalog-grouped scheduling.
 Temperature-zero repeats are consistency checks, not independent statistical samples.
+
+## Final runtime budget
+
+Before inspecting any corrected candidate results, reduce the definitive matrix to
+**one complete pass per arm on each of Qwen 3 30B and Llama 3.1 8B: 32 trials**.
+The first four Qwen baseline tasks took minutes each; the original 64-trial schedule
+would spend substantial additional time on temperature-zero consistency repeats.
+Keep the same tasks, tools, limits and acceptance criteria. Stop the Qwen run after
+its first complete pair of eight-task groups, then run Llama once. Retain any
+interrupted next trial separately. Report the fixed baseline-first order as a
+limitation; do not claim counterbalanced evidence or independent repetitions.
+
+## Second independent review
+
+[Claude review 2](../research/adt-vscode-1.2/evidence/diagnostics-review/claude-value-review-2.md)
+verified P1/E1–E3 and found F1–F3: wrong-type syntax credit, missing wildcard search
+semantics and unsupported-log completion without evidence. Correct the fixture and
+grader; require a PROG check and an actual unsupported DOMA-log result. Preserve
+raw scores and re-score saved answers with the final grader. Flag or rerun any trial
+whose model saw a wrong-type success or an incorrectly empty search. Existing
+unmodeled routes remain inconclusive, including domain object-state source reads.
+
+Qwen's running process keeps the frozen `086dc2bd` fixture for both arms. Llama
+will use the corrected fixture for both arms. Record exact manifests separately;
+do not pool their raw machine scores. Also restore the baseline's specific ATC-only
+refusal message. A malformed `dumpIds` field is a formatting issue, not evidence of
+a false factual claim. Placeholder validation remains stricter than the production
+normalizer in both arms; report affected calls rather than silently correcting them.

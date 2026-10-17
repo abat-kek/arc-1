@@ -91,13 +91,22 @@ export function createWorld(caseId: string) {
       const query = (u.searchParams.get('query') ?? '').toUpperCase();
       const matches = ['A', 'B', 'C', 'D']
         .map((letter) => `ZEVAL_${letter}`)
-        .filter((name) => query === '*' || query === name || query === 'ZEVAL_*');
+        .filter((name) =>
+          new RegExp(
+            `^${query
+              .split('*')
+              .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+              .join('.*')}$`,
+          ).test(name),
+        );
       response = `<objectReferences>${matches.map((name) => `<objectReference name="${name}" type="PROG/P" uri="/sap/bc/adt/programs/programs/${name}"/>`).join('')}</objectReferences>`;
     } else if (u.pathname === '/sap/bc/adt/checkruns' && method === 'POST') {
       const uris = [...body.matchAll(/adtcore:uri="([^"]+)"/g)].map((match) => match[1]!);
       response = `<checkRunReports>${uris
         .map((uri) => {
           const name = uri.split('/').at(-1)!.toUpperCase();
+          if (!/^\/sap\/bc\/adt\/programs\/programs\/ZEVAL_[ABCD]$/i.test(uri))
+            return `<checkReport reporter="abapCheckRun" triggeringUri="${uri}" status="notProcessed"><checkMessage type="E" shortText="Resource does not exist."/></checkReport>`;
           if (caseId === 'syntax-missing' && name === 'ZEVAL_D') return '';
           if (!/^ZEVAL_[ABCD]$/.test(name)) return '';
           const message = name === 'ZEVAL_B' ? '<checkMessage type="E" shortText="Unknown field TOTALX."/>' : '';

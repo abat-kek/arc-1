@@ -1,5 +1,10 @@
 # Verified diagnostics — 17 October 2026
 
+**Revision note:** this document preserves the original implementation and review record.
+The later policy removal, empty native-report correction and local-model value evaluation
+are tracked in the [value-evaluation plan](../plans/2026-10-17-diagnostic-value-evals.md).
+Earlier approvals and test counts apply only to the revisions named below.
+
 [Plan and review](../plans/2026-10-17-verified-diagnostics.md) ·
 [User guide](../../docs_page/diagnostic-evidence.md) ·
 [Live summary and hashes](adt-vscode-1.2/evidence/diagnostics-live-summary.json)

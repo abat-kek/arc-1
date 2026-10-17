@@ -42,8 +42,9 @@ fallback or package expansion runs.
 
 ## Filter short dumps
 
-First call `SAPDiagnose` with `{"action":"feed_schema"}`. This reads the target's advertised dumps
-attributes and operators. Then submit typed filters:
+Submit known typed filters directly. Each request validates them against the target's advertised
+attributes and operators. If those are unknown, `SAPDiagnose` with `{"action":"feed_schema"}`
+can discover them; it is optional, not a required preflight:
 
 ```json
 {

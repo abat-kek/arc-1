@@ -1143,7 +1143,7 @@ export function getToolDefinitions(
         '- "object_state": active/inactive ETags/hashes/divergence (name+type; CLAS includes). No server-driven types.\n' +
         '- "quickfix": proposals: name+type+source+line; optional column/sourceUri.\n' +
         '- "apply_quickfix": text deltas, no save; quickfix inputs + proposalUri/proposalUserContent.\n' +
-        '- "dumps": ST22 list: user/from/to/maxResults/filters. Supply id for detail.\n' +
+        '- "dumps": ST22 list, newest first: user/from/to/maxResults/filters. Supply id for detail.\n' +
         '- "feed_schema": optional dump filter discovery; action only. Known filters work directly.\n' +
         '- "traces": list profiler traces; id+analysis analyzes one.\n' +
         '- "trace_start": arm NEXT matching execution (write; defaults HTTP, SQL on); reproduce, then read "traces".\n' +
@@ -1283,7 +1283,7 @@ export function getToolDefinitions(
           filters: {
             ...dumpFiltersJson,
             description:
-              'dumps list: AND, max 8 including user. E.g. [{attribute:"runtimeError",operator:"equals",values:["TIME_OUT"]}]. Target-advertised names via optional feed_schema.',
+              'dumps list: AND, max 8 including user. E.g. [{attribute:"runtimeError",operator:"equals",values:["MESSAGE_TYPE_X"]}]. Use optional feed_schema for target names.',
           },
           authObject: { type: 'string', description: 'Authorization object filter, e.g. S_TCODE.' },
           from: {

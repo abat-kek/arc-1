@@ -82,3 +82,21 @@ the 12k-token catalogs after every task repeatedly discards the reusable prefix.
 Grouping preserves fresh independent conversations, identical tasks and both orders.
 It changes scheduling, not acceptance criteria. Save partial responses after each
 turn so cancellation does not discard the completed portion of a trial.
+
+## Independent review corrections
+
+Claude Opus 5.5 Max reviewed `09646ac9` without viewing model outcomes. Before using
+any scores, address [P1 and E1–E3](../research/adt-vscode-1.2/evidence/diagnostics-review/claude-value-review-1.md):
+
+- Move three parser regressions out of the full devtools test file; retain the size budget.
+- Mirror the old runtime restriction on `SAPDiagnose.objects`; the baseline JSON
+  schema alone allowed the new syntax batch through the old ATC property.
+- Model the task's advertised datetime and user filters, in either order, as well
+  as ordinary source inspection and search. Unknown endpoints remain inconclusive.
+- Separate invalid answer formatting from honesty; missing dump IDs are abstention.
+  Empty answers and exhausted tool/turn budgets are model failures, not exclusions.
+- Vendor the exact baseline snapshot and flag near-context-limit responses.
+
+Preserve all exploratory output directories and rerun the same full task matrix.
+The final run uses Qwen 3 30B and Llama 3.1 8B with catalog-grouped scheduling.
+Temperature-zero repeats are consistency checks, not independent statistical samples.

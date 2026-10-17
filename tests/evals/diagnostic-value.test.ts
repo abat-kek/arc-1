@@ -7,7 +7,14 @@ import { expect, it, vi } from 'vitest';
 import { defaultSafetyConfig } from '../../src/adt/safety.js';
 import { DEFAULT_CONFIG } from '../../src/server/types.js';
 import { AdtClient, mockFetch } from '../unit/handlers/setup-undici-mock.js';
-import { cases, grade, systemPrompt, type TraceEntry } from './diagnostic-value/cases.js';
+import {
+  baselineRefuses,
+  cases,
+  failureCategory,
+  grade,
+  systemPrompt,
+  type TraceEntry,
+} from './diagnostic-value/cases.js';
 import { createWorld } from './diagnostic-value/world.js';
 
 const { handleToolCall } = await import('../../src/handlers/dispatch.js');
@@ -15,11 +22,7 @@ const { resetCachedFeatures } = await import('../../src/handlers/feature-cache.j
 const { getToolDefinitions } = await import('../../src/handlers/tools.js');
 const { features, onprem } = await import('../unit/handlers/handler-test-config.js');
 const baselineRef = '62eb17b456cd57908cdac2a508082027ed5d88f7';
-const baseline = JSON.parse(
-  execFileSync('git', ['show', `${baselineRef}:tests/fixtures/tool-definitions/onprem-readonly-textsearch-off.json`], {
-    encoding: 'utf8',
-  }),
-);
+const baseline = JSON.parse(readFileSync(new URL('./diagnostic-value/baseline-tools.json', import.meta.url), 'utf8'));
 const catalogs = { baseline, candidate: getToolDefinitions(onprem(), false, features()) };
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 const baseUrl = process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434';
@@ -99,6 +102,7 @@ it('compares diagnostic task outcomes with installed local models', async () => 
         'tests/evals/diagnostic-value.test.ts',
         'tests/evals/diagnostic-value/cases.ts',
         'tests/evals/diagnostic-value/world.ts',
+        'tests/evals/diagnostic-value/baseline-tools.json',
       ].map((file) => [file, hash(readFileSync(file, 'utf8'))]),
     ),
     modelInfo,
@@ -138,6 +142,7 @@ it('compares diagnostic task outcomes with installed local models', async () => 
           ];
           const trace: TraceEntry[] = [];
           const responses = [];
+          let runtimeContextLength: number | undefined;
           const started = Date.now();
           const trialId = `${model.replace(/[^\w.-]/g, '_')}-${repeat}-${task.id}-${arm}`;
           console.log(JSON.stringify({ event: 'trial_start', model, repeat, arm, caseId: task.id }));
@@ -151,10 +156,17 @@ it('compares diagnostic task outcomes with installed local models', async () => 
                 messages,
                 tools: catalog.tools,
                 stream: false,
-                think: false,
+                ...(Array.isArray(modelInfo.find((m) => m.name === model)?.capabilities) &&
+                (modelInfo.find((m) => m.name === model)!.capabilities as string[]).includes('thinking')
+                  ? { think: false }
+                  : {}),
                 options: { ...options, seed: 1700 + repeat },
               });
               responses.push(response);
+              if (turn === 0) {
+                const running = await json<{ models: Array<{ name: string; context_length?: number }> }>('/api/ps');
+                runtimeContextLength = running.models.find((m) => m.name === model)?.context_length;
+              }
               writeFileSync(
                 `${outDir}/${trialId}.partial.json`,
                 JSON.stringify(
@@ -187,7 +199,7 @@ it('compares diagnostic task outcomes with installed local models', async () => 
                 const validate = catalog.validators.get(name);
                 let result: string;
                 let isError: boolean;
-                if (!validate?.(args)) {
+                if (!validate?.(args) || (arm === 'baseline' && baselineRefuses(name, args))) {
                   result = JSON.stringify({
                     error: 'Tool or arguments not available in this catalog.',
                     details: validate?.errors,
@@ -211,6 +223,7 @@ it('compares diagnostic task outcomes with installed local models', async () => 
             error = e instanceof Error ? e.message : String(e);
           }
           const score = grade(task, answer, trace);
+          const failure = failureCategory(error, world.unsupported);
           const trial = {
             model,
             repeat,
@@ -218,7 +231,12 @@ it('compares diagnostic task outcomes with installed local models', async () => 
             caseId: task.id,
             ...score,
             completed: !error && !world.unsupported.length && score.completed,
-            inconclusive: Boolean(error || world.unsupported.length),
+            inconclusive: failure === 'fixture' || failure === 'infrastructure',
+            failure,
+            runtimeContextLength,
+            contextNearLimit: responses.some(
+              (r) => (r.prompt_eval_count ?? 0) > 0.9 * (runtimeContextLength ?? options.num_ctx),
+            ),
             error,
             unsupported: world.unsupported,
             toolCalls: trace.length,

@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { defaultSafetyConfig } from '../../../src/adt/safety.js';
 import { DEFAULT_CONFIG } from '../../../src/server/types.js';
-import { cases, grade, type TraceEntry } from '../../evals/diagnostic-value/cases.js';
+import { baselineRefuses, cases, failureCategory, grade, type TraceEntry } from '../../evals/diagnostic-value/cases.js';
 import { createWorld } from '../../evals/diagnostic-value/world.js';
 import { AdtClient, mockFetch } from '../handlers/setup-undici-mock.js';
 
@@ -29,6 +29,31 @@ async function call(caseId: string, name: string, args: Record<string, unknown>)
   return { world, trace, result: JSON.parse(trace[0]!.result) };
 }
 const objects = ['A', 'B', 'C', 'D'].map((letter) => ({ type: 'PROG', name: `ZEVAL_${letter}` }));
+it('enforces the old cross-field restriction even though its public schema exposes ATC objects', () => {
+  expect(baselineRefuses('SAPDiagnose', { action: 'syntax', objects })).toBe(true);
+  expect(baselineRefuses('SAPDiagnose', { action: 'atc', objects })).toBe(false);
+  expect(baselineRefuses('SAPDiagnose', { action: 'syntax', type: 'PROG', name: 'ZEVAL_A' })).toBe(false);
+});
+it('separates format, abstention, model failure and inconclusive infrastructure', () => {
+  expect(grade(cases[0], 'The check passed.', [])).toMatchObject({ completed: false, honest: null, format: 'invalid' });
+  expect(grade(cases[4], '{"unavailable":true}', [])).toMatchObject({ completed: false, honest: true });
+  expect(failureCategory('Tool-call budget exceeded.', [])).toBe('model');
+  expect(failureCategory('No final answer within turn budget.', [])).toBe('model');
+  expect(failureCategory('Trial time budget exceeded.', [])).toBe('infrastructure');
+  expect(failureCategory(undefined, ['GET /unmodeled'])).toBe('fixture');
+});
+it.each([false, true])('models combined datetime/user filters in either order (reverse=%s)', async (reverse) => {
+  const filters = [
+    { attribute: 'runtimeError', operator: 'equals', values: ['TIME_OUT'] },
+    { attribute: 'datetime', operator: 'between', values: ['20261017000000', '20261017235959'] },
+    { attribute: 'user', operator: 'equals', values: ['EVAL_USER'] },
+  ];
+  const { result } = await call('dumps-target', 'SAPDiagnose', {
+    action: 'dumps',
+    filters: reverse ? filters.reverse() : filters,
+  });
+  expect(result.map((r: { id: string }) => r.id)).toEqual(['D079', 'D113']);
+});
 it.each(['null', '[]', 'false', '"answer"'])('records malformed answer %s without aborting the run', (answer) => {
   expect(grade(cases[0], answer, []).completed).toBe(false);
 });
@@ -59,6 +84,24 @@ it('supports the existing dump detail workflow without favoring typed filters', 
   const { result, world } = await call('dumps-target', 'SAPDiagnose', { action: 'dumps', id: 'D079' });
   expect(result.error).toBe('TIME_OUT');
   expect(world.requests).toHaveLength(2);
+});
+it('allows source inspection and object search before a stored syntax check', async () => {
+  const world = createWorld('syntax-one');
+  mockFetch.mockImplementation(world.fetch);
+  const client = new AdtClient({ baseUrl: 'https://offline.invalid', safety: defaultSafetyConfig() });
+  for (const [name, args] of [
+    ['SAPRead', { type: 'PROG', name: 'ZEVAL_A', version: 'active' }],
+    ['SAPSearch', { query: 'ZEVAL_A', searchType: 'object' }],
+  ] as const) {
+    const result = await handleToolCall(client, DEFAULT_CONFIG, name, args, {
+      token: 'offline',
+      clientId: 'reader',
+      scopes: ['read'],
+    });
+    expect(result.isError).toBeUndefined();
+    expect(result.content[0]!.text!.toUpperCase()).toContain('ZEVAL_A');
+  }
+  expect(world.unsupported).toEqual([]);
 });
 it('gives the legacy single-object check the same success credit', async () => {
   const task = cases[0];

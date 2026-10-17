@@ -15,8 +15,8 @@ Defaults: `qwen3:30b,llama3.1:8b`, two repetitions, eight tasks, both catalogs.
 Override `DIAGNOSTIC_EVAL_MODELS` (comma-separated installed names),
 `DIAGNOSTIC_EVAL_REPEATS` (1–3), `DIAGNOSTIC_EVAL_CASES` (case IDs), or
 `DIAGNOSTIC_EVAL_OUTPUT` (artifact directory). `OLLAMA_BASE_URL` must be local.
-Missing models fail explicitly; nothing is downloaded. The baseline commit
-`62eb17b4` must exist in Git history. Full transcripts, schemas, model digests and
+Missing models fail explicitly; nothing is downloaded. The frozen baseline catalog from `62eb17b4` is vendored so squash merges do not
+break reproducibility. Full transcripts, schemas, model digests and
 scores go to `test-results/diagnostic-value/` by default.
 
 Review failures and natural-language answers manually: JSON-format compliance is

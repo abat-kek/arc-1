@@ -3,7 +3,7 @@
 These workflows turn existing ARC-1 intent-tool results into reusable local JSON and HTML.
 They use the configured CLI connection, identity, dispatcher, policies and audit path. They do
 not release transports, activate objects, or change SQL/data permissions. These commands require a build containing the review workflow;
-they are not available in the published 1.5.2 package. When testing a checkout, build it and
+they are not available in the published 1.6.0 package. When testing a checkout, build it and
 invoke its local CLI with `node bin/arc1-cli.js review ...`.
 
 ## Collect a transport review

@@ -318,3 +318,16 @@ describe('independent review regressions', () => {
     },
   );
 });
+it('retains the multi-target prohibition on an explicit SAP delegator proposal', async () => {
+  const client = new AdtClient({ safety: defaultSafetyConfig() });
+  const result = parse(
+    await explainPolicy(
+      client,
+      { ...DEFAULT_CONFIG, targetId: 'A4H/001', multiTargetEndpoints: true },
+      { proposedTool: 'SAP', proposedArgs: { action: 'read', type: 'PROG', name: 'ZREPORT' } },
+      auth,
+    ),
+  );
+  expect(result.decision).toBe('denied');
+  expect(result.checks.targetCeiling.status).toBe('denied');
+});

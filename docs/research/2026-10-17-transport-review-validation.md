@@ -193,3 +193,10 @@ result is recorded above. This final record/archive commit changes documentation
 All review findings have a recorded disposition. The draft PR remains post-1.6, with current GitHub
 CI results visible on PR #1008. Local unit verification and the bounded SAP replay are distinct from
 shared-runner integration/E2E qualification; pending or skipped jobs do not prove live coverage.
+
+## Release integration check
+
+Release 1.6.0 (`041a9e48`) includes #1007, which adds 12 lines of search-name normalization
+to `xml-parser.ts`. The reduced parser budget now includes those upstream lines; no parser or
+search behavior changed here. The combined stack passed 9,085 tests across 326 files before
+this budget-only adjustment.

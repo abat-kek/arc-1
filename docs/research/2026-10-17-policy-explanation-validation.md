@@ -87,3 +87,15 @@ fixes were merged normally, preserving the published stack. No proposed operatio
 After these corrections and the notebook parent update, **9,005 tests / 320 files passed**.
 Typecheck, build, Biome, policy, file/schema budgets and strict docs all passed. Final independent
 review is requested on the resulting commit; the earlier live evidence retains its original hashes.
+
+## Second independent review
+
+[Claude review 2](adt-vscode-1.2/evidence/policy-claude-review-2.md) approved `83d02146` with
+no must-fix items; its clean full rerun passed 9,005 tests. We also fixed its low-severity N1:
+explicit `SAP` proposals now retain the multi-target prohibition before checking the expanded intent.
+The regression failed before the fix; 90 policy/dispatch tests and typecheck passed afterward.
+A quick exact-commit verification follows.
+
+The review also noted a pre-existing distinction: `SAP.read` denies the delegator route; a direct
+intent call needs an intent-level rule. The user guide now states this instead of expanding this
+PR into a tool-registration redesign.

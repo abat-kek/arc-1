@@ -1,3 +1,5 @@
+import { normalizeTypeArgsForValidation } from '../../../src/handlers/object-types.js';
+
 /** Synthetic business tasks; no prompt names a newly added action. */
 export const cases = [
   { id: 'syntax-one', prompt: 'Check stored active syntax of program ZEVAL_A.', statuses: { ZEVAL_A: 'passed' } },
@@ -47,6 +49,13 @@ export interface TraceEntry {
   arguments: Record<string, unknown>;
   result: string;
   isError: boolean;
+}
+
+// Match dispatch normalization before applying the frozen public catalog guard.
+export function normalizeEvalArgs(name: string, args: Record<string, unknown>) {
+  return Object.fromEntries(
+    Object.entries(normalizeTypeArgsForValidation(name, args)).filter(([, value]) => value !== undefined),
+  );
 }
 
 // The old public JSON Schema exposes objects for ATC; its runtime forbids other actions.

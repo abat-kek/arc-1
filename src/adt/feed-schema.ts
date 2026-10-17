@@ -111,7 +111,9 @@ export function compileDumpFilters(schema: DumpFeedSchema, filters: FeedFilter[]
       ![1, 2].includes(operator.operands) ||
       filter.values.length !== operator.operands
     )
-      throw new Error('Filter attribute, operator or operand count is not advertised by this target.');
+      throw new Error(
+        'Filter attribute, operator or operand count is not advertised by this target. Use SAPDiagnose action="feed_schema" for supported attribute and operator names.',
+      );
     const values = filter.values.map((value) => {
       if (attribute.type === 'string') {
         if (!/^[A-Za-z0-9_/$.* -]{1,128}$/.test(value) || value !== value.trim())

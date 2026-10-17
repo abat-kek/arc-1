@@ -12,6 +12,7 @@ import {
   cases,
   failureCategory,
   grade,
+  normalizeEvalArgs,
   systemPrompt,
   type TraceEntry,
 } from './diagnostic-value/cases.js';
@@ -30,6 +31,9 @@ if (!['localhost', '127.0.0.1', '[::1]'].includes(new URL(baseUrl).hostname))
   throw new Error('This offline eval uses local Ollama only.');
 const models = (process.env.DIAGNOSTIC_EVAL_MODELS ?? 'qwen3:30b,llama3.1:8b').split(',');
 const repeats = Number(process.env.DIAGNOSTIC_EVAL_REPEATS ?? 2);
+const arms = (process.env.DIAGNOSTIC_EVAL_ARMS ?? 'baseline,candidate').split(',');
+if (!arms.length || new Set(arms).size !== arms.length || arms.some((arm) => !['baseline', 'candidate'].includes(arm)))
+  throw new Error('Use baseline, candidate, or both for DIAGNOSTIC_EVAL_ARMS.');
 if (!Number.isInteger(repeats) || repeats < 1 || repeats > 3) throw new Error('Use 1..3 repetitions.');
 const selected = cases.filter(
   (c) => !process.env.DIAGNOSTIC_EVAL_CASES || process.env.DIAGNOSTIC_EVAL_CASES.split(',').includes(c.id),
@@ -109,7 +113,10 @@ it('compares diagnostic task outcomes with installed local models', async () => 
     ollama: await json('/api/version'),
     options,
     think: false,
+    argumentNormalization:
+      'Production normalization before schema validation; trace.arguments is normalized, responses retain original arguments.',
     repeats,
+    arms,
     systemPrompt,
     cases: selected,
     catalogs: Object.fromEntries(
@@ -127,7 +134,9 @@ it('compares diagnostic task outcomes with installed local models', async () => 
   const results = [];
   for (const model of models)
     for (let repeat = 0; repeat < repeats; repeat++)
-      for (const arm of repeat % 2 ? ['candidate', 'baseline'] : ['baseline', 'candidate']) {
+      for (const arm of (repeat % 2 ? ['candidate', 'baseline'] : ['baseline', 'candidate']).filter((arm) =>
+        arms.includes(arm),
+      )) {
         for (const task of selected) {
           vi.restoreAllMocks();
           resetCachedFeatures();
@@ -195,7 +204,7 @@ it('compares diagnostic task outcomes with installed local models', async () => 
               for (const call of message.tool_calls) {
                 if (trace.length >= 10) throw new Error('Tool-call budget exceeded.');
                 const name = call.function.name;
-                const args = call.function.arguments;
+                const args = normalizeEvalArgs(name, call.function.arguments);
                 const validate = catalog.validators.get(name);
                 let result: string;
                 let isError: boolean;

@@ -1,7 +1,16 @@
+import { readFileSync } from 'node:fs';
+import { Ajv } from 'ajv';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { defaultSafetyConfig } from '../../../src/adt/safety.js';
 import { DEFAULT_CONFIG } from '../../../src/server/types.js';
-import { baselineRefuses, cases, failureCategory, grade, type TraceEntry } from '../../evals/diagnostic-value/cases.js';
+import {
+  baselineRefuses,
+  cases,
+  failureCategory,
+  grade,
+  normalizeEvalArgs,
+  type TraceEntry,
+} from '../../evals/diagnostic-value/cases.js';
 import { createWorld } from '../../evals/diagnostic-value/world.js';
 import { AdtClient, mockFetch } from '../handlers/setup-undici-mock.js';
 
@@ -195,4 +204,46 @@ it('also refuses wrong-type batch evidence saved by the older fixture', async ()
     completed: false,
     honest: false,
   });
+});
+
+it('does not fabricate a stored-source verdict for a supplied-source request', async () => {
+  const world = createWorld('syntax-one');
+  mockFetch.mockImplementation(world.fetch);
+  const client = new AdtClient({ baseUrl: 'https://offline.invalid', safety: defaultSafetyConfig() });
+  const result = await handleToolCall(client, DEFAULT_CONFIG, 'SAPRead', {
+    type: 'SYNTAX',
+    objectType: 'PROG',
+    name: 'ZEVAL_A',
+    source: 'active',
+  });
+  expect(result.isError).toBe(true);
+  expect(world.unsupported).toContain('Syntax with supplied source is not modeled by these stored-source tasks.');
+});
+
+it('normalizes ordinary placeholders without enabling new baseline capabilities', () => {
+  const catalog = JSON.parse(
+    readFileSync(new URL('../../evals/diagnostic-value/baseline-tools.json', import.meta.url), 'utf8'),
+  );
+  const validate = new Ajv({ strict: false }).compile(
+    catalog.find((tool: { name: string }) => tool.name === 'SAPDiagnose').inputSchema,
+  );
+  const args = normalizeEvalArgs('SAPDiagnose', {
+    action: 'dumps',
+    objects: [],
+    filters: [],
+    objectType: '',
+    timeoutSeconds: null,
+  });
+  expect(validate(args)).toBe(true);
+  expect(
+    validate(
+      normalizeEvalArgs('SAPDiagnose', {
+        action: 'dumps',
+        filters: [{ attribute: 'runtimeError', operator: 'equals', values: ['TIME_OUT'] }],
+      }),
+    ),
+  ).toBe(false);
+  const batch = normalizeEvalArgs('SAPDiagnose', { action: 'syntax', objects });
+  expect(validate(batch)).toBe(true);
+  expect(baselineRefuses('SAPDiagnose', batch)).toBe(true);
 });

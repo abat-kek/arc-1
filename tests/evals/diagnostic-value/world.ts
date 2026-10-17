@@ -100,6 +100,10 @@ export function createWorld(caseId: string) {
           ).test(name),
         );
       response = `<objectReferences>${matches.map((name) => `<objectReference name="${name}" type="PROG/P" uri="/sap/bc/adt/programs/programs/${name}"/>`).join('')}</objectReferences>`;
+    } else if (u.pathname === '/sap/bc/adt/checkruns' && body.includes('<chkrun:artifacts>')) {
+      unsupported.push('Syntax with supplied source is not modeled by these stored-source tasks.');
+      status = 400;
+      response = 'Supplied-source syntax response not modeled; do not infer an SAP verdict.';
     } else if (u.pathname === '/sap/bc/adt/checkruns' && method === 'POST') {
       const uris = [...body.matchAll(/adtcore:uri="([^"]+)"/g)].map((match) => match[1]!);
       response = `<checkRunReports>${uris

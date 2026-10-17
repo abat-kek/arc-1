@@ -1134,7 +1134,7 @@ export function getToolDefinitions(
       description:
         'ABAP diagnostics and runtime analysis. Actions:\n' +
         '- "feed_schema": dump filter attributes/operators. dumps filters are ANDed; datetime uses UTC YYYYMMDDHHMMSS.\n' +
-        '- "activation_log": latest advertised DDIC log (DOMA/DTEL/TABL/DDLS); no activation or attempt correlation.\n' +
+        '- "activation_log": existing DDIC log: type (DOMA/DTEL/TABL/DDLS) + name. No activation or attempt correlation.\n' +
         '- "syntax": compatibility check; when available prefer SAPRead(type="SYNTAX", objectType, name, version?, source?).\n' +
         '- "unittest": harmless ABAP Unit for CLAS/PROG/FUGR or DEVC (exact; includeSubpackages recurses).\n' +
         '- "unittest_ci": harmless package tests with source reconciliation; empty/incomplete runs fail.\n' +
@@ -1144,7 +1144,7 @@ export function getToolDefinitions(
         '- "object_state": active/inactive ETags, hashes and divergence (name+type; CLAS: all includes). Server-driven types unsupported.\n' +
         '- "quickfix": proposals at name+type+source+line (optional column/sourceUri).\n' +
         '- "apply_quickfix": return proposal text deltas without writing; needs quickfix inputs + proposalUri/proposalUserContent.\n' +
-        '- "dumps": list/read ST22 short dumps (no id = list, newest first, user/from/to/maxResults; id = read; includeFullText, sections).\n' +
+        '- "dumps": ST22 newest-first list (user/from/to/maxResults; filters e.g. attribute=runtimeError, operator=equals, values=[MESSAGE_TYPE_X]) or id detail (includeFullText, sections).\n' +
         '- "traces": list profiler traces; id+analysis analyzes one.\n' +
         '- "trace_start": arm a profiler trace for the NEXT matching execution, then reproduce and read via "traces" (write scope; defaults: next HTTP request, SQL on).\n' +
         '- "trace_requests": list armed trace requests. "trace_cancel": cancel one by id (write scope).\n' +

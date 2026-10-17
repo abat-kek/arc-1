@@ -128,3 +128,23 @@ do not pool their raw machine scores. Also restore the baseline's specific ATC-o
 refusal message. A malformed `dumpIds` field is a formatting issue, not evidence of
 a false factual claim. Placeholder validation remains stricter than the production
 normalizer in both arms; report affected calls rather than silently correcting them.
+
+## Separate confirmation after the 32-trial comparison
+
+The original comparison completed all 32 trials. Its failures justify two small
+model-facing edits: spell out `type` + `name` for activation logs; show a typed dump
+filter example using MESSAGE_TYPE_X (the task still asks for TIME_OUT); and point
+invalid-filter errors to optional `feed_schema` discovery. No new API or fallback.
+
+Llama also supplied `source: "active"` instead of requesting stored source. The
+fixture previously ignored that supplied source; flag those three executed trials
+inconclusive, despite the grader already refusing to credit them. Future fixtures
+explicitly reject this unmodeled route. Strict Ajv validation also rejected empty
+placeholders which production normalizes. Normalize before the catalog guard for
+future runs, with a regression proving this cannot unlock the baseline batch.
+
+Run **one further complete Llama 3.1 8B baseline/candidate pass (16 trials)** using
+the corrected normalization/fixture and concise descriptions. This fast local model
+uses the same prompts, seed, limits and final grader. This is an explicitly
+post-feedback confirmation, not a replacement for the original 32 trials or an
+independent statistical replication. Retain both protocols and all raw results.

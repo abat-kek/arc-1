@@ -69,5 +69,5 @@ separate from a current activation attempt. Prefer a small focused module for ea
   See diagnostic draft #1011 for the 15-request probe and exact stop condition.
 - [x] Notebook runner, tests, docs, live run and three independent review rounds (#1009).
 - [x] Policy explanations, parity tests, docs, live read-only check and three review rounds (#1010).
-- [ ] Verified syntax/feed/DDIC diagnostics, tests, docs, live checks and independent review.
-- [ ] Final preservation check and links to all draft PRs and evidence.
+- [x] Verified syntax/feed/DDIC diagnostics, tests, docs, 758 live checks and two independent review rounds; final approval at `b89bebd0` (#1011).
+- [x] Final preservation check: 67 original dirty files and 11 archived evidence files unchanged; all four draft PRs and evidence linked in the research index.

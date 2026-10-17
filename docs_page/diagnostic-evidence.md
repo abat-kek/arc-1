@@ -84,6 +84,9 @@ canonical activation-log link with GET. It never activates the object or follows
 | `denied` | SAP returned 401/403 |
 | `unavailable` | SAP returned 404 |
 
+`denied` and `unavailable` can come from either the metadata or log request; they do not identify
+which step failed. TABL currently uses the table route, without a structure fallback.
+
 Malformed or ambiguous metadata/logs fail. `retrievedAt` is retrieval time; `activationTime` remains
 null and `correlation` remains `not-established`. An old successful log says nothing about a later
 activation attempt. Unknown severities remain unknown. Limits: 20 seconds, eight HTTP attempts,

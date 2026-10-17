@@ -105,6 +105,7 @@ sequence.
 | [FEAT-78](#feat-78) | Table type access type and keys | P2 | M | Needs research | Object coverage |
 | [FEAT-09](#feat-09) | Cross Trace result reader | P2 | M | Needs research | Diagnostics |
 | [FEAT-50](#feat-50) | ADT type-probe fixture coverage | P3 | XS each | Contributor-driven | Diagnostics |
+| [FEAT-89](#feat-89) | Validate the legacy dump user filter | P2 | S | Needs research | Diagnostics |
 | [FEAT-32](#feat-32) | Stable data-preview pagination | P3 | M | Needs research | Data access |
 | [FEAT-36](#feat-36) | Type information | P3 | S | Blocked | Code intelligence |
 | [FEAT-79](#feat-79) | DDIC-aware dependency context | P2 | M | Needs research | Code intelligence |
@@ -504,6 +505,23 @@ explicitly unresolved; execution keeps its normal fail-closed guards.
 explanation. Reuse the action's actual prerequisite evaluator under bounded, authorized reads; do
 not duplicate an approximate policy engine or run a mutation to test permission. No broader scope
 or SAP authorization certification is planned. [Current contract](authorization.md#explain-a-proposed-operation).
+
+<a id="feat-89"></a>
+### FEAT-89 — Validate the legacy dump user filter
+
+- **Priority / effort / status:** P2 / S / Needs research
+- **Category:** Diagnostics
+
+**Remaining gap.** Typed dump filters reject query grammar delimiters, but the older `user`-only
+path still inserts its trimmed value into the query grammar. Offline base/head comparison in
+[diagnostic review O6](https://github.com/arc-mcp/arc-1/blob/main/docs/research/adt-vscode-1.2/evidence/diagnostics-review/claude-review-1.md)
+reproduces this pre-existing behavior. It changes the requested filter, not the caller's SAP rights.
+
+**Resume with.** Confirm supported SAP user-name characters and existing wildcard semantics,
+then reuse a narrow value validator without adding schema discovery to legacy calls. Add
+fail-before grammar tests and a positive live match; preserve trimming, paging and date bounds.
+Also settle the existing `maxResults: 0` placeholder behavior (currently clamped to one result)
+before changing compatibility defaults.
 
 <a id="feat-23"></a>
 ### FEAT-23 — Recursive program include reading

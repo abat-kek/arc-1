@@ -124,3 +124,48 @@ was used by both syntax entry points and the new diagnostic allowlists.
 The legacy `user` filter now retains its whitespace normalization when combined with typed
 filters. Its regression failed before correction; all 267 focused tests and typecheck passed.
 This adds one line to the existing paginator (21 lines total above its original budget).
+
+## Independent review dispositions
+
+[Claude review 1](adt-vscode-1.2/evidence/diagnostics-review/claude-review-1.md) reviewed immutable
+`d93272ad` in the GUI with Opus 5.5 Max. It reproduced three must-fix issues and six optional notes.
+All product corrections are in `b89bebd0`; the table accounts for every finding.
+
+| ID | Disposition |
+|---|---|
+| M1 | Fixed empty-array normalization and shared harmless-placeholder rules; meaningful unsupported options still fail. |
+| M2 | Fixed namespace handling using the existing canonical guard; offline namespace/traversal regressions pass. |
+| M3 | Fixed all four response-limit hints while preserving the JSON error contract; documented unfiltered dump bounds. |
+| O1 | Hardened traversal of nested messages and reports; ambiguous reports cannot pass. |
+| O2 | Documented that denied/unavailable may originate at either GET, and that TABL lacks a structure fallback. |
+| O3 | Preserved legacy user trimming with typed filters. |
+| O4 | Deferred wording nit: the shared type description lists PROG, while the enforced BTP enum excludes it. The user guide explicitly states this restriction. |
+| O5 | Deferred cosmetic import/comment placement; no behavior or validation difference. |
+| O6 | Pre-existing legacy user-filter grammar behavior; recorded separately as FEAT-89 with compatibility and positive-live-match prerequisites. |
+
+Independent review used offline dispatcher tests on Node 22.21.1. It did not add live SAP coverage.
+In particular, namespaced objects, positive typed-filter matches and cross-release behavior remain
+unverified live; the recorded 758 run used a non-matching filter.
+
+## Final corrected-tree qualification
+
+The [final combined-tree record](adt-vscode-1.2/evidence/release-integration-reviewed-summary.json)
+pins corrected product `b89bebd0`, release main `041a9e48` and combined tree `4ae14e57`.
+All **9,103 tests / 326 files passed** on Node 24.11.1 with two workers (140.54 seconds).
+Typecheck, build, lint, policy, file/schema budgets and strict docs passed. Lint has three
+informational suggestions and no errors. The size gate initially needed the isolated archive's
+tracked paths indexed; its rerun passed without changing source. Logs are hash-recorded.
+
+The original 67 uncommitted prototype files and all 11 archived evidence files still match their
+recorded hashes. The other three implementation worktrees are clean. Main remained `041a9e48`
+at the final upstream check; all four PRs are draft and mergeable. Later documentation/archive
+commits do not change this tested product revision.
+
+[Claude final verification](adt-vscode-1.2/evidence/diagnostics-review/claude-review-2.md)
+**approves `b89bebd0` with no must-fix items and no new defect**. All six original regressions
+pass, along with 1,632 focused tests / 26 files, source/test typechecks and Biome on Node 22.21.1.
+One earlier repro intentionally asserted the old namespace bug and now fails because the fixed
+call reaches metadata validation; the six correction regressions and maintained suite pass.
+O2 documentation and O6 roadmap parking were completed after the immutable product review.
+Both reports are archived byte-for-byte; the final integration record above includes the user
+trim that was still running when Claude wrote its report. No further product changes followed.

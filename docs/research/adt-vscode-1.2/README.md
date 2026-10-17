@@ -1,7 +1,7 @@
 # ADT for VS Code 1.2: ARC-1 adoption backlog
 
-**Decision record · 17 October 2026.** Start with trustworthy transport review. Then evaluate
-the notebook runner, policy explanations and verified diagnostics as separate changes.
+**Decision record · 17 October 2026.** Trustworthy transport review comes first, followed by
+the notebook runner, policy explanations and verified diagnostics in separate draft PRs.
 This is the durable index for the research, including ideas we deliberately defer.
 
 ## Read in this order
@@ -54,7 +54,7 @@ ordering. The earlier activation-log uncertainty is also superseded: the install
 |---|---|---|
 | Destination restrictions | Reuse merged opt-in XSUAA target grants, #677 / ADR-0008 | Release and landscape acceptance; no second ACL engine or incidental writes |
 | Package write restrictions | Reuse real-package exact/prefix/subtree checks | Explain clearly: write-package rules are not read/data restrictions |
-| Effective access explanation | POL-01 above | Review the prototype against actual evaluators; complex actions stay unresolved |
+| Effective access explanation | POL-01 implemented in draft #1010 | FEAT-88 retains complex prerequisites; execution remains authoritative |
 | SQL notebooks | NB-01 above | Small runner first; editor only if repeated use identifies editing as the bottleneck |
 | Timeline / comparisons | REVIEW-01 above | Preserve provenance and uncertainty; avoid another diff engine |
 | Transport Organizer | Reuse list/get/history/mutations; build review workflow | Specific missing task/member action needs its own use case; owner fix #1003 is merged |
@@ -149,9 +149,10 @@ demand remain hypotheses until measured.
 
 The [eight-request transport pilot](../2026-10-17-transport-pilot.md) records actual coverage gaps
 and bounded metrics. The [follow-up plan](../../plans/2026-10-17-adt-followups.md) separates the
-notebook, policy and diagnostic slices. The notebook runner is implemented in this branch; its
-[guide](../../../docs_page/sql-notebooks.md) documents explicit execution, narrow scalar assertions
-and limits. Validation and independent-review results are recorded with its draft PR.
+implemented notebook, policy and diagnostic slices. Read the guides for
+[notebooks](../../../docs_page/sql-notebooks.md), [policy](../../../docs_page/authorization.md#explain-a-proposed-operation)
+and [diagnostics](../../../docs_page/diagnostic-evidence.md). Each draft has tests, live observations
+with explicit limits, and independent review evidence.
 
 ## Implementation checkpoints
 
@@ -160,7 +161,7 @@ and limits. Validation and independent-review results are recorded with its draf
 | Transport review | [Draft #1008](https://github.com/arc-mcp/arc-1/pull/1008) | Three Claude review rounds; final approval; eight-request pilot |
 | SQL notebook | [Draft #1009](https://github.com/arc-mcp/arc-1/pull/1009) | Allowed/denied live run; exact strings; three review rounds; final approval and 52 focused checks |
 | Policy explanation | [Draft #1010](https://github.com/arc-mcp/arc-1/pull/1010) | Four live explanations; three review rounds; final approval and 106 focused checks; no proposed execution |
-| Diagnostics | [Draft #1011](https://github.com/arc-mcp/arc-1/pull/1011) · [validation](../2026-10-17-verified-diagnostics.md) | Native syntax, typed feed filter and existing log reads on 758; parser/handler regressions |
+| Diagnostics | [Draft #1011](https://github.com/arc-mcp/arc-1/pull/1011) · [validation](../2026-10-17-verified-diagnostics.md) | Native reads on 758; two Claude review rounds; final approval and 1,632 focused tests; full stack passes 9,103 tests against release 1.6.0 |
 | Broader transport history | Research remains deferred | [Pilot follow-up](evidence/history-pilot-summary.json): no text history relation, current-only entries, one inaccessible archived domain revision |
 
 These are draft changes, not a released feature promise. Merge the stack in order after maintainer

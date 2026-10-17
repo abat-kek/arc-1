@@ -69,6 +69,9 @@ it.each([
   'ADT API error: status 500 at /sap/bc/adt/ddic/tables: Internal server error',
   'Network timeout at /sap/bc/adt/packages',
   'ADT API error: status 404 at /sap/bc/adt/ddic/tables/Z_MISSING: Object missing',
+  'ADT API error: status 404 at /sap/bc/adt/ddic/tables/Z_MISSING: Z_MISSING does not exist',
+  'ADT API error: status 404 at /sap/bc/adt/ddic/domains/Z_MISSING: Z_MISSING does not exist',
+  'ADT API error: status 404 at /sap/bc/adt/packages/Z_MISSING: Z_MISSING does not exist',
 ])('does not infer an absent collection from: %s', (text) => {
   expect(classifyToolErrorSkip({ isError: true, content: [{ type: 'text', text }] })).toBeNull();
 });

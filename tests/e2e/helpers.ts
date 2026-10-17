@@ -278,17 +278,11 @@ export function classifyToolErrorSkip(result: ToolResult): string | null {
       return null;
     }
   }
-  // Release gap — ADT endpoints absent on pre-7.52 systems.
-  if (
-    text === DOMA_WRITE_UNAVAILABLE_HINT ||
-    /\/sap\/bc\/adt\/ddic\/domains(?:\/|\b).*(?:does not exist|not found)/i.test(text)
-  ) {
+  // Explicit collection refusals; an individual object's 404 is not a release gap.
+  if (text === DOMA_WRITE_UNAVAILABLE_HINT) {
     return 'Backend feature not supported on this SAP system: /ddic/domains endpoint not available on this release';
   }
-  if (
-    text === TABL_DT_WRITE_UNAVAILABLE_HINT ||
-    /\/sap\/bc\/adt\/ddic\/tables(?:\?|\b).*(?:does not exist|not found)/i.test(text)
-  ) {
+  if (text === TABL_DT_WRITE_UNAVAILABLE_HINT) {
     return 'Backend feature not supported on this SAP system: /ddic/tables collection not available on this release';
   }
   if (/\/sap\/bc\/adt\/ddic\/tables\/[A-Z0-9_]+\/source.*(?:does not exist|not found)/i.test(text)) {
@@ -305,10 +299,7 @@ export function classifyToolErrorSkip(result: ToolResult): string | null {
   if (/\/sap\/bc\/adt\/ddic\/dataelements\b.*Unsupported Media Type/i.test(text)) {
     return 'Backend feature not supported on this SAP system: DTEL v2 content type not supported on this release';
   }
-  if (
-    text === DEVC_WRITE_UNAVAILABLE_HINT ||
-    /\/sap\/bc\/adt\/packages\b.*(?:No suitable|does not exist)/i.test(text)
-  ) {
+  if (text === DEVC_WRITE_UNAVAILABLE_HINT) {
     return 'Backend feature not supported on this SAP system: /packages endpoint not available on this release';
   }
   if (/\/sap\/bc\/adt\/datapreview\/ddic\b.*No suitable resource/i.test(text)) {

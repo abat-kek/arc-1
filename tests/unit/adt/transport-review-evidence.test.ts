@@ -44,7 +44,7 @@ function client(missing: string[] = []) {
   return {
     getRevisions: vi.fn(async (_type: string, _name: string, opts: { include?: string }) => {
       if (missing.includes(opts.include ?? 'main')) throw new AdtApiError('Not found', 404, '/sap/bc/adt/demo');
-      return { revisions: history(opts.include === 'main') };
+      return { revisions: history((opts.include ?? 'main') === 'main') };
     }),
     getRevisionSource: vi.fn(async (uri: string) => (uri.includes('00002') ? 'WRITE 2.\n' : 'WRITE 1.\n')),
   } as unknown as AdtClient;
@@ -109,7 +109,7 @@ describe('transport review evidence regressions', () => {
       minimalErrors: true,
     });
     expect(result.parts[0].note).toContain('ARC-1 review page budget exhausted');
-    expect(result.parts[0].statisticsComplete).toBe(false);
+    expect(result.parts[0].baselineStatus).toBe('baseline-unavailable');
   });
   it('does not certify a newer-numbered undated snapshot as the predecessor', () => {
     const feed = [rev('00002', request), rev('00003', 'DEVK900003', '')];
@@ -132,7 +132,6 @@ describe('transport review evidence regressions', () => {
   it('selects explicit source states without substituting current work for missing release history', () => {
     const feed = [rev('99999', request), rev('00000', request), ...history()];
     expect(selectTransportRevisionPair(feed, ids, 'active').current?.id).toBe('00000');
-    expect(selectTransportRevisionPair(feed, ids, 'draft').current?.id).toBe('99999');
     expect(selectTransportRevisionPair(feed, ids, 'released').current?.id).toBe('00002');
     expect(selectTransportRevisionPair(feed.slice(0, 2), ids, 'released').current).toBeNull();
   });
@@ -153,14 +152,13 @@ describe('transport review evidence regressions', () => {
     expect(parseRevisionFeed('<feed/>').revisions).toEqual([]);
   });
 
-  it('bounds a wide UTF-8 line while retaining statistics and exact source hashes', async () => {
+  it('bounds a wide UTF-8 line while retaining accurate statistics', async () => {
     const c = client();
     vi.mocked(c.getRevisionSource).mockImplementation(async (uri) => (uri.includes('00002') ? 'é'.repeat(150000) : ''));
     const result = await diffTransportObject(c, { ...object([]), type: 'PROG' }, ids);
     const part = result.parts[0];
     expect(Buffer.byteLength(part.diff)).toBeLessThanOrEqual(16384);
-    expect(part).toMatchObject({ diffTruncated: true, statisticsComplete: true, added: 1 });
-    expect(part.sourceHashes?.after).toMatch(/^[a-f0-9]{64}$/);
+    expect(part).toMatchObject({ diffTruncated: true, added: 1 });
   });
   it('TD-01 retains a selected include when main succeeds and include history returns 404', async () => {
     const result = await diffTransportObject(
@@ -169,17 +167,26 @@ describe('transport review evidence regressions', () => {
       ids,
     );
     expect(result.parts).toHaveLength(2);
-    expect(result.scopeNote).toContain('whole source part');
+    expect(result.scopeNote).toContain('whole class source');
     expect(result.parts[0].diff).toContain('+WRITE 2.');
     expect(result.parts[1]).toMatchObject({ part: 'implementations', baselineStatus: 'baseline-unavailable' });
     expect(result.parts[1].note).toContain('absence or deletion is not established');
   });
 
   it('TD-02 retains changed unattributed siblings of an exact main match', async () => {
+    const c = client(['definitions', 'macros', 'testclasses']);
+    vi.mocked(c.getRevisions).mockImplementation(async (_t, _n, opts) => ({
+      object: { type: 'CLAS', name: 'ZCL_DEMO' },
+      revisions: [rev('00000', opts?.include === 'main' ? request : undefined), rev('00001', 'OTHER', '2026-10-16')],
+    }));
+    vi.mocked(c.getRevisionSource).mockImplementation(async (uri) =>
+      uri.includes('00000') ? 'WRITE 2.\n' : 'WRITE 1.\n',
+    );
     const result = await diffTransportObject(
-      client(['definitions', 'macros', 'testclasses']),
+      c,
       object([{ pgmid: 'R3TR', type: 'CLAS', name: 'ZCL_DEMO', wbtype: 'CLAS/OC', taskId: request }]),
       ids,
+      { mode: 'active' },
     );
     expect(result.parts.find((p) => p.part === 'implementations')).toMatchObject({
       added: 1,
@@ -197,18 +204,13 @@ describe('transport review evidence regressions', () => {
     const result = await diffTransportObject(c, input, ids);
     expect(result.parts).toEqual([]);
     expect(c.getRevisions).not.toHaveBeenCalled();
-    expect(result.components).toEqual(input.components);
     expect(result.inventoryReason).toContain('historical');
-    expect(result.coverageGaps).toBeUndefined();
   });
 
-  it.each(['00000', '99999'])(
-    'TD-04 does not infer an empty baseline for undated %s with known history',
-    (workState) => {
-      const feed = [rev('00002', 'DEVK900001'), rev(workState, request, '')];
-      const pair = selectTransportRevisionPair(feed, ids);
-      expect(pair.previous?.id).toBe('00002');
-      expect(baselineStatusFor(pair, feed)).toBe('baseline-ambiguous');
-    },
-  );
+  it.each(['00000'])('TD-04 does not infer an empty baseline for undated %s with known history', (workState) => {
+    const feed = [rev('00002', 'DEVK900001'), rev(workState, request, '')];
+    const pair = selectTransportRevisionPair(feed, ids, 'active');
+    expect(pair.previous?.id).toBe('00002');
+    expect(baselineStatusFor(pair, feed)).toBe('baseline-ambiguous');
+  });
 });

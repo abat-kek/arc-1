@@ -72,14 +72,14 @@ describe('selectTransportRevisionPair', () => {
     expect(pair.skipped[0].reason).toMatch(/active work state/);
   });
 
-  it('never selects the active revision as current when a real snapshot exists', () => {
+  it('never substitutes an unrelated snapshot for a released request', () => {
     const pair = selectTransportRevisionPair(A4H_CLASS_FEED, ['SOMETHING_ELSE']);
-    expect(pair.selectionMethod).toBe('latest-revision-fallback');
-    expect(pair.current?.id).toBe('00002');
+    expect(pair.selectionMethod).toBe('no-revisions');
+    expect(pair.current).toBeNull();
   });
 
   it('reports active-only-fallback when the feed holds nothing but the work state', () => {
-    const pair = selectTransportRevisionPair([rev('00000', '2026-04-18T18:42:16Z')], ['A4HK906291']);
+    const pair = selectTransportRevisionPair([rev('00000', '2026-04-18T18:42:16Z')], ['A4HK906291'], 'active');
     expect(pair.selectionMethod).toBe('active-only-fallback');
     expect(pair.current?.id).toBe('00000');
     expect(pair.previous).toBeNull();
@@ -129,7 +129,7 @@ describe('selectTransportRevisionPair', () => {
       rev('00002', '2026-03-28T19:42:52Z', 'A4HK900111'),
       { id: '00001', author: '', timestamp: '', uri: '/sap/bc/adt/x/versions/1/00001/content' } as RevisionInfo,
     ];
-    const pair = selectTransportRevisionPair(feed, ['A4HK900110']);
+    const pair = selectTransportRevisionPair(feed, ['A4HK900110'], 'active');
     expect(pair.current?.id).toBe('00000');
     expect(pair.previous?.id).toBe('00002');
   });
@@ -143,7 +143,7 @@ describe('selectTransportRevisionPair', () => {
       [undated, a, b],
       [b, undated, a],
     ] as RevisionInfo[][]) {
-      expect(selectTransportRevisionPair(feed, ['A4HK900110']).previous?.id).toBe('00002');
+      expect(selectTransportRevisionPair(feed, ['A4HK900110'], 'active').previous?.id).toBe('00002');
     }
   });
 
@@ -155,17 +155,17 @@ describe('selectTransportRevisionPair', () => {
       rev('00000', '2026-08-03T21:30:00Z', 'A4HK906370'),
       rev('00004', '2026-07-01T09:00:00Z', 'A4HK906111'),
     ];
-    const pair = selectTransportRevisionPair(feed, ['A4HK906370']);
-    expect(pair.current?.id).toBe('99999');
+    const pair = selectTransportRevisionPair(feed, ['A4HK906370'], 'active');
+    expect(pair.current?.id).toBe('00000');
     expect(pair.previous?.id).toBe('00004');
-    expect(pair.skipped.map((s) => s.revision.id)).toEqual(['00000']);
+    expect(pair.skipped).toEqual([]);
   });
 
   it('does not fall back onto an inactive draft when no revision names the transport', () => {
     const feed = [rev('99999', '2026-08-03T21:35:57Z'), rev('00003', '2026-07-01T09:00:00Z', 'A4HK906111')];
     const pair = selectTransportRevisionPair(feed, ['A4HK909999']);
-    expect(pair.selectionMethod).toBe('latest-revision-fallback');
-    expect(pair.current?.id).toBe('00003');
+    expect(pair.selectionMethod).toBe('no-revisions');
+    expect(pair.current).toBeNull();
   });
 
   it('matches a task id as well as the request id', () => {
@@ -177,7 +177,7 @@ describe('selectTransportRevisionPair', () => {
 
   it('ignores a blank transport id on the current side when matching', () => {
     const pair = selectTransportRevisionPair([rev('00001', '2026-06-01T09:00:00Z')], ['']);
-    expect(pair.selectionMethod).toBe('latest-revision-fallback');
+    expect(pair.selectionMethod).toBe('no-revisions');
   });
 });
 
@@ -186,14 +186,14 @@ describe('baselineStatusFor', () => {
     expect(baselineStatusFor(selectTransportRevisionPair(A4H_CLASS_FEED, ['A4HK906291']))).toBe('prior-revision');
   });
 
-  it('confirms creation only when the current revision was matched to the transport', () => {
+  it('reports missing predecessor without proving creation', () => {
     const feed = [rev('00001', '2026-06-23T09:34:43Z', 'A4HK906289'), rev('00000', '2026-06-23T09:34:04Z')];
     expect(baselineStatusFor(selectTransportRevisionPair(feed, ['A4HK906289']))).toBe('no-prior-snapshot');
   });
 
   it('calls a missing baseline ambiguous when the current revision was only guessed', () => {
     const feed = [rev('00001', '2026-06-23T09:34:43Z', 'A4HK900001'), rev('00000', '2026-06-23T09:34:04Z')];
-    expect(baselineStatusFor(selectTransportRevisionPair(feed, ['A4HK906289']))).toBe('baseline-ambiguous');
+    expect(baselineStatusFor(selectTransportRevisionPair(feed, ['A4HK906289'], 'active'))).toBe('baseline-ambiguous');
   });
 
   it('reports baseline-unavailable for an empty feed', () => {
@@ -401,11 +401,11 @@ describe('classIncludesFor — the transport states which includes it touched', 
 describe('baselineStatusFor — evidence level is visible', () => {
   it('marks a predecessor found under a fallback selection as unverified', () => {
     const feed = [
-      rev('00003', '2026-06-23T12:00:00Z', 'A4HK900001'),
+      rev('00000', '2026-06-23T12:00:00Z', 'A4HK900001'),
       rev('00002', '2026-06-01T09:00:00Z', 'A4HK900000'),
     ];
-    const pair = selectTransportRevisionPair(feed, ['A4HK906291']);
-    expect(pair.selectionMethod).toBe('latest-revision-fallback');
+    const pair = selectTransportRevisionPair(feed, ['A4HK906291'], 'active');
+    expect(pair.selectionMethod).toBe('active-only-fallback');
     expect(baselineStatusFor(pair)).toBe('prior-revision-unverified');
   });
 });
@@ -447,7 +447,7 @@ describe('baselineStatusFor — creation needs positive evidence', () => {
     expect(baselineStatusFor(pair, feedWithOlder)).toBe('baseline-ambiguous');
   });
 
-  it('still reports creation when nothing older exists', () => {
+  it('reports no retained predecessor when nothing older exists', () => {
     const feed = [rev('00001', '2026-06-23T09:34:43Z', 'A4HK906289'), rev('00000', '2026-06-23T09:34:04Z')];
     expect(baselineStatusFor(selectTransportRevisionPair(feed, ['A4HK906289']), feed)).toBe('no-prior-snapshot');
   });

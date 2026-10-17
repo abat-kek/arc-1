@@ -43,115 +43,108 @@ const client = {
 } as unknown as AdtClient;
 const config = { ...DEFAULT_CONFIG, url: 'https://sap.test' };
 const run = (user: string, args: Record<string, unknown>) =>
-  requestContext.run({ requestId: 'test', user }, () =>
-    handleTransportReview(client, { id, reviewMode: 'released', ...args }, config),
-  );
+  requestContext.run({ requestId: 'test', user }, () => handleTransportReview(client, { id, ...args }, config));
 beforeEach(() => {
+  vi.clearAllMocks();
   vi.mocked(getTransport).mockResolvedValue(transport(['A', 'B']));
 });
-it('binds review continuation to caller, inventory, request, target and mode', async () => {
-  const first = JSON.parse((await run('alice', { limit: 1 })).content[0]!.text);
-  expect(first.nextOffset).toBe(1);
-  expect((await run('bob', { offset: 1, continuation: first.continuation })).isError).toBe(true);
-  expect((await run('alice', { offset: 1, reviewMode: 'active', continuation: first.continuation })).isError).toBe(
-    true,
-  );
-  expect((await run('alice', { offset: 1, continuation: first.continuation })).isError).toBeUndefined();
-  expect((await run('alice', { id: 'A4HK900002', offset: 1, continuation: first.continuation })).isError).toBe(true);
-  const otherTarget = await requestContext.run({ requestId: 'test', user: 'alice' }, () =>
-    handleTransportReview(
-      client,
-      { id, reviewMode: 'released', offset: 1, continuation: first.continuation },
-      { ...config, url: 'https://other.test' },
-    ),
-  );
-  expect(otherTarget.isError).toBe(true);
-  vi.mocked(getTransport).mockResolvedValue(transport(['B']));
-  expect((await run('alice', { offset: 1, continuation: first.continuation })).isError).toBe(true);
-});
-it('does not declare offset-only continuation verified', async () => {
-  const page = JSON.parse((await run('alice', { offset: 1 })).content[0]!.text);
-  expect(page).toMatchObject({ status: 'partial', continuationVerified: false });
-});
-it('reports an oversized first object instead of returning a non-progressing continuation', async () => {
-  const large = transport(['A']);
-  large.tasks[0]!.objects = Array.from({ length: 7000 }, () => ({ ...large.tasks[0]!.objects[0]! }));
-  vi.mocked(getTransport).mockResolvedValue(large);
-  const result = await run('alice', { limit: 1 });
-  expect(result.isError).toBe(true);
-  expect(result.content[0]!.text).toContain('output budget');
-});
-it('invalidates continuation when a task changes state or an empty task is added', async () => {
-  const first = JSON.parse((await run('alice', { limit: 1 })).content[0]!.text);
-  const changed = transport(['A', 'B']);
-  changed.tasks[0]!.status = 'R';
-  vi.mocked(getTransport).mockResolvedValue(changed);
-  expect((await run('alice', { offset: 1, continuation: first.continuation })).isError).toBe(true);
-  const added = transport(['A', 'B']);
-  added.tasks.push({ id: 'A4HK900099', status: 'D', owner: 'TEST', description: '', objects: [] });
-  vi.mocked(getTransport).mockResolvedValue(added);
-  expect((await run('alice', { offset: 1, continuation: first.continuation })).isError).toBe(true);
-});
-it('binds the SAP client even when a configured target label stays the same', async () => {
-  const selected = { ...config, targetId: 'DEV' };
-  const first = JSON.parse((await handleTransportReview(client, { id }, selected)).content[0]!.text);
-  const changedClient = { ...client, sapClient: '002' } as AdtClient;
-  expect((await handleTransportReview(changedClient, { id, continuation: first.continuation }, selected)).isError).toBe(
-    true,
-  );
-});
-it('accepts reordered objects while refusing a forged continuation', async () => {
-  const first = JSON.parse((await run('alice', { limit: 1 })).content[0]!.text);
+it('pages sorted inventory without local state or report metadata', async () => {
   vi.mocked(getTransport).mockResolvedValue(transport(['B', 'A']));
-  expect((await run('alice', { offset: 1, continuation: first.continuation })).isError).toBeUndefined();
-  expect((await run('alice', { offset: 1, continuation: '0'.repeat(64) })).isError).toBe(true);
-});
-it('bounds a page of whole classes and keeps unfinished work visible', async () => {
-  const inventory = transport(Array.from({ length: 40 }, (_, i) => `ZCL_${i}`));
-  for (const task of inventory.tasks)
-    for (const object of task.objects) {
-      object.type = 'CLAS';
-      object.wbtype = 'CLAS/OC';
-    }
-  vi.mocked(getTransport).mockResolvedValue(inventory);
-  const page = JSON.parse((await run('alice', { limit: 40 })).content[0]!.text);
-  expect(page).toMatchObject({ status: 'partial', metrics: { exhausted: true } });
-  expect(page.metrics.reads).toBeLessThanOrEqual(180);
-  expect(page.shown).toBeLessThan(40);
-  expect(page.nextOffset).toBe(page.shown);
-  expect(
-    page.objects
-      .flatMap((o: { parts: Array<{ note?: string }> }) => o.parts)
-      .some((p: { note?: string }) => p.note?.includes('budget')),
-  ).toBe(false);
-  expect(Buffer.byteLength(JSON.stringify(page))).toBeLessThanOrEqual(512 * 1024);
-});
-
-it('rejects an offset outside the inventory instead of returning an empty complete page', async () => {
   const first = JSON.parse((await run('alice', { limit: 1 })).content[0]!.text);
-  const result = await run('alice', { offset: 2, continuation: first.continuation });
-  expect(result.isError).toBe(true);
-  expect(result.content[0]!.text).toContain('outside this transport inventory');
+  const second = JSON.parse((await run('alice', { offset: first.nextOffset })).content[0]!.text);
+  expect(first).toMatchObject({ offset: 0, shown: 1, nextOffset: 1, objects: [{ name: 'A' }] });
+  expect(second).toMatchObject({ offset: 1, shown: 1, objects: [{ name: 'B' }] });
+  expect(second).not.toHaveProperty('nextOffset');
+  for (const field of ['continuation', 'target', 'sourceHashes', 'status', 'resultFormat'])
+    expect(first).not.toHaveProperty(field);
+  expect(first.objects[0].parts[0].diff).toContain('+/2');
 });
-
-it('keeps normal replies compact while full evidence retains hashes and revision records', async () => {
-  const inventory = transport(Array.from({ length: 20 }, (_, i) => `ZCL_${i}`));
+it.each(['D', 'L', 'R', 'N'])('derives source state from native status %s', async (status) => {
+  vi.mocked(getTransport).mockResolvedValue({ ...transport(['A']), status });
+  vi.mocked(client.getRevisions).mockResolvedValueOnce({
+    object: { type: 'PROG', name: 'A' },
+    revisions: [
+      { id: '99999', transport: id, timestamp: '2026-10-18', uri: '/draft', author: 'T' },
+      { id: '00000', transport: id, timestamp: '2026-10-17', uri: '/active', author: 'T' },
+      { id: '00002', transport: id, timestamp: '2026-10-16', uri: '/released', author: 'T' },
+      { id: '00001', transport: 'OTHER', timestamp: '2026-10-15', uri: '/prior', author: 'T' },
+    ],
+  });
+  const page = JSON.parse((await run('alice', {})).content[0]!.text);
+  expect(page.objects[0].parts[0].to).toContain(['D', 'L'].includes(status) ? '00000' : '00002');
+  expect(client.getRevisionSource).not.toHaveBeenCalledWith('/draft', expect.anything());
+});
+it.each(['O', 'P', '?', ''])('does not guess a comparison during transitional/unknown status %s', async (status) => {
+  vi.mocked(getTransport).mockResolvedValue({ ...transport(['A']), status });
+  expect((await run('alice', {})).isError).toBe(true);
+  expect(client.getRevisions).not.toHaveBeenCalled();
+});
+it('bounds a page of whole classes and retries the unfinished later object', async () => {
+  const inventory = transport(Array.from({ length: 40 }, (_, i) => `ZCL_${i}`));
   for (const object of inventory.tasks[0]!.objects) {
-    object.pgmid = 'LIMU';
-    object.type = 'METH';
-    object.wbtype = 'CLAS/OM';
-    object.name = `${object.name.padEnd(30)}RUN`;
+    object.type = 'CLAS';
+    object.wbtype = 'CLAS/OC';
   }
   vi.mocked(getTransport).mockResolvedValue(inventory);
-  const compactText = (await run('alice', {})).content[0]!.text;
-  const fullText = (await run('alice', { resultFormat: 'structured' })).content[0]!.text;
-  const compact = JSON.parse(compactText),
-    full = JSON.parse(fullText);
-  expect(Buffer.byteLength(compactText)).toBeLessThan(Buffer.byteLength(fullText) * 0.65);
-  expect(compact.scopeNotes).toHaveLength(1);
-  expect(compact.coverage).toEqual(full.coverage);
-  expect(compact.objects[0].components).toEqual(full.objects[0].components);
-  expect(compact.objects[0].parts[0].diff).toEqual(full.objects[0].parts[0].diff);
-  expect(compact.objects[0].parts[0]).not.toHaveProperty('revisions');
-  expect(full.objects[0].parts[0].sourceHashes.after).toMatch(/^[a-f0-9]{64}$/);
+  const page = JSON.parse((await run('alice', { limit: 40 })).content[0]!.text);
+  expect(page.stoppedBy).toBe('collection limit');
+  expect(page.shown).toBe(11);
+  expect(page.nextOffset).toBe(page.shown);
+  expect(JSON.stringify(page.objects)).not.toContain('budget exhausted');
+  expect(Buffer.byteLength(JSON.stringify(page))).toBeLessThanOrEqual(64 * 1024);
+});
+it('rejects an offset outside the inventory', async () => {
+  expect((await run('alice', { offset: 2 })).isError).toBe(true);
+});
+it('summary omits hunks but preserves counts and baseline evidence', async () => {
+  const full = JSON.parse((await run('alice', {})).content[0]!.text);
+  const summary = JSON.parse((await run('alice', { summary: true })).content[0]!.text);
+  expect(summary.objects[0].parts[0]).toEqual({ ...full.objects[0].parts[0], diff: '', hunksOmitted: true });
+});
+it('fails a cancelled review without reading more SAP objects', async () => {
+  const abort = new AbortController();
+  vi.mocked(client.getRevisionSource).mockImplementationOnce(async () => {
+    abort.abort();
+    return 'source';
+  });
+  await expect(
+    requestContext.run({ requestId: 'cancel', signal: abort.signal }, () =>
+      handleTransportReview(client, { id }, config),
+    ),
+  ).rejects.toThrow();
+});
+it('caps a large first class and pages later objects without losing their hunks', async () => {
+  const inventory = transport(['ZA', 'ZB']);
+  for (const object of inventory.tasks[0]!.objects) {
+    object.type = 'CLAS';
+    object.wbtype = 'CLAS/OC';
+  }
+  vi.mocked(getTransport).mockResolvedValue(inventory);
+  const source = vi
+    .mocked(client.getRevisionSource)
+    .mockImplementation(async (uri) => (uri === '/2' ? 'é'.repeat(12000) : 'old'));
+  try {
+    const response = (await run('alice', {})).content[0]!.text;
+    const first = JSON.parse(response);
+    expect(Buffer.byteLength(response)).toBeLessThanOrEqual(64 * 1024);
+    expect(first).toMatchObject({ shown: 1, nextOffset: 1, stoppedBy: 'output limit' });
+    expect(first.objects[0].parts).toHaveLength(5);
+    expect(first.objects[0].parts.some((p: { hunksOmitted?: boolean }) => p.hunksOmitted)).toBe(true);
+    expect(
+      first.objects[0].parts.every((p: { added: number; removed: number }) => p.added === 1 && p.removed === 1),
+    ).toBe(true);
+    const second = JSON.parse((await run('alice', { offset: first.nextOffset })).content[0]!.text);
+    expect(second.objects[0].name).toBe('ZB');
+    expect(second).not.toHaveProperty('nextOffset');
+  } finally {
+    source.mockImplementation(async (uri) => uri);
+  }
+});
+it('keeps translation entries as inventory without reading object source', async () => {
+  const inventory = transport(['ZTEXT']);
+  inventory.tasks[0]!.objects[0]!.pgmid = 'LANG';
+  vi.mocked(getTransport).mockResolvedValue(inventory);
+  const page = JSON.parse((await run('alice', {})).content[0]!.text);
+  expect(page.objects[0]).toMatchObject({ parts: [], inventoryReason: expect.stringContaining('LANG entry') });
+  expect(client.getRevisions).not.toHaveBeenCalled();
 });

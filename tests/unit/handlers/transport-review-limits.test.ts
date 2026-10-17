@@ -17,7 +17,6 @@ it('explains an oversized transport inventory without data-query advice', async 
   const result = await handleToolCall(createClient(), DEFAULT_CONFIG, 'SAPTransport', {
     action: 'diff',
     id: 'A4HK900001',
-    reviewMode: 'released',
   });
   expect(result.isError).toBe(true);
   const text = result.content[0]!.text;

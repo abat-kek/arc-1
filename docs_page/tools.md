@@ -1548,9 +1548,8 @@ SAPQuery(sql="SELECT * FROM mara WHERE matnr LIKE 'Z%'", maxRows=50)
 
 Manage CTS transport requests (SE09/SE10 equivalent): list, get details, **diff (review what a transport changed)**, create, release, delete, reassign owner, recursive release, check transport requirements, and inspect an object's current lock/assignment status. The legacy action name for that status lookup is `history`, but it is not complete transport history. `create` uses the ADT `CreateCorrectionRequest` endpoint, which works on both NetWeaver 7.50+ and S/4HANA.
 
-In multi-target v1, only the read-only `list`, `get`, `check`, and `history` actions are listed and
-accepted. Transport mutations and topology actions remain structurally unavailable; `diff` is also
-excluded there because it fans out many source reads per call.
+In multi-target v1, `list`, `get`, `diff`, `check`, and `history` are available under the
+selected target's identity and read policy. Transport mutations remain unavailable.
 
 ### `action="diff"` — reviewing what a transport changed
 
@@ -1568,16 +1567,14 @@ Every part carries the evidence behind its diff — read `baselineStatus` before
 | `baseline-ambiguous` | Missing or uncertain baseline chronology. Candidate hunks are **not** proof of creation. |
 | `baseline-unavailable` | The read failed. Never report this as unchanged. |
 
-Objects without a verified historical adapter (domains, data elements, function-group sources, …)
-return an `inventoryReason`: they remain in scope. Failed selected class parts remain visible, and
-text-pool components have an explicit coverage gap. Long diffs set `diffTruncated`; statistics remain
-complete only when `statisticsComplete` is true. See [Transport reviews](review-workflows.md) for
-source modes, JSON/HTML reports, bounds and continuation.
+Objects without a verified historical adapter return an `inventoryReason`. Missing class parts
+stay visible; `notCompared` lists non-source scope such as text pools and metadata. Released
+requests use attributed historical snapshots; open requests use active source, never drafts.
+`nextOffset` continues a bounded page. Pages reread SAP and are not an atomic snapshot.
+Long hunks set `diffTruncated` or `hunksOmitted`; failed comparisons have unavailable counts.
+See [Transport reviews](review-workflows.md) for the workflow, object support and limits.
 
-Diff `status` and `coverage` describe the returned page; the review CLI reconciles all pages.
-An out-of-range offset is an error. `resultFormat="structured"` adds full revision records and source hashes;
-normal replies retain hunks, raw CTS components and coverage gaps with a smaller payload.
-Malformed or empty revision-feed responses now fail explicitly in both transport review and `SAPRead VERSIONS`;
+Malformed revision feeds fail explicitly in both transport review and `SAPRead VERSIONS`;
 a valid empty Atom feed still returns empty history.
 
 **Parameters:**
@@ -1586,8 +1583,6 @@ a valid empty Atom feed still returns empty history.
 |-----------|------|----------|-------------|
 | `action` | string | Yes | `list`, `get`, `diff`, `create`, `release`, `delete`, `remove_object`, `reassign`, `release_recursive`, `check`, `history`, `layers`, or `targets` (the last two are advertised only when transport support is enabled) |
 | `id` | string | No | Transport request ID, e.g. `A4HK900123` (for get/diff/release/delete/remove_object/reassign/release_recursive) |
-| `reviewMode` | string | No | For `diff`: `legacy` (default), `released`, `active`, or `draft`. Released mode never substitutes current work. |
-| `continuation` | string | No | For `diff`: reuse the previous page's token with `offset` and the same mode to detect inventory/caller/target changes. |
 | `offset` | number | No | For `diff`: index of the first object to diff (default 0). Page with `limit`. |
 | `limit` | number | No | For `diff`: objects per call (default 20, max 40 — the same ceiling SAP's own transport-diff tool uses). |
 | `description` | string | No | Transport description text (required for create) |

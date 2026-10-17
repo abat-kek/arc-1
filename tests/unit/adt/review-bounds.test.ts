@@ -1,8 +1,9 @@
 import { expect, it, vi } from 'vitest';
 import { AdtResponseLimitError } from '../../../src/adt/errors.js';
 import { unifiedDiff } from '../../../src/adt/source-diff.js';
-import { ReviewBudget } from '../../../src/adt/transport-review-budget.js';
+import { REVIEW_DEADLINE_MS, ReviewBudget } from '../../../src/adt/transport-review-budget.js';
 import { requestContext } from '../../../src/server/context.js';
+import { SHARED_AUTH_ACQUIRE_TIMEOUT_MS } from '../../../src/server/multi-target-shared-auth-state.js';
 
 it('stops diff work without inventing zero change statistics', () => {
   expect(() =>
@@ -42,13 +43,13 @@ it('does not enqueue further reads after inherited cancellation', async () => {
   expect(read).not.toHaveBeenCalled();
 });
 
-it('propagates the 30-second deadline and refuses the next read at its boundary', async () => {
+it('propagates the 20-second deadline and refuses the next read at its boundary', async () => {
   let now = 1000;
   const clock = vi.spyOn(Date, 'now').mockImplementation(() => now);
   try {
     const budget = new ReviewBudget();
-    await budget.read(async (request) => expect(request.deadline).toBe(31000));
-    now = 31000;
+    await budget.read(async (request) => expect(request.deadline).toBe(21000));
+    now = 21000;
     const next = vi.fn();
     await expect(budget.read(next)).rejects.toThrow(/deadline/);
     expect(next).not.toHaveBeenCalled();
@@ -56,4 +57,8 @@ it('propagates the 30-second deadline and refuses the next read at its boundary'
   } finally {
     clock.mockRestore();
   }
+});
+
+it('leaves headroom before a shared-target lease waiter times out', () => {
+  expect(REVIEW_DEADLINE_MS).toBeLessThan(SHARED_AUTH_ACQUIRE_TIMEOUT_MS);
 });

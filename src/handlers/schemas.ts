@@ -1258,9 +1258,7 @@ export const SAPTransportSchema = z
     resultFormat: z.enum(['legacy', 'structured']).optional(),
     timeoutSeconds: z.coerce.number().int().min(1).max(1800).optional(),
     // For diff: object-level paging (cap 40, matching SAP's own transport-diff pageSize ceiling).
-    reviewMode: z.enum(['legacy', 'released', 'active', 'draft']).optional(),
-    continuation: z.string().max(200).optional(),
-    offset: z.coerce.number().int().min(0).optional(),
+    offset: z.coerce.number().optional(),
     limit: z.coerce.number().optional(),
   })
   .strict()

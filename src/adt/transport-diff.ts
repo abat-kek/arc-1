@@ -19,9 +19,10 @@
  * `selectionMethod` and `baselineStatus` ride the result so a reviewer can tell exact
  * evidence from a fallback guess; SAP's tool reports neither.
  */
-import { createHash } from 'node:crypto';
+import { getCurrentContext } from '../server/context.js';
 import { type AdtClient, CLASS_REVISION_INCLUDES, REVISION_TYPES } from './client.js';
 import { AdtApiError, AdtNetworkError, AdtResponseLimitError, isNotFoundError } from './errors.js';
+import { throwIfRequestCancelled } from './http-deadline.js';
 import { AdtRequestBudgetError } from './request-attempt-budget.js';
 import { unifiedDiff } from './source-diff.js';
 import { ReviewBudget } from './transport-review-budget.js';
@@ -48,14 +49,16 @@ function describeError(err: unknown, minimalErrors?: boolean): string {
   return 'request failed';
 }
 
-/** How `current` was chosen — evidence quality, surfaced to the caller. */
-export type RevisionSelectionMethod =
-  | 'exact-transport'
-  | 'latest-revision-fallback'
-  | 'active-only-fallback'
-  | 'no-revisions';
+/** Authentication and caller cancellation end the review, even inside per-part recovery. */
+function throwIfReviewInterrupted(error: unknown): void {
+  throwIfRequestCancelled({ signal: getCurrentContext()?.signal });
+  if (error instanceof AdtApiError && error.statusCode === 401) throw error;
+}
 
-export type ReviewMode = 'legacy' | 'released' | 'active' | 'draft';
+/** How `current` was chosen — evidence quality, surfaced to the caller. */
+export type RevisionSelectionMethod = 'exact-transport' | 'active-only-fallback' | 'no-revisions';
+
+export type ReviewMode = 'released' | 'active';
 export function revisionSourceState(r: RevisionInfo | null): 'released' | 'active' | 'draft' | 'unknown' {
   if (!r) return 'unknown';
   const num = revisionNumber(r);
@@ -88,8 +91,8 @@ export interface TransportRevisionPair {
 
 /**
  * The two pseudo-versions SAP's `IRevision` maps to UI text rather than a number: `00000` is the
- * ACTIVE work state and `99999` the INACTIVE draft. Either can legitimately be the *current* side
- * of a review — that is the change being shipped — but neither is ever a transported baseline.
+ * ACTIVE work state and `99999` the INACTIVE draft. Only active source can be the current side of an open-request
+ * review; neither work state is a transported baseline.
  */
 const ACTIVE_VERSION = '00000';
 const INACTIVE_VERSION = '99999';
@@ -155,7 +158,7 @@ function compareDesc(a: number, b: number): number {
 export function selectTransportRevisionPair(
   revisions: RevisionInfo[],
   transportIds: Iterable<string>,
-  mode: ReviewMode = 'legacy',
+  mode: ReviewMode = 'released',
 ): TransportRevisionPair {
   const sorted = sortNewestFirst(revisions);
   const wanted = new Set([...transportIds].map((id) => String(id).trim().toUpperCase()).filter(Boolean));
@@ -170,31 +173,16 @@ export function selectTransportRevisionPair(
     return { current: null, previous: null, selectionMethod: 'no-revisions', skipped: [] };
   }
 
-  // An UNRELEASED transport has no snapshot of its own — but while its objects are locked,
-  // the active entry (00000) carries the transport link, so it matches here and the walk
-  // back lands on the last released state. That makes "what am I about to ship" the same
-  // code path as "what did this transport ship", with the same evidence labels.
-  let currentIndex = sorted.findIndex(
-    (r) => belongsToTransport(r) && (mode === 'legacy' || revisionSourceState(r) === mode),
-  );
+  // A released review needs an attributed historical snapshot. An open request uses
+  // active source, never an inactive draft or an unrelated released version.
+  let currentIndex = sorted.findIndex((r) => belongsToTransport(r) && revisionSourceState(r) === mode);
   let selectionMethod: RevisionSelectionMethod = 'exact-transport';
-
-  if (currentIndex === -1 && (mode === 'active' || mode === 'draft')) {
-    currentIndex = sorted.findIndex((r) => revisionSourceState(r) === mode);
+  if (currentIndex === -1 && mode === 'active') {
+    currentIndex = sorted.findIndex((r) => revisionSourceState(r) === 'active');
     selectionMethod = 'active-only-fallback';
   }
-  if (currentIndex === -1 && mode !== 'legacy') {
+  if (currentIndex === -1) {
     return { current: null, previous: null, selectionMethod: 'no-revisions', skipped: [] };
-  }
-  if (currentIndex === -1) {
-    // No revision names this transport. Prefer the newest real snapshot over a work state,
-    // so the diff is still between two transported versions.
-    currentIndex = sorted.findIndex((r) => !WORK_STATE_VERSIONS.has(revisionNumber(r)));
-    selectionMethod = 'latest-revision-fallback';
-  }
-  if (currentIndex === -1) {
-    currentIndex = 0;
-    selectionMethod = 'active-only-fallback';
   }
 
   const skipped: SkippedRevision[] = [];
@@ -453,7 +441,7 @@ export function classIncludesFor(object: LogicalTransportObject): { includes: st
 }
 
 /**
- * Per-part diff cap. A created object renders its ENTIRE source as an addition, so a page of
+ * Per-part diff cap. A missing predecessor displays available source as additions, so a page of
  * 20 such objects is otherwise unbounded — `MAX_DIFF_OBJECTS` limits the object count, never
  * the bytes. `added`/`removed` are counted before truncation, so the totals stay honest.
  */
@@ -487,17 +475,6 @@ export interface TransportPartDiff {
   /** The hunks were trimmed; `added`/`removed` still reflect the full change. */
   diffTruncated?: boolean;
   note?: string;
-  sourceState?: ReturnType<typeof revisionSourceState>;
-  activationStatus?: 'active' | 'saved-inactive' | 'historical-snapshot' | 'unknown';
-  comparisonMode?: ReviewMode;
-  selectionOrigin?: 'cts' | 'speculative';
-  attribution?: 'transport' | 'unverified';
-  historyCompleteness?: 'not-advertised' | 'partial';
-  revisions?: { before: RevisionInfo | null; after: RevisionInfo | null; skipped: SkippedRevision[] };
-  sourceHashes?: { before: string | null; after: string };
-  retrievedAt?: string;
-  statisticsComplete?: boolean;
-  change?: 'changed' | 'unchanged' | 'cosmetic' | 'unknown';
   hunksOmitted?: boolean;
 }
 
@@ -506,8 +483,8 @@ export interface TransportObjectDiff {
   name: string;
   taskIds: string[];
   parts: TransportPartDiff[];
-  components: LogicalTransportObject['components'];
-  coverageGaps?: string[];
+  /** CTS scope that the source comparison does not cover. */
+  notCompared?: string[];
   scopeNote?: string;
   /** Set instead of `parts` when the object carries no diffable source at all. */
   inventoryReason?: string;
@@ -539,8 +516,6 @@ function unavailablePart(part: string, note: string, resolved?: Partial<Transpor
     removed: 0,
     diff: '',
     note,
-    statisticsComplete: false,
-    change: 'unknown',
   };
 }
 
@@ -556,39 +531,44 @@ async function diffPart(
   name: string,
   part: string,
   transportIds: Set<string>,
-  opts: { group?: string; minimalErrors?: boolean; mode?: ReviewMode; budget?: ReviewBudget; summary?: boolean },
+  opts: {
+    group?: string;
+    minimalErrors?: boolean;
+    mode?: ReviewMode;
+    budget?: ReviewBudget;
+    summary?: boolean;
+    speculative?: boolean;
+  },
 ): Promise<TransportPartDiff> {
   const include = type === 'CLAS' ? part : undefined;
   let revisions: RevisionInfo[];
-  let historyCompleteness: 'not-advertised' | 'partial' = 'not-advertised';
+  let historyIncomplete = false;
   try {
     const history = await (opts.budget
       ? opts.budget.read((request) => client.getRevisions(type, name, { include, group: opts.group }, request))
       : client.getRevisions(type, name, { include, group: opts.group }));
     revisions = history.revisions;
-    if (history.historyComplete === false) historyCompleteness = 'partial';
+    historyIncomplete = history.historyComplete === false;
   } catch (err) {
+    throwIfReviewInterrupted(err);
     if (type === 'CLAS' && part !== 'main' && isNotFoundError(err)) {
-      return unavailablePart(part, 'revision history returned 404; absence or deletion is not established');
+      return unavailablePart(
+        part,
+        `${opts.speculative ? 'Speculative part' : 'CTS-selected part'}: revision history returned 404; absence or deletion is not established`,
+      );
     }
     return unavailablePart(part, `revision history unavailable: ${describeError(err, opts.minimalErrors)}`);
   }
 
   const pair = selectTransportRevisionPair(revisions, transportIds, opts.mode);
+  const baselineStatus: BaselineStatus =
+    historyIncomplete && pair.current ? 'baseline-ambiguous' : baselineStatusFor(pair, revisions);
   const base = {
     part,
-    baselineStatus: baselineStatusFor(pair, revisions),
+    baselineStatus,
     selectionMethod: pair.selectionMethod,
     from: pair.previous ? revisionLabel(pair.previous) : null,
     to: pair.current ? revisionLabel(pair.current) : null,
-    sourceState: revisionSourceState(pair.current),
-    activationStatus: (
-      { active: 'active', draft: 'saved-inactive', released: 'historical-snapshot', unknown: 'unknown' } as const
-    )[revisionSourceState(pair.current)],
-    comparisonMode: opts.mode ?? 'legacy',
-    attribution: pair.selectionMethod === 'exact-transport' ? ('transport' as const) : ('unverified' as const),
-    historyCompleteness,
-    revisions: { before: pair.previous, after: pair.current, skipped: pair.skipped },
   };
 
   if (!pair.current) {
@@ -606,16 +586,10 @@ async function diffPart(
     after = await read(pair.current.uri);
     before = pair.previous ? await read(pair.previous.uri) : '';
   } catch (err) {
+    throwIfReviewInterrupted(err);
     return unavailablePart(part, `source read failed: ${describeError(err, opts.minimalErrors)}`, base);
   }
 
-  const sourceEvidence = {
-    sourceHashes: {
-      before: pair.previous ? createHash('sha256').update(before).digest('hex') : null,
-      after: createHash('sha256').update(after).digest('hex'),
-    },
-    retrievedAt: new Date().toISOString(),
-  };
   let result: ReturnType<typeof unifiedDiff>;
   try {
     result = unifiedDiff(before, after, `${name} (${base.from ?? 'none'})`, `${name} (${base.to})`, 3, true, {
@@ -625,15 +599,22 @@ async function diffPart(
   } catch {
     return unavailablePart(part, 'Diff calculation failed or exceeded its work budget; statistics are unavailable.', {
       ...base,
-      ...sourceEvidence,
     });
   }
   const capped = capDiff(result.diff);
-  const note = result.cosmeticOnly
-    ? 'whitespace-only change (trailing blanks / final newline)'
-    : result.identical
-      ? 'no source change between the selected revisions'
-      : undefined;
+  const note = [
+    historyIncomplete ? 'History advertises more revisions; the selected baseline is uncertain.' : '',
+    pair.selectionMethod !== 'exact-transport'
+      ? 'Active source is not attributed to this request; this is a candidate comparison.'
+      : '',
+    result.cosmeticOnly
+      ? 'whitespace-only change (trailing blanks / final newline)'
+      : result.identical
+        ? 'no source change between the selected revisions'
+        : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return {
     ...base,
@@ -641,9 +622,6 @@ async function diffPart(
     removed: result.removed,
     diff: opts.summary ? '' : capped.diff,
     ...(opts.summary && result.diff ? { hunksOmitted: true } : {}),
-    ...sourceEvidence,
-    statisticsComplete: true,
-    change: result.cosmeticOnly ? 'cosmetic' : result.identical ? 'unchanged' : 'changed',
     ...(capped.truncated ? { diffTruncated: true } : {}),
     ...(note ? { note } : {}),
   };
@@ -662,28 +640,35 @@ export async function diffTransportObject(
     'Text-pool components are in scope; historical symbols, selection texts and headings were not compared.';
   // A text-only CTS key names no source part; diffing main would review something CTS never selected.
   if (object.components.length && object.components.every((c) => c.type === 'REPT')) {
-    return { type, name, taskIds, components: object.components, parts: [], inventoryReason: textGap };
+    return { type, name, taskIds, parts: [], inventoryReason: textGap };
   }
-  // A whole-object entry also carries the text pool (and, for programs, screens and GUI status).
-  const wholeObject = (type === 'PROG' || type === 'CLAS') && object.components.some((c) => c.pgmid === 'R3TR');
+  if (object.pgmid !== 'R3TR' && object.pgmid !== 'LIMU') {
+    return {
+      type,
+      name,
+      taskIds,
+      parts: [],
+      inventoryReason: `${object.pgmid} entry: non-source scope has no verified historical adapter.`,
+    };
+  }
+  const wholeObject = object.components.some((c) => c.pgmid === 'R3TR');
+  const notCompared = new Set<string>();
+  if (wholeObject && REVISION_TYPES.has(type)) notCompared.add('metadata');
+  if ((wholeObject && (type === 'PROG' || type === 'CLAS')) || object.components.some((c) => c.type === 'REPT')) {
+    notCompared.add('text pool');
+  }
+  if (wholeObject && type === 'PROG') {
+    notCompared.add('screens');
+    notCompared.add('GUI status');
+  }
   const head = {
     type,
     name,
     taskIds,
-    components: object.components,
+    ...(notCompared.size ? { notCompared: [...notCompared] } : {}),
     ...(object.components.some((c) => c.type === 'METH')
       ? {
-          scopeNote:
-            'Method CTS keys select class source. Hunks compare the whole source part; individual method attribution across requests is not established.',
-        }
-      : {}),
-    ...(wholeObject || object.components.some((c) => c.type === 'REPT')
-      ? {
-          coverageGaps: [
-            wholeObject
-              ? 'Whole-object entry: text pool (and for programs, screens and GUI status) was not compared; only source parts were.'
-              : textGap,
-          ],
+          scopeNote: 'CTS method keys select whole class source; hunks are not attributed per method.',
         }
       : {}),
   };
@@ -715,6 +700,7 @@ export async function diffTransportObject(
           ? opts.budget.read((request) => client.resolveFunctionGroup(name, request))
           : client.resolveFunctionGroup(name))) ?? undefined;
     } catch (err) {
+      throwIfReviewInterrupted(err);
       return {
         ...head,
         parts: [],
@@ -732,38 +718,16 @@ export async function diffTransportObject(
   const parts: TransportPartDiff[] = [];
   for (const part of wanted) {
     try {
-      const result = await diffPart(client, type, name, part, transportIds, { ...opts, group });
-      parts.push({ ...result, selectionOrigin: selection.fromComponents ? 'cts' : 'speculative' });
+      const result = await diffPart(client, type, name, part, transportIds, {
+        ...opts,
+        group,
+        speculative: !selection.fromComponents,
+      });
+      parts.push(result);
     } catch (err) {
+      throwIfReviewInterrupted(err);
       parts.push(unavailablePart(part, `source read failed: ${describeError(err, opts.minimalErrors)}`));
     }
   }
   return { ...head, parts };
-}
-
-/** Mutually exclusive counts for source parts and explicitly unreviewed components. */
-export function reviewCoverage(objects: TransportObjectDiff[]) {
-  const counts = { reviewed: 0, uncertain: 0, unavailable: 0, unsupported: 0 };
-  for (const object of objects) {
-    if (object.inventoryReason) counts.unsupported++;
-    counts.unsupported += object.coverageGaps?.length ?? 0;
-    for (const part of object.parts) {
-      if (part.baselineStatus === 'baseline-unavailable' || part.statisticsComplete === false) counts.unavailable++;
-      else if (
-        part.baselineStatus !== 'prior-revision' ||
-        part.historyCompleteness === 'partial' ||
-        !part.sourceHashes?.before ||
-        !part.sourceHashes.after ||
-        !part.revisions?.before ||
-        !part.revisions.after
-      )
-        counts.uncertain++;
-      else counts.reviewed++;
-    }
-  }
-  return {
-    denominator: 'returned source parts plus explicit non-source gaps',
-    expected: Object.values(counts).reduce((a, b) => a + b, 0),
-    ...counts,
-  };
 }

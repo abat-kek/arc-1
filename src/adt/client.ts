@@ -1085,17 +1085,7 @@ export class AdtClient {
 
       const seen = new Set<string>();
       const matches = rawMatches
-        .flatMap((r) => {
-          if (r.objectName.toUpperCase() === name) return [r];
-          // 7.50 decorates display names across types; require the URI to confirm the identity.
-          if (!r.objectName.toUpperCase().startsWith(`${name} (`)) return [];
-          const segment = /^\/sap\/bc\/adt\/(?:[^/?#]+\/)*([^/?#]+)$/i.exec(r.uri)?.[1];
-          try {
-            return segment && decodeURIComponent(segment).toUpperCase() === name ? [{ ...r, objectName: name }] : [];
-          } catch {
-            return [];
-          }
-        })
+        .filter((r) => r.objectName.toUpperCase() === name)
         .filter((r) => {
           const key = `${r.objectType}\u0000${r.objectName}\u0000${r.packageName}\u0000${r.uri}`;
           if (seen.has(key)) return false;
@@ -1476,12 +1466,14 @@ WHERE d~TABNAME = '${table}' AND d~AS4LOCAL = 'A'`;
       columns?: string[];
       where?: Array<{ field: string; op: string; value?: string }>;
       maxRows?: number;
+      /** Internal opt-in, verified on 758/816: retain repeated spaces through SAP's CONDENSE. */
+      preserveLiteralSpaces?: boolean;
     } = {},
   ): Promise<{ columns: string[]; rows: Record<string, string>[] }> {
     checkOperation(this.safety, OperationType.Query, 'RunTableQuery');
     // One canonical identity: authorize it, then build the statement from the SAME string.
     const source = canonicalDataSourceName(tableName, 'TABLE_QUERY table name');
-    const sql = buildTableQuerySql(source, opts.columns, opts.where);
+    const sql = buildTableQuerySql(source, opts.columns, opts.where, opts.preserveLiteralSpaces);
     const maxRows = clampPreviewRows(opts.maxRows);
     return this.withDataResultScope(async (budget, signal) => {
       await this.dataSourceBlocklistGuard(budget, signal).enforceSources([source]);

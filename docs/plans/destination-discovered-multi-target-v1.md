@@ -488,7 +488,7 @@ destination per target is sufficient for v1. PP is recommended because it retain
 identity. Basic is explicitly shared: every scoped XSUAA user reaches SAP as the destination's
 technical user, so human attribution requires ARC-1 audit correlation. No target uses a technical
 startup probe; the first authorized call may pay feature-probe/canary latency, and feature
-availability must never be inferred from an unauthorized user's response.
+availability must never be inferred from an unauthorized user's response. Retain conclusive backend facts per target; omit authorization-limited fields rather than discarding the entire probe. Unknown fields must not hide tools, and per-user authorization results remain request-local.
 
 ## Endpoint Contract
 
@@ -588,9 +588,10 @@ Target input normalization is separate from general LLM empty-value stripping:
 
 The validated `target` key is removed before existing handler Zod validation.
 
-`SAPQuery` is listed only if at least one target is effectively SQL-enabled and the caller has SQL
-scope. Its target field follows the same all-target enum/pattern rule as other tools; do not reveal
-the SQL-enabled subset through a narrowed schema. Selected-target policy produces
+`SAPQuery` is listed if at least one target enables an action the caller may use: `sql` requires
+free SQL and SQL scope; `long_text` requires data preview and data scope. Its target field follows
+the same all-target enum/pattern rule as other tools; do not reveal the enabled subset through a
+narrowed target schema. Selected-target policy produces
 `TARGET_POLICY_DENIED` at runtime. Data-specific `SAPRead` variants follow the same rule.
 
 Do not mutate aggregate or pinned tool schemas after one user's feature probe. Discovered target

@@ -57,6 +57,7 @@
       "scripts/demo-review-workflows.ts",
       "scripts/bench-context-parsing.ts",
       "scripts/spikes/pr677-target-authorization/**",
+      "scripts/spikes/stxl/**",
       "scripts/ci/check-target-authorization-mta.mjs",
       "!tests/fixtures/tool-definitions"
     ]

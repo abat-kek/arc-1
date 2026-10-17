@@ -10,7 +10,6 @@ import {
 } from '../../../src/server/destination-registry.js';
 import { logger } from '../../../src/server/logger.js';
 import { buildTargetCatalog, TARGET_CATALOG_DIAGNOSTIC_LIMIT } from '../../../src/server/multi-target-catalog.js';
-import { hasAuthorizationLimitedFeatureEvidence } from '../../../src/server/multi-target-feature-state.js';
 import { buildAggregateToolSurfaceConfig, buildMultiTargetConfig } from '../../../src/server/multi-target-runtime.js';
 import { parseSapTargetsArguments } from '../../../src/server/multi-target-server.js';
 import { createServer, resolveSingleTargetOverlapState } from '../../../src/server/server.js';
@@ -271,29 +270,6 @@ describe('multi-target MCP servers', () => {
     expect(broadActiveQuery.admin.destinations).toHaveLength(TARGET_CATALOG_DIAGNOSTIC_LIMIT);
   });
 
-  it('keeps authorization-limited feature evidence in the unknown state', () => {
-    const status = (id: string, message?: string) => ({ id, available: !message, mode: 'auto', message });
-    const features = {
-      hana: status('hana'),
-      abapGit: status('abapGit'),
-      gcts: status('gcts'),
-      rap: status('rap', 'forbidden (403) — endpoint exists but user lacks authorization'),
-      amdp: status('amdp'),
-      ui5: status('ui5'),
-      transport: status('transport'),
-      ui5repo: status('ui5repo'),
-      flp: status('flp'),
-    };
-    expect(hasAuthorizationLimitedFeatureEvidence(features)).toBe(true);
-    expect(
-      hasAuthorizationLimitedFeatureEvidence({
-        ...features,
-        rap: status('rap'),
-        textSearch: { available: false, reason: 'ICF endpoint not found (404)' },
-      }),
-    ).toBe(false);
-  });
-
   it('keeps a zero-target aggregate endpoint alive with no SAP tools', async () => {
     const current = registry(0);
     const server = createServer(buildAggregateToolSurfaceConfig(DEFAULT_CONFIG, current.targets), {
@@ -446,7 +422,7 @@ describe('multi-target MCP servers', () => {
     auditSpy.mockRestore();
   });
 
-  it('shows SAPQuery only when target consent, the instance ceiling, and user SQL scope all agree', async () => {
+  it('exposes only SAPQuery actions allowed by target consent, the instance ceiling and user scopes', async () => {
     const current = registry(2, { data: true, sql: true });
     const instanceConfig = { ...DEFAULT_CONFIG, allowDataPreview: true, allowFreeSQL: true };
     const server = createServer(buildAggregateToolSurfaceConfig(instanceConfig, current.targets), {
@@ -459,6 +435,7 @@ describe('multi-target MCP servers', () => {
     };
 
     expect(await names(['read'])).not.toContain('SAPQuery');
+    expect(await names(['read', 'data'])).toContain('SAPQuery');
     expect(await names(['read', 'sql'])).toContain('SAPQuery');
     expect(await names(['admin'])).toContain('SAPQuery');
 
@@ -470,7 +447,20 @@ describe('multi-target MCP servers', () => {
       { method: 'tools/list', params: {} },
       { authInfo: { ...readAuth, scopes: ['read', 'sql'] } },
     );
-    expect(withoutConsent.tools.map((tool: { name: string }) => tool.name)).not.toContain('SAPQuery');
+    const textOnly = withoutConsent.tools.find((tool: { name: string }) => tool.name === 'SAPQuery');
+    expect(textOnly.inputSchema.properties.action.enum).toEqual(['long_text']);
+    expect(textOnly.inputSchema.properties).not.toHaveProperty('sql');
+    expect(textOnly.inputSchema.properties).not.toHaveProperty('maxRows');
+    expect(new Set(textOnly.inputSchema.required)).toEqual(new Set(['action', 'longText', 'target']));
+    const noConsent = registry(2, { data: false, sql: false });
+    const noConsentServer = createServer(buildAggregateToolSurfaceConfig(instanceConfig, noConsent.targets), {
+      multiTarget: { mode: 'aggregate', registry: noConsent, instanceConfig },
+    });
+    const hidden = await requestHandler(noConsentServer, ListToolsRequestSchema.shape.method.value)(
+      { method: 'tools/list', params: {} },
+      { authInfo: adminAuth },
+    );
+    expect(hidden.tools.map((tool: { name: string }) => tool.name)).not.toContain('SAPQuery');
   });
 
   it('keeps admin catalog diagnostics reachable when destination discovery fails', async () => {

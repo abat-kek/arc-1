@@ -6,6 +6,7 @@ import type { AdtClient } from '../../../src/adt/client.js';
 import { type CliDependencies, main } from '../../../src/cli.js';
 import { errorResult, textResult } from '../../../src/handlers/shared.js';
 import { DEFAULT_CONFIG } from '../../../src/server/types.js';
+import { importAbapSql } from '../../../src/workflows/notebook-document.js';
 
 const temporary: string[] = [];
 afterEach(async () => {
@@ -137,5 +138,34 @@ it.each(['oversized', 'directory', 'invalid-utf8'])('refuses %s input before cre
       deps,
     ),
   ).not.toBe(0);
+  expect(createClient).not.toHaveBeenCalled();
+});
+
+it('allows a corrected proposal to reuse the output path after validation fails', async () => {
+  const root = await directory();
+  const file = join(root, 'input.json');
+  const output = join(root, 'run');
+  await writeFile(file, JSON.stringify(input));
+  const { deps, dispatchToolCall } = dependencies();
+  expect(await main(['notebook', 'run', file, '--target', 'wrong', '--output-dir', output], deps)).toBe(2);
+  expect(dispatchToolCall).not.toHaveBeenCalled();
+  expect(await main(['notebook', 'run', file, '--target', 'dev', '--output-dir', output], deps)).toBe(0);
+});
+
+it.each(['compact', 'formatted'])('rejects an import whose %s output exceeds the runner limit', async (form) => {
+  const root = await directory();
+  const file = join(root, 'source.abapsql');
+  const output = join(root, 'imported.json');
+  const base = { cells: [{ kind: 'markdown', value: 'x' }], metadata: '' };
+  const overhead = JSON.stringify(importAbapSql(base, {})).length;
+  const remaining = form === 'compact' ? 100 : overhead + 10;
+  const source = JSON.stringify({ ...base, metadata: 'x'.repeat(1024 * 1024 - remaining) });
+  expect(Buffer.byteLength(source)).toBeLessThan(1024 * 1024);
+  await writeFile(file, source);
+  const { deps, createClient } = dependencies();
+  expect(
+    await main(['notebook', 'import', file, '--destination', 'SAP', '--target', 'dev', '--out', output], deps),
+  ).toBe(2);
+  await expect(stat(output)).rejects.toMatchObject({ code: 'ENOENT' });
   expect(createClient).not.toHaveBeenCalled();
 });

@@ -108,7 +108,7 @@ The independent review and additional regressions identified four small correcti
 |---|---|
 | Namespaced Dictionary URIs refused | Reuse the existing canonical path guard with raw encoded namespace separators for owner, advertised log and retained references. Traversal and nested encodings remain rejected. The real-dispatch regression failed before correction. |
 | Nested report/message evidence could disappear | Continue traversing matched nodes; nested errors cannot pass and nested foreign/duplicate reports remain incomplete. Two regressions failed before correction. |
-| Empty strict-client batch filler broke ordinary SAPRead calls | Match existing SAPDiagnose normalization for `objects: []` on ordinary reads and explicit single-object syntax checks. Empty diagnostic filter lists are treated as omitted, including legacy unfiltered dumps; nonempty filters on unrelated actions still fail. Genuine empty batches and nonempty conflicting selections remain errors. Real-dispatch regressions failed before correction. |
+| Empty strict-client batch filler broke ordinary SAPRead calls | Match existing SAPDiagnose normalization for `objects: []` on ordinary reads and explicit single-object syntax checks. Empty diagnostic filter lists are treated as omitted, including legacy unfiltered dumps; nonempty filters on unrelated actions still fail. Genuine empty batches and nonempty conflicting selections remain errors. Real-dispatch regressions failed before correction. The new action allowlists also reuse SAPRead syntax's existing harmless-default predicate; meaningful unrelated options still fail. |
 | Diagnostic byte limits suggested SQL fixes | Preserve the stable error code and give advice for syntax batches, schemas, dump windows and logs. Normal/minimal-error regressions failed before correction. |
 
 The guide now explicitly states that the 30-second / 2-MiB dump-list bounds also apply without
@@ -116,3 +116,7 @@ typed filters. A real HTTP/dispatch test proves that legacy path is bounded with
 discovery. Plain-text sibling log messages also have a dedicated regression. The recorded live
 run still belongs to `5bc693b3`; these corrections are tested offline. Final exact-commit review
 and the updated combined-tree results follow below.
+
+After completing placeholder parity, **335 focused schema/dispatch/syntax/policy tests**, typecheck
+and file/schema budgets passed. Four falsy-placeholder cases failed before the shared predicate
+was used by both syntax entry points and the new diagnostic allowlists.

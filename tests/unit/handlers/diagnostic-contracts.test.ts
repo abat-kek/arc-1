@@ -65,6 +65,44 @@ it('treats empty optional filters as omitted on diagnostic calls', async () => {
     }
   }
 });
+it.each([
+  { action: 'feed_schema' },
+  { action: 'syntax', objects },
+  { action: 'activation_log', type: 'DOMA', name: 'ZDOMAIN' },
+  { action: 'dumps', filters: [{ attribute: 'user', operator: 'equals', values: ['X'] }] },
+])('accepts harmless filler but rejects meaningful unrelated options for $action', async (args) => {
+  mockFetch.mockImplementation(async (url, options) =>
+    mockResponse(
+      200,
+      options?.method === 'POST'
+        ? batch
+        : String(url).includes('/feeds')
+          ? schema
+          : String(url).includes('/ddic/domains/')
+            ? '<domain name="ZDOMAIN"/>'
+            : '<feed/>',
+      { 'x-csrf-token': 't' },
+    ),
+  );
+  const result = await handleToolCall(
+    client(),
+    DEFAULT_CONFIG,
+    'SAPDiagnose',
+    {
+      ...args,
+      coverage: false,
+      includeFullText: false,
+      sections: [],
+      maxResults: 0,
+    },
+    reader,
+  );
+  expect(result.isError).toBeUndefined();
+  mockFetch.mockClear();
+  const invalid = await handleToolCall(client(), DEFAULT_CONFIG, 'SAPDiagnose', { ...args, coverage: true }, reader);
+  expect(invalid.isError).toBe(true);
+  expect(mockFetch).not.toHaveBeenCalled();
+});
 it.each(['SAPRead', 'SAPDiagnose'])(
   'runs one native batch through %s with read scope and normalized aliases',
   async (tool) => {

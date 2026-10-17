@@ -23,7 +23,12 @@ import { SYNTAX_BATCH_TYPES } from '../adt/syntax-batch.js';
 import { TEXT_ELEMENT_PARTS as SAPREAD_TEXT_ELEMENT_INCLUDES } from '../adt/text-elements.js';
 import { MAX_GREP_PATTERN_LENGTH } from '../context/grep.js';
 import { CI_PACKAGES_SCHEMA } from './diagnose-fields.js';
-import { diagnosticObjectsSchema, dumpFilters, validateDiagnosticInputs } from './diagnostic-inputs.js';
+import {
+  diagnosticObjectsSchema,
+  dumpFilters,
+  isDiagnosticPlaceholder,
+  validateDiagnosticInputs,
+} from './diagnostic-inputs.js';
 import { sourcePreconditionError } from './editable-source.js';
 import { FUNCTION_PROCESSING_TYPES, FUNCTION_UPDATE_TASK_KINDS } from './function-processing.js';
 import { CLASS_WRITE_INCLUDES, KNOWN_BASE_TYPES } from './object-types.js';
@@ -109,12 +114,7 @@ function validateSapReadInput(
     );
     for (const [key, value] of Object.entries<unknown>(input)) {
       // Ignore strict-client filler, but reject options that would change the requested check.
-      const filler =
-        value === false ||
-        (Array.isArray(value) && value.length === 0) ||
-        (key === 'format' && value === 'text') ||
-        (key === 'maxResults' && value === 0);
-      if (value !== undefined && !allowed.has(key) && !filler) {
+      if (value !== undefined && !allowed.has(key) && !isDiagnosticPlaceholder(key, value)) {
         ctx.addIssue({ code: 'custom', path: [key], message: `SYNTAX does not accept ${key}.` });
       }
     }

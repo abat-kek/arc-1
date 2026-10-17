@@ -56,6 +56,15 @@ export const diagnosticObjectsJson = (types: readonly string[]) => ({
     },
   },
 });
+/** Existing SAPRead syntax compatibility: only harmless strict-client defaults are ignored. */
+export function isDiagnosticPlaceholder(key: string, value: unknown): boolean {
+  return (
+    value === false ||
+    (Array.isArray(value) && value.length === 0) ||
+    (key === 'format' && value === 'text') ||
+    (key === 'maxResults' && value === 0)
+  );
+}
 export function validateDiagnosticInputs(input: Record<string, unknown>, ctx: z.RefinementCtx) {
   const issue = (key: string, message: string) => ctx.addIssue({ code: 'custom', path: [key], message });
   if (input.filters !== undefined && (input.action !== 'dumps' || input.id !== undefined))
@@ -82,5 +91,6 @@ export function validateDiagnosticInputs(input: Record<string, unknown>, ctx: z.
   }
   if (allowed)
     for (const [key, value] of Object.entries(input))
-      if (value !== undefined && !allowed.includes(key)) issue(key, `${key} is not supported for ${input.action}.`);
+      if (value !== undefined && !allowed.includes(key) && !isDiagnosticPlaceholder(key, value))
+        issue(key, `${key} is not supported for ${input.action}.`);
 }

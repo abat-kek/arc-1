@@ -40,6 +40,7 @@ export interface StructureHierarchyResult {
 type StructureHierarchyClient = Pick<AdtClient, 'getTabl' | 'resolveTablObjectUrl' | 'http' | 'safety'>;
 
 const DEFAULT_MAX_DEPTH = 10;
+const MAX_APPEND_CANDIDATES = 50;
 const WHERE_USED_UNAVAILABLE_STATUSES = new Set([400, 404, 405, 415, 501]);
 
 export function parseEmbeddedStructures(source: string): EmbeddedStructureRef[] {
@@ -173,7 +174,7 @@ async function findExtensionRefs(
     for (const result of results) {
       const candidate = normalizeStructureName(result.name);
       if (!candidate || candidate === baseName) continue;
-      if (!/^TABL\//i.test(result.type)) continue;
+      if (result.type.toUpperCase() !== 'TABL/DS' || result.isResult === false) continue;
       candidates.add(candidate);
     }
   };
@@ -187,6 +188,15 @@ async function findExtensionRefs(
     } else {
       throw err;
     }
+  }
+
+  // Every candidate needs a source read; large where-used lists otherwise fan out into thousands of requests.
+  if (candidates.size > MAX_APPEND_CANDIDATES) {
+    warnings.push(
+      `Where-used returned ${candidates.size} structure candidates for ${baseName}, exceeding the append scan limit of ${MAX_APPEND_CANDIDATES}; append discovery is incomplete.`,
+    );
+    disableAppendDiscovery();
+    return [];
   }
 
   const extendRe = new RegExp(`extend\\s+type\\s+${escapeRegExp(baseName)}\\s+with`, 'i');

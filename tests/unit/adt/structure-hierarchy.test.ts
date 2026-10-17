@@ -38,6 +38,13 @@ define structure zbase {
               ? [
                   { name: 'ZAPPEND_OK', type: 'TABL/DS', uri: '/sap/bc/adt/ddic/structures/ZAPPEND_OK' },
                   { name: 'ZAPPEND_NOPE', type: 'TABL/DS', uri: '/sap/bc/adt/ddic/structures/ZAPPEND_NOPE' },
+                  { name: 'ZTAB_CONSUMER', type: 'TABL/DT', uri: '/sap/bc/adt/ddic/tables/ZTAB_CONSUMER' },
+                  {
+                    name: 'ZCONTAINER',
+                    type: 'TABL/DS',
+                    uri: '/sap/bc/adt/ddic/structures/ZCONTAINER',
+                    isResult: false,
+                  },
                   { name: 'ZCL_CONSUMER', type: 'CLAS/OC', uri: '/sap/bc/adt/oo/classes/ZCL_CONSUMER' },
                 ]
               : [],
@@ -66,6 +73,8 @@ define structure zbase {
       expect(post).toHaveBeenCalledTimes(3);
       expect(post.mock.calls.every(([path]) => !path.includes('/scope'))).toBe(true);
       expect(result.warnings).toBeUndefined();
+      expect(client.getTabl).not.toHaveBeenCalledWith('ZTAB_CONSUMER', expect.anything());
+      expect(client.getTabl).not.toHaveBeenCalledWith('ZCONTAINER', expect.anything());
     });
 
     it('skips where-used when includeExtensions is false', async () => {
@@ -111,6 +120,29 @@ define structure zbase {
       expect(result.warnings).toEqual(
         expect.arrayContaining(['Where-used endpoint unavailable for ZBASE; append structures were not resolved.']),
       );
+    });
+
+    it('keeps includes and warns instead of scanning a large candidate set', async () => {
+      const candidates = Array.from({ length: 51 }, (_, i) => ({
+        name: `ZREF${i}`,
+        type: 'TABL/DS',
+        uri: `/sap/bc/adt/ddic/structures/zref${i}`,
+      }));
+      const post = vi.fn(async () => ({ body: whereUsedXml(candidates) }));
+      const client = makeStructureClient(
+        {
+          ZBASE: 'define structure zbase {\n include zinc;\n}',
+          ZINC: 'define structure zinc { field : abap.char(1); }',
+        },
+        post,
+      );
+      const result = await buildStructureHierarchy(client, 'ZBASE');
+      expect(result.tree.children).toEqual([{ structure: 'ZINC', attribute: null, kind: 'include', children: [] }]);
+      expect(result.warnings).toEqual([
+        'Where-used returned 51 structure candidates for ZBASE, exceeding the append scan limit of 50; append discovery is incomplete.',
+      ]);
+      expect(post).toHaveBeenCalledTimes(1);
+      expect(client.getTabl).toHaveBeenCalledTimes(2);
     });
 
     it('propagates authorization failures instead of reporting no appends', async () => {
@@ -169,13 +201,13 @@ function makeStructureClient(sources: Record<string, string>, post: ReturnType<t
   };
 }
 
-function whereUsedXml(refs: Array<{ name: string; type: string; uri: string }>): string {
+function whereUsedXml(refs: Array<{ name: string; type: string; uri: string; isResult?: boolean }>): string {
   return `<?xml version="1.0" encoding="utf-8"?>
 <usageReferences:usageReferenceResult xmlns:usageReferences="http://www.sap.com/adt/ris/usageReferences">
   <usageReferences:referencedObjects>
 ${refs
   .map(
-    (ref) => `    <usageReferences:referencedObject uri="${ref.uri}" isResult="true">
+    (ref) => `    <usageReferences:referencedObject uri="${ref.uri}" isResult="${ref.isResult ?? true}">
       <usageReferences:adtObject adtcore:name="${ref.name}" adtcore:type="${ref.type}" xmlns:adtcore="http://www.sap.com/adt/core"/>
     </usageReferences:referencedObject>`,
   )

@@ -6,10 +6,21 @@ native response does not contain. This prevented append discovery and added a
 failed request to CDS guidance.
 
 The reviewed fix removes that helper and its invented fixture. Both callers use
-one ordinary where-used query. Structure discovery filters TABL candidates and
+one ordinary where-used query. Structure discovery filters TABL/DS candidates and
 confirms `extend type <base> with` in each candidate source. CDS guidance retains
 deduplication. Actual endpoint absence still produces a structure warning;
-authorization failures still propagate. No new tool parameters are added.
+authorization failures still propagate. More than 50 candidates stop append discovery
+with an explicit incomplete-result warning; includes are retained. No new tool
+parameters are added.
+
+## Large-result review
+
+On 816, T000 returned 6,760 where-used rows: 4,080 transparent tables and 320
+structures. Reading every TABL candidate would cause thousands of requests.
+Transparent tables cannot be append structures (verified TABL/DS contract), and
+scanning over 50 structure candidates now stops with a warning instead of silently
+returning a complete-looking empty result. This is a bounded bug fix; native scope
+filtering remains a separate feature.
 
 ## Live evidence, 17 October 2026
 

@@ -42,9 +42,18 @@ not live-verified on BTP or 750.
   zero results and “Where-used is not supported at this position”. Cleanup passed.
   CDS consumer discovery is therefore unverified on 750; zero results are not proof
   that no consumer exists.
-- Native scope requests work on 816 and BTP although the exact scope subpath is
-  absent from discovery. They return selectable categories, grades and an opaque
-  payload, not per-type counts. The scope endpoint returns 404 on 750 and 758.
+- Native scope requests work on 816 and BTP. They return selectable categories,
+  grades and an opaque payload, not per-type counts. The scope endpoint returns
+  404 on 750 and 758.
+
+Raw discovery rechecked on 18 October after [kts982's correction](https://github.com/arc-mcp/arc-1/pull/1022#issuecomment-6242448000):
+816 and BTP advertise the scope path as an `adtcomp:templateLink` inside the
+`usageReferences` collection. Its `rel` is
+`http://www.sap.com/adt/relations/informationsystem/usageReferences/scope`, and its
+`template` is `/sap/bc/adt/repository/informationsystem/usageReferences/scope{?uri}`.
+That link is absent on our 750 and 758 systems. The earlier absence claim came
+from ARC-1's collection/MIME map, which does not retain nested template links.
+Future native scope support can use this relation as its discovery gate.
 
 #1018's package filtering and bounded position/snippet retrieval remain separate
 research. Correcting request headers alone would not fix the callers' assumptions.

@@ -12,9 +12,9 @@ and supplies a map for its own workspace. Other callers receive unchanged output
 The core implementation, HTTP routing tests and live BTP pinned/aggregate reads pass. On the user's
 existing BTP test deployment, real XSUAA OAuth, public-router preference forwarding, Copilot tool
 calls and native ADT opening succeeded. The earlier isolated-deployment quota blocker was avoided
-by temporarily using the existing test app with a saved rollback. A4H client 100 still times out;
-Copilot aggregate reconnect hit a client validation error, and second-user/PP-only multi-instance
-acceptance remains open.
+by temporarily using the existing test app with a saved rollback. Copilot aggregate reconnect now
+passes after clearing its stale validator with a full window reload. A4H client 100 has both successful
+source reads and repeatable timeout cases; second-user/PP-only multi-instance acceptance remains open.
 
 ```mermaid
 flowchart LR
@@ -193,8 +193,8 @@ The live catalog advertised five targets. Each successful source read used `CL_A
 
 The initial matrix performed **30 reads: 29 successful reads with 29 passing link/source assertions,
 zero assertion failures, and the A4H/100 timeout**. The separate pinned A4H/100 diagnostic returned
-one error block and no alias/link. Its backend connectivity/authentication path needs owner diagnosis;
-this evidence does not identify a root cause or qualify distinct SAP clients live.
+one error block and no alias/link. The follow-up below narrows this failure, but does not establish
+reliable client-100 operation.
 
 For `A4H/001`, both routes passed absent preferences, user-agent-only, wrong client marker, wrong
 public-target map and conflicting-map suppression. A percent-encoded Unicode alias round-tripped
@@ -236,14 +236,52 @@ advertised eight tools; the aggregate entry advertised nine (including `SAPTarge
   SAP browser sign-in, the same link freshly loaded `cl_abap_classdescr.clas.abap`, with the class
   definition and source visible. No file was created, edited, saved or activated.
 
-A post-restart Copilot call did not pass consistently: the model omitted `target`, and a subsequent
-clean chat after **MCP: Reset Cached Tools** and **Restart Server** reported client-side
-`must NOT have additional properties` validation. The same target-bearing SDK input passed Ajv and
-live execution on both sides of restart/token refresh. The cause is not established (client/model
-schema handling or tool identity remains a possibility); no server validation was relaxed. **Copilot
-aggregate reconnect is not qualified**, even though one pre-restart aggregate Copilot call and native
-opening succeeded. These runs used Copilot's Gemini 3.8 Flash model; other Copilot models were not
-qualified in this BTP pass.
+The initial reconnect failure was traced to **Copilot's stale input-validator cache**, rather than
+an invalid aggregate schema. Debug records show calls that correctly included `target` being rejected
+client-side with `must NOT have additional properties`. The earlier local/pinned/aggregate definitions
+had successively reused `mcp_arc-13_SAPRead`. In the installed Copilot 0.70.0 bundle,
+`BaseToolsService.validateToolInput` caches Ajv validators solely by tool name in a 16-entry LRU;
+it does not compare the current schema before reusing one. A pinned validator rejects aggregate
+`target`, while omitting it reaches ARC-1 and correctly fails `TARGET_REQUIRED`.
+**MCP: Reset Cached Tools** and **Restart Server** do not clear this separate Copilot cache.
+This matches [VS Code issue #321662](https://github.com/microsoft/vscode/issues/321662) and the
+[upstream tools service](https://github.com/microsoft/vscode/blob/main/extensions/copilot/src/extension/tools/common/toolsService.ts).
+
+The follow-up used **Developer: Reload Window**, then kept `btpMulti1025` and `btpPinned1025`
+configured simultaneously with their own native OAuth connections. Four actual Copilot reads passed:
+
+1. Aggregate `CL_ABAP_TYPEDESCR`, with `target=A4H/001`.
+2. Pinned `CL_ABAP_CLASSDESCR`, without `target`.
+3. Aggregate `CL_ABAP_CLASSDESCR` after the pinned call, with `target=A4H/001`.
+4. After restarting the CF app and the aggregate MCP connection, a **fresh chat** read aggregate
+   `CL_ABAP_TYPEDESCR`, with `target=A4H/001` on its first invocation.
+
+All four rendered the exact response link using `A4H2023-2`. Clicking the fourth link freshly opened
+`cl_abap_typedescr.clas.abap` after the independent local ADT login was renewed. The editor displayed
+Runtime Type Services source and `CLASS CL_ABAP_TYPEDESCR IMPLEMENTATION`. No SAP edits were made.
+This qualifies reconnect for the tested stable configuration, VS Code 1.142 / Copilot 0.70.0 /
+Gemini 3.8 Flash. Other models and arbitrary configuration/schema changes are not thereby qualified.
+Keep `target` required and reload the window if a changed tool surface encounters stale validation.
+
+### Client-100 follow-up
+
+The same reviewed droplet was reused, with fresh browser XSUAA OAuth. Read-only Destination inspection
+confirmed A4H/001 and A4H/100 use the same virtual Cloud Connector endpoint, PP authentication and
+location; the configured SAP client differs. Neither destination nor Cloud Connector was changed.
+`SAPRead SYSTEM` for A4H/100 succeeded in 1.2 seconds; its ADT discovery request returned HTTP 200.
+Two `CL_ABAP_TYPEDESCR` reads with `version=active` also succeeded, one pinned (11.2 seconds) and one
+aggregate (11.7 seconds), each returning source plus a link under the client-100 preference.
+
+However, separate default-version calls still failed after 120 seconds on both routes, and an explicit
+`version=active` aggregate read after CF restart failed in the same way. Explicit active selection is
+therefore **not a reliable workaround**, and the default already resolves to active in the handler.
+The failure was after per-user Destination setup succeeded and source dispatch began; audit records
+report `AdtNetworkError`, with one error block and no link. No extra credential, SAP role or network
+permission was added. This narrows the remaining work to tracing the SAP/Connectivity source-read
+path (including the cold feature-probe/client state); it does not prove a permanent PP mapping failure.
+Useful failed-request anchors on 2026-10-18: `REQ-15` at 20:59:42–21:01:42 UTC (pinned), `REQ-37` at
+21:01:51–21:03:51 UTC (aggregate). Request IDs are process-local and must be paired with timestamps.
+Successful samples prove reachability, not reliable distinct-client acceptance.
 
 The exact aggregate link was:
 
@@ -262,13 +300,20 @@ local OAuth tokens, binding credentials, configuration backups and raw logs were
 verification. No SAP objects, users, roles, destinations or Cloud Connector settings were changed.
 The candidate is evidence from a temporary test, not a permanent upgrade of this shared test app.
 
+The blocker follow-up also restored the same original droplet and verified the environment, actual
+process command, sizing, complete route objects and service-binding identities. Health was `ok`,
+version `0.9.27`, startup `2026-10-18T21:09:01.597Z`. Both temporary MCP entries were removed and the
+remaining VS Code configuration matched its pre-test backup. Local test credentials and raw logs
+were removed after verification; sanitized results and the local acceptance screenshot were retained.
+
 ### Remaining live scope
 
 COMPAT-19 now covers A4H/100 diagnosis, two distinct authorized SAP users/workspaces, a live known-
 ungranted target under `xsuaa-attribute`, and a separate PP-only deployment spanning multiple instances.
 The shared-Basic test app retains its one-instance constraint and must not be scaled for that test.
-VS Code/Copilot aggregate tool selection should also be kept in client acceptance checks: an omitted
-`target` must fail, and model retries do not establish first-attempt reliability.
+VS Code/Copilot aggregate tool selection stays in client acceptance checks: an omitted `target` must
+fail. The stale-validator recovery and stable post-restart configuration now pass; other configuration
+changes and models require their own qualification.
 
 ## Review and wider gaps
 
@@ -281,6 +326,21 @@ guard checks were added. Its follow-up confirmed the fix and found no remaining 
 Two speculative follow-up notes were checked against the source: the shared normalizer already
 strips empty include values, no config-identity cache was found, and no dead IDE field remains in
 `ToolDispatchContext`. The reviewer did not execute tests; the test results here are separate evidence.
+
+A separate follow-up review used Claude Code **2.1.302**, model **`claude-opus-5-5`**, with **Max**
+effort (runtime identity verified). It confirmed the correct strict pinned/aggregate schemas and
+recommended client recovery documentation rather than changing the server schema or automatically
+renaming routes. Its suggested Ajv regression was added: the actual advertised aggregate schema
+accepts the exact target, rejects missing/unknown targets, and the pinned validator rejects that extra
+property while accepting pinned input. This reproduces the stale-validator failure mode without
+simulating Copilot itself. The reviewer also identified an unrelated `serverName` inheritance omission;
+it is not a fix for the cache problem and was left for a separate change.
+
+The merged implementation at `8d9dd77d` completed [CI run 39163985401](https://github.com/arc-mcp/arc-1/actions/runs/39163985401):
+**9,407 unit passes on each of Node 22 and 24**, **261 integration passes / 96 skips**, and
+**143 E2E passes / 4 skips**, all with zero failures. CodeQL, security/dependency checks, strict docs,
+MTA and reliability checks passed. Downloaded JSON artifacts were checked; skips are not live evidence.
+The follow-up changes tests and documentation only; live evidence remains tied to `adfae1e1`.
 
 Earlier architecture review recommended request-scoped presentation, alias provenance, exact public
 target matching, and keeping browser CORS outside this feature.

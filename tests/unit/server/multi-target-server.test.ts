@@ -1,6 +1,7 @@
 import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { Ajv2020 } from 'ajv/dist/2020.js';
 import { describe, expect, it, vi } from 'vitest';
 import { canonicalDestinationUrl, opaqueDestinationValue } from '../../../src/server/destination-discovery.js';
 import {
@@ -350,6 +351,39 @@ describe('multi-target MCP servers', () => {
       { authInfo: adminAuth },
     );
     expect(adminResult.tools.map((tool: { name: string }) => tool.name)).not.toContain('SAPTargets');
+  });
+
+  it('validates pinned and aggregate inputs independently with Copilot-compatible Ajv options', async () => {
+    const current = registry(1);
+    const target = current.targets[0];
+    const aggregateServer = createServer(buildAggregateToolSurfaceConfig(DEFAULT_CONFIG, current.targets), {
+      multiTarget: { mode: 'aggregate', registry: current, instanceConfig: DEFAULT_CONFIG },
+    });
+    const pinnedServer = createServer(buildMultiTargetConfig(DEFAULT_CONFIG, target), {
+      multiTarget: { mode: 'pinned', registry: current, instanceConfig: DEFAULT_CONFIG, target },
+    });
+    const ajv = new Ajv2020({ coerceTypes: true, strictTypes: false, allowUnionTypes: true });
+    const validator = async (server: Server) => {
+      const result = await requestHandler(server, ListToolsRequestSchema.shape.method.value)(
+        { method: 'tools/list', params: {} },
+        { authInfo: readAuth },
+      );
+      return ajv.compile(result.tools.find((tool: { name: string }) => tool.name === 'SAPRead').inputSchema);
+    };
+    const aggregate = await validator(aggregateServer);
+    const pinned = await validator(pinnedServer);
+    const args = { type: 'CLAS', name: 'CL_ABAP_TYPEDESCR' };
+    expect(aggregate({ ...args, target: target.target })).toBe(true);
+    expect(aggregate({ ...args })).toBe(false);
+    expect(aggregate.errors).toContainEqual(expect.objectContaining({ keyword: 'required' }));
+    expect(aggregate({ ...args, target: 'UNKNOWN/001' })).toBe(false);
+    expect(pinned({ ...args })).toBe(true);
+    // A stale pinned validator reproduces Copilot's rejection of valid aggregate input.
+    expect(pinned({ ...args, target: target.target })).toBe(false);
+    expect(pinned.errors).toContainEqual(
+      expect.objectContaining({ keyword: 'additionalProperties', params: { additionalProperty: 'target' } }),
+    );
+    expect(aggregate({ ...args, target: target.target })).toBe(true);
   });
 
   it('lists multiple targets compactly for readers and expands diagnostics for admins', async () => {

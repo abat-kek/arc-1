@@ -430,9 +430,11 @@ A BTP destination name or SAP SID is not necessarily the local ADT destination a
 for qualified source types, including request-specific HTTP/BTP destination mapping.
 The [setup](ide-integration.md) and
 [live BTP acceptance record](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-18-btp-native-ide-links.md)
-now include public CF routing, XSUAA OAuth, pinned/aggregate reads on four targets, SDK restart/token
-refresh, and Copilot-to-native editor opening. **A4H/100 timeouts and Copilot aggregate reconnect
-validation remain unresolved; second-user and PP-only multi-instance acceptance remain open.**
+now include public CF routing, XSUAA OAuth, pinned/aggregate reads on four reliable targets plus
+successful A4H/100 samples, SDK restart/token refresh, and Copilot-to-native editor opening. Copilot
+aggregate reconnect passes after clearing its stale validator with a window reload and keeping
+separate stable entries. **A4H/100 still has timeout cases; second-user, denied-target and PP-only
+multi-instance acceptance remain open.**
 Opening a link does not prove canonical dirty-buffer reuse, Keep/Undo, saving, activation or
 transport-selection parity.
 The earlier [#676 bridge proposal](https://github.com/arc-mcp/arc-1/pull/676) was closed unmerged.
@@ -467,7 +469,7 @@ Status checked **18 October 2026**. These distinctions prevent research plans fr
 | [#1016 deny-rule guidance](https://github.com/arc-mcp/arc-1/pull/1016), [#1019 syntax result fix](https://github.com/arc-mcp/arc-1/pull/1019) | **Merged after 1.6.0** | Narrow fixes; no policy-preview feature from closed [#1010](https://github.com/arc-mcp/arc-1/pull/1010) |
 | [#1020 dump filters](https://github.com/arc-mcp/arc-1/pull/1020) | **Open draft** | Research/implementation evidence, not a released capability |
 | [#1024 saved application logs](https://github.com/arc-mcp/arc-1/pull/1024) | **Open draft** | Native SLG1-reader proposal; not Dictionary activation logs |
-| [#1025 editor links](https://github.com/arc-mcp/arc-1/pull/1025) | **Open draft** | Local/BTP navigation evidence; remaining client/reconnect and deployment qualifications |
+| [#1025 editor links](https://github.com/arc-mcp/arc-1/pull/1025) | **Open draft** | Local/BTP navigation and reconnect evidence; remaining client-100 and deployment qualifications |
 | [#1011 broader diagnostics](https://github.com/arc-mcp/arc-1/pull/1011) | **Open draft** | Source of separate investigations; not blanket shipped parity |
 
 The [research index](https://github.com/arc-mcp/arc-1/blob/main/docs/research/adt-vscode-1.2/README.md)

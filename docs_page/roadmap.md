@@ -372,19 +372,21 @@ fixtures avoid the pre-delete, but do not fix this runtime gap; do not add a ski
 - **Priority / effort / status:** P1 / S / Needs environment
 - **Category:** Compatibility
 
-**Remaining gap.** [PR #1025](https://github.com/arc-mcp/arc-1/pull/1025) now has live public-router,
+**Remaining gap.** [PR #1025](https://github.com/arc-mcp/arc-1/pull/1025) has live public-router,
 XSUAA OAuth, pinned/aggregate PP and shared-Basic reads, request-local workspace mapping,
-restart/token-refresh and Copilot-to-native-ADT evidence from the existing BTP test app. A4H/100
-still times out on both routes. Two distinct SAP identities, a known-but-ungranted target under
-`xsuaa-attribute`, and PP-only multi-instance routing remain unqualified live. Copilot aggregate
-reconnect also hit an unresolved client-side additional-properties validation error after resetting tools. Automated coverage
+restart/token-refresh and Copilot-to-native-ADT evidence. A4H/100 now has successful discovery and
+pinned/aggregate source samples, but also repeatable 120-second source-read timeouts, including with
+explicit active selection after restart. Two distinct SAP identities, a known-but-ungranted target
+under `xsuaa-attribute`, and PP-only multi-instance routing remain unqualified live. Automated coverage
 exists for both authorization modes and distinct clients/users; it does not replace these live checks.
 
-**Resume with.** Have the SAP/Connectivity owner diagnose A4H/100's 120-second backend timeout, obtain
-a second authorized test identity and a denied-target test account, and use an isolated PP-only
-multi-instance deployment. Keep aggregate Copilot target selection in acceptance: the model omitted
-`target` before a successful retry, then failed the post-restart clean-chat check. The existing
-shared-Basic test app must retain one instance.
+**Resume with.** Trace the A4H/100 SAP/Connectivity source-read timeout using the request IDs and UTC
+windows in the acceptance record; successful PP setup and discovery narrow the problem but do not
+prove the entire backend path is healthy. Obtain a second authorized test identity and a denied-target
+test account, and use an isolated PP-only multi-instance deployment. The existing shared-Basic test
+app must retain one instance. Keep aggregate target selection and changed-tool-surface recovery in
+client acceptance; the tested Copilot stale-validator failure is resolved by a window reload and
+stable separate entries, including post-restart execution.
 Preferences opt in presentation; they do not attest the application or prove a local alias's backend.
 
 The [implementation and acceptance record](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-18-btp-native-ide-links.md)

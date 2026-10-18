@@ -173,5 +173,14 @@ ADT needs its own SAP logon and working network route.
 
 Desktop VS Code is the qualified client scope. This change does not expand browser CORS headers;
 VS Code Insiders, web clients, and browser-hosted agents require separate qualification.
+
+If Copilot rejects a valid aggregate call with `must NOT have additional properties` after changing
+an MCP connection, run **Developer: Reload Window** and start a fresh chat. Keep pinned and aggregate
+endpoints in separate, stable MCP entries. In the tested Copilot 0.70.0 / VS Code 1.142 combination,
+Copilot cached the input validator by tool name; **MCP: Reset Cached Tools** and **Restart Server**
+did not clear that separate cache. This matches [VS Code issue #321662](https://github.com/microsoft/vscode/issues/321662).
+The aggregate call still requires `target`; do not remove it or relax server validation to work
+around a stale client schema.
+
 See the [BTP implementation and verification record](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-18-btp-native-ide-links.md)
 for tested behavior and remaining deployment limitations.

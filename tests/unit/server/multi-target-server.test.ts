@@ -353,7 +353,7 @@ describe('multi-target MCP servers', () => {
     expect(adminResult.tools.map((tool: { name: string }) => tool.name)).not.toContain('SAPTargets');
   });
 
-  it('validates pinned and aggregate inputs independently with Copilot-compatible Ajv options', async () => {
+  it('validates pinned and aggregate inputs independently with Ajv', async () => {
     const current = registry(1);
     const target = current.targets[0];
     const aggregateServer = createServer(buildAggregateToolSurfaceConfig(DEFAULT_CONFIG, current.targets), {
@@ -375,8 +375,11 @@ describe('multi-target MCP servers', () => {
     const args = { type: 'CLAS', name: 'CL_ABAP_TYPEDESCR' };
     expect(aggregate({ ...args, target: target.target })).toBe(true);
     expect(aggregate({ ...args })).toBe(false);
-    expect(aggregate.errors).toContainEqual(expect.objectContaining({ keyword: 'required' }));
+    expect(aggregate.errors).toContainEqual(
+      expect.objectContaining({ keyword: 'required', params: { missingProperty: 'target' } }),
+    );
     expect(aggregate({ ...args, target: 'UNKNOWN/001' })).toBe(false);
+    expect(aggregate.errors).toContainEqual(expect.objectContaining({ keyword: 'enum' }));
     expect(pinned({ ...args })).toBe(true);
     // A stale pinned validator reproduces Copilot's rejection of valid aggregate input.
     expect(pinned({ ...args, target: target.target })).toBe(false);

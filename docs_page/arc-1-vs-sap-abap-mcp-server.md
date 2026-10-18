@@ -430,10 +430,10 @@ A BTP destination name or SAP SID is not necessarily the local ADT destination a
 for qualified source types, including request-specific HTTP/BTP destination mapping.
 The [setup](ide-integration.md) and
 [live BTP acceptance record](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-18-btp-native-ide-links.md)
-now include public CF routing, XSUAA OAuth, pinned/aggregate reads on four reliable targets plus
+now include public CF routing, XSUAA OAuth, pinned/aggregate reads on four other targets plus
 successful A4H/100 samples, SDK restart/token refresh, and Copilot-to-native editor opening. Copilot
-aggregate reconnect passes after clearing its stale validator with a window reload and keeping
-separate stable entries. **A4H/100 still has timeout cases; second-user, denied-target and PP-only
+aggregate reconnect passes in the tested VS Code 1.142 / Copilot 0.70.0 setup after clearing its stale
+validator with a window reload and keeping separate stable entries. **A4H/100 still has timeout cases; second-user, denied-target and PP-only
 multi-instance acceptance remain open.**
 Opening a link does not prove canonical dirty-buffer reuse, Keep/Undo, saving, activation or
 transport-selection parity.

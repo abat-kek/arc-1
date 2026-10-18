@@ -12,8 +12,8 @@ and supplies a map for its own workspace. Other callers receive unchanged output
 The core implementation, HTTP routing tests and live BTP pinned/aggregate reads pass. On the user's
 existing BTP test deployment, real XSUAA OAuth, public-router preference forwarding, Copilot tool
 calls and native ADT opening succeeded. The earlier isolated-deployment quota blocker was avoided
-by temporarily using the existing test app with a saved rollback. Copilot aggregate reconnect now
-passes after clearing its stale validator with a full window reload. A4H client 100 has both successful
+by temporarily using the existing test app with a saved rollback. In VS Code 1.142 / Copilot 0.70.0,
+aggregate reconnect now passes after clearing its stale validator with a full window reload. A4H client 100 has both successful
 source reads and repeatable timeout cases; second-user/PP-only multi-instance acceptance remains open.
 
 ```mermaid
@@ -283,6 +283,11 @@ Useful failed-request anchors on 2026-10-18: `REQ-15` at 20:59:42–21:01:42 UTC
 21:01:51–21:03:51 UTC (aggregate). Request IDs are process-local and must be paired with timestamps.
 Successful samples prove reachability, not reliable distinct-client acceptance.
 
+A final read-only baseline on the restored original **0.9.27** app reproduced the pinned client-100
+source failure in **120.6 seconds**, while client-001 source succeeded in 2.4 seconds and client-100
+SYSTEM discovery succeeded in 1.5 seconds. This timeout reproduces without the PR build or link
+feature. The original app remained deployed; the baseline's temporary OAuth credentials were removed.
+
 The exact aggregate link was:
 
 ```text
@@ -335,6 +340,11 @@ accepts the exact target, rejects missing/unknown targets, and the pinned valida
 property while accepting pinned input. This reproduces the stale-validator failure mode without
 simulating Copilot itself. The reviewer also identified an unrelated `serverName` inheritance omission;
 it is not a fix for the cache problem and was left for a separate change.
+
+The final Opus 5.5 Max follow-up found no blocking defects. Its two wording nits were addressed:
+the test now says Ajv without claiming to simulate Copilot's implementation, and the comparison page
+limits reconnect evidence to the tested versions instead of calling sampled targets reliable.
+The missing-target and unknown-target assertions were also tightened to check their error keywords.
 
 The merged implementation at `8d9dd77d` completed [CI run 39163985401](https://github.com/arc-mcp/arc-1/actions/runs/39163985401):
 **9,407 unit passes on each of Node 22 and 24**, **261 integration passes / 96 skips**, and

@@ -14,7 +14,8 @@ This follow-up changes documentation, not the runtime link contract or plugin ma
    Two projects using the same SID and client produced a project chooser. Automatic backend-correct
    navigation needs more than inserting the target SID into the URL.
 3. The existing VS Code implementation already has a small local setup: two environment variables
-   per stdio server. A single HTTP endpoint needs one `@single` mapping; a single pinned target needs
+   per stdio server. Traditional HTTP with `ARC1_MULTI_TARGET_ENDPOINTS` off needs one `@single`
+   mapping; a single pinned target needs
    one exact target mapping. Aggregate configuration is not necessary for single-system users.
 4. SAP ADT 1.2's native resolver works against live SAP and returns canonical repository-tree URIs.
    It can potentially remove ARC-1-specific presentation configuration, but still requires local SAP
@@ -44,7 +45,8 @@ This follow-up changes documentation, not the runtime link contract or plugin ma
 | Eclipse Share Link | Pass | Generated `adt://A4H/...?...` URL |
 | Eclipse Open ADT Link | Pass | Project chooser, selected A4H_2023, live CL_ABAP_TYPEDESCR source |
 | Chrome → registered Eclipse handler | Pass | OS confirmation, project chooser, live source |
-| `adt://A4H.2023/...` project-name shortcut | Rejected | Invalid system ID; not a portable project-name encoding |
+| `adt://A4H.2023/...` authority variant | Rejected | Invalid system ID |
+| `adt://A4H_2023/...` literal project-name authority | Rejected | Native Open ADT Link validation: invalid system ID |
 | Eclipse Copilot Markdown `adt://` link | Render only | No chooser/editor on click; not an ARC-1 MCP end-to-end test |
 | Claude Code ordinary MCP preference probe | Pass | `vscode` / `TEST-001` inherited |
 | Claude Code temporary plugin MCP preference probe | Pass | Same values inherited; no SAP access by the probe |
@@ -55,11 +57,15 @@ and Git writes disabled. All preserved the same first source block, SHA-256
 `631ff0819d097f18752a7cab744dc95b61fc6ce76282857012d5ec4b4eff58f0`.
 Only the appended link block differed. No SAP source, passwords, bearer tokens or service keys are
 included in the committed evidence.
+The local HTTP instance had multi-target endpoints disabled. `@single` also fails closed on the bare
+`/mcp` of a multi-target instance; use its pinned endpoint for single-target IDE presentation.
 
 The package was produced with `npm run build` and `npm pack`, then launched by
 `npx --yes --package=<absolute-packed-tgz> arc1`. This verifies npm packaging and stdio startup for
 the feature branch, not publication of the feature to `arc-1@latest`. The pack inventory contained
 982 files and none of `.env`, `cookies.txt`, or `.arc1.json`.
+An SDK harness launched these processes; the separate VS Code `envFile` plus `env` configuration
+example was not UI-tested as a whole.
 
 ## Eclipse details
 
@@ -80,6 +86,11 @@ The chooser offered `A4H_2023` and `A4H_2025`; both projects display SID A4H and
 the 2023 project opened active source. This is direct evidence that SID/client alone cannot represent
 the public ARC-1 target's backend identity in this landscape. A BTP Destination name is another,
 independent identifier and is not automatically an Eclipse project name.
+With only one matching local project, a chooser might not appear; that does not prove its backend
+matches the researched target. ARC-1 cannot see the local project registry or force a chooser.
+The review prompted a further test of literal `A4H_2023`, which the native dialog also rejected as
+an invalid system ID before navigation. These two failed authority forms do not disqualify every
+possible exact-project encoding; alternative forms remain unqualified live.
 
 External registration was initially disabled. Enabling `adt` in General → Link Handlers made the
 Chrome anchor work, following Chrome's normal Open Eclipse confirmation. The fresh preference page
@@ -89,6 +100,7 @@ still say disabled; the registration page and successful external click were the
 Eclipse Copilot was asked only to render a literal Markdown link to CL_ABAP_CLASSDESCR, with no tool
 calls or edits. It produced a blue underlined link, but the tested clicks did not navigate. This is
 a renderer/handler smoke test, not proof of the BTP MCP flow or a diagnosis of the plugin's internals.
+Command-click and Control-click were also tried without establishing navigation.
 Use the copy/paste Open ADT Link fallback until a direct click is independently qualified.
 
 Installed SAP bundle inspection found additional project-link handling under `sap-adt-project-*`.
@@ -110,9 +122,11 @@ Then add an explicit Eclipse presentation mode, with these acceptance conditions
 - Preserve the current source/JSON blocks and the bounded, post-authorization decoration path.
 - Keep VS Code and Eclipse preferences per request; a shared BTP instance must serve both without
   emitting both link kinds to every client. Do not reinterpret the existing `vscode` map as Eclipse data.
+- Verify that each intended client can send its own per-server environment or HTTP headers.
 - Use verified ADT object URIs, not arbitrary URI templates, command URLs, or project-creation data.
-- For a SID-only initial mode, label the researched target and require a project choice when ambiguous;
-  do not promise exact selection. For exact selection, qualify SAP's richer matching format or use a
+- Treat any SID-only mode as a manual navigation aid: label the researched target, explain project
+  selection, and do not promise or attempt to enforce a chooser remotely. For exact selection,
+  qualify SAP's richer matching format or use a
   local companion that maps the service identity plus public target ID to an existing Eclipse project.
 - Do not automatically choose the first project with a matching SID. Test duplicate SIDs, duplicate
   SID/client pairs, different clients, HTTP/cloud projects, absent projects and malformed mappings.
@@ -156,6 +170,9 @@ The native object-URI resolver returned `.clas.json` for the class object endpoi
 Definitions and a namespaced CDS URI resolved without guessed tree paths. Opening the resulting
 canonical source link in the editor still disconnected the destination during this run. No write,
 activation, Keep/Undo, dirty-editor identity or version-selection claims follow from these reads.
+The displayed error does not establish the cause; URI shape or VS Code window routing may still
+be involved. A future Markdown link builder must escape parentheses as well as applying
+`encodeURIComponent`, especially for namespaced object paths.
 
 VS Code's MCP reference supports input variables, but documents that the Copilot harness does not
 forward servers needing interactive `${input:...}`. Therefore an alias prompt inside the MCP JSON
@@ -173,6 +190,16 @@ One test used an explicit MCP config; another loaded a temporary plugin declarin
 Both returned exactly `mode=vscode,destination=TEST-001` inherited from a scoped process environment.
 The probe did not read credentials or access SAP. Actual ARC-1 + SAP was tested separately through
 the packed stdio process. This does not qualify link rendering in Claude's different UIs.
+The successful temporary plugin declaration had no `env` block. A follow-up with an explicit
+non-secret `env` entry reported that the plugin tool was unavailable and did not execute it. That
+run does not establish whether environment merging failed or plugin loading failed; it is not a
+pass for the real ARC-1 manifest's environment/substitution path.
+
+These are inheritance experiments, not a recommended process-wide configuration recipe. A global
+`ARC1_IDE_DESTINATION` reaches every inheriting ARC-1 stdio server, including servers for another
+backend or servers that should have no links. Use per-server `env` instead; the user guide no longer
+recommends launching all of Claude with one alias. A dedicated plugin preference must be substituted
+only into that plugin server's environment, alongside its SAP connection configuration.
 
 An initial plugin probe used `--strict-mcp-config` with an empty MCP config, which excluded the
 plugin server; it was not counted as a successful plugin test. The successful plugin run omitted
@@ -189,8 +216,11 @@ An isolated copy of the manifest with two new fields and MCP environment substit
 with `options: ["off", "vscode"]` and `default: "off"`; a JSON Schema-style `enum` was rejected.
 The destination field was a string with an empty default. This validates a proposed manifest,
 not its configuration UI, saved-value substitution or an installed ARC-1 plugin. Using `options`
-would require a documented minimum Claude Code version of 2.1.271.
-It must not silently enable VS Code links in Claude Desktop, terminal use, or another editor. A
+would require a documented minimum Claude Code version of 2.1.271, according to the
+[official userConfig reference](https://code.claude.com/docs/en/plugins-reference#limit-a-field-to-fixed-options).
+The final isolated validation output was “Validation passed”; the initial `enum` candidate and the
+real repository layout with its existing `CLAUDE.md` warning are distinct failed checks.
+The proposed picker must not silently enable VS Code links in Claude Desktop, terminal use, or another editor. A
 per-plugin preference can simplify one-system use, but multiple differently mapped stdio connections
 still need per-server configuration. Native MCP resolver composition is also possible for a local
 Claude client, provided the client can render/open the result; this was not UI-qualified here.
@@ -204,7 +234,8 @@ The original stale-port conflict therefore remains a local setup issue to resolv
 SAP's native resolver. No BTP deployment changes were made in this follow-up.
 
 At runtime commit `28406c16`, every reported GitHub PR check passed, including Node 22/24 tests,
-integration, E2E, docs, MTA validation, CodeQL and dependency review. Earlier live BTP pinned and
+integration, E2E, docs, MTA validation, CodeQL and dependency review
+([runtime CI](https://github.com/arc-mcp/arc-1/actions/runs/39167290752)). Earlier live BTP pinned and
 aggregate evidence remains in the [BTP dossier](2026-10-18-btp-native-ide-links.md); these local
 experiments do not replace or broaden that evidence.
 
@@ -212,6 +243,21 @@ The focused local regression run passed **4 files / 98 tests**: `ide-links`, `id
 `ide-links-http`, and `dispatch-ide-links`. `npm run build`, `git diff --check`, and
 `mkdocs build --strict` also passed. No runtime code, authorization policy, tool schema or test
 assertions changed in this follow-up.
+
+Claude Code 2.1.302 / Opus 5.5 at max effort independently reviewed the documentation and relevant
+implementation. It found a blocking configuration risk in the process-wide Claude launch recipe:
+one alias could decorate results from another ARC-1 server. That recipe was removed from the guide;
+only per-server configuration is recommended. The review also led to explicit multi-target-off
+requirements for `@single`, narrower URI/project-name claims, local package startup examples,
+`auto` migration guidance, and clearer distinctions between isolated validation and real plugin
+installation. These documentation corrections were checked against code and a fresh strict docs
+build; the reviewer did not execute the test matrix.
+
+The smallest proposed implementation follow-up is two default-off/default-empty plugin preferences,
+substituted into that one server's existing `env`. Before shipping, qualify upgrade defaults,
+saved-value substitution with the existing SAP fields, startup validation, and the intended client
+surface. A plain string field avoids adding a picker-related minimum client version. Bridge-supplied
+`ARC1_IDE_LINKS=auto` configurations and the CLI help's broad `1.2+` wording need release review too.
 
 ## Primary references
 

@@ -408,7 +408,7 @@ Optional pre-write validation layers and tool/schema selection.
 
 ## IDE navigation
 
-Optional [native source links for SAP ADT for VS Code 1.2+](ide-integration.md). Stdio uses a local alias;
+Optional [native source links qualified on SAP ADT for VS Code 1.2.0](ide-integration.md). Stdio uses a local alias;
 HTTP/BTP requires explicit per-request VS Code headers and a matching target map. These options affect presentation,
 not SAP connection selection or authorization.
 

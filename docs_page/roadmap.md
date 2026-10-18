@@ -436,7 +436,7 @@ on unknown mappings; never pick the first matching SID. Cover single-system loca
 pinned and aggregate BTP independently. A one-time configuration picker can simplify VS Code/Claude
 setup without sharing one alias across unrelated servers or enabling links in every client.
 
-Evidence and acceptance conditions: [editor links and setup research](https://github.com/arc-mcp/arc-1/blob/codex/adt12-ide-links/docs/research/2026-10-19-editor-links-and-setup.md).
+Evidence and acceptance conditions: [editor links and setup research](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-editor-links-and-setup.md).
 
 <a id="sec-14"></a>
 ### SEC-14 — DNS rebinding and Host-header hardening

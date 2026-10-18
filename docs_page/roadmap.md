@@ -893,9 +893,9 @@ backend grammar before generalizing the stored-text workaround.
 - **Priority / effort / status:** P3 / M / Needs research
 - **Category:** Data access
 
-**Remaining gap.** Exact `SAPQuery(application_log)` reads use SAP's native OData service.
-Finding logs by object/time range, message details, BTP ABAP, principal propagation, restricted-user
-authorization tests, and additional active-service releases remain unqualified. Positive `$top`
+**Remaining gap.** Exact `SAPQuery(application_log)` reads use SAP's native OData service;
+restricted-user allow/deny checks passed on 7.58. Finding logs by object/time range, message
+details, BTP ABAP, principal propagation and additional active-service releases remain unqualified. Positive `$top`
 limits output, not SAP's full-log load. Do not add `/$count`, broad text searches, or BALDAT fallback
 without separate authorization and resource-cost evidence.
 

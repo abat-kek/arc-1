@@ -81,12 +81,11 @@ default-size pages, plus page sizes 1/2/100 and exact-end/beyond-end checks. Rea
 verified cumulative byte-limit rejection, cancellation during a native GET and queued admission,
 and successful reads after each failure. No reader defect was found in these runs.
 
-All probes were read-only; private responses and SAP source remain outside the repository. The
-public-tool checks preserved native errors without a table/RFC fallback.
-Comparisons use native HeaderSet navigation as the reference, not an independent SLG1/BAL oracle.
-The attempted SLG1 UI comparison stopped at unusable GUI text input; its test session was logged off.
-Restricted users, PP, BTP ABAP, additional active-service releases, non-Latin text, exception-specific
-rendering and independent screen comparisons remain unqualified; no universal compatibility claim.
+The reader probes were read-only; private responses and SAP source remain outside the repository.
+Public-tool checks preserved native errors without a table/RFC fallback. Most comparisons use native
+HeaderSet navigation; the independent SLG1 and restricted-user checks below add bounded coverage.
+PP, BTP ABAP, additional active-service releases, non-Latin text and exception-specific rendering
+remain unqualified; no universal compatibility claim.
 
 ### Service setup and restricted-user follow-up
 
@@ -108,12 +107,26 @@ in multi-target error handling. Unit tests cover unrelated codes, malformed bodi
 sessions. Fresh public-tool calls verified the corrected hint on 7.50/8.16 and a successful 7.58
 control read. This correction does not enable the missing service or qualify those two releases.
 
-No suitable restricted identity is available yet: the proposed accounts were absent from the
-tested client, had no roles/profiles, or had `SAP_ALL`. A valid test needs one identity with native
-service access and `S_APPL_LOG` display activity 03 for one object/subobject, plus existing logs
-outside that grant. Verify the allowed log against SLG1, verify that denied logs disclose no
-header/messages, and repeat privileged → restricted → privileged calls to check session isolation.
-A service-level 403 or a nonexistent log does not establish log-level authorization enforcement.
+On 2026-10-18, WebGUI SU01/PFCG prepared an existing empty test account on 7.58 with a temporary
+role containing only the service's IWSG/IWSV `S_SERVICE` grants and `S_APPL_LOG` activity 03 for
+`RSTCO_UT` / `ACT_XPRA_MESS`. Public `data`-scoped calls at `8e4cc6bd` passed this matrix:
+
+| Saved log | Administrator | Restricted account |
+| --- | --- | --- |
+| Granted object and subobject | Messages returned | Messages returned |
+| Same object, another subobject | Messages returned | `not_found_or_not_visible`; no header/messages |
+| Another object | Messages returned | `not_found_or_not_visible`; no header/messages |
+
+Calls alternated separate administrator/restricted clients. The existing integration test also
+passed as the restricted account for all 150 messages of the allowed log, including page sizes
+1/2/50/100 and end-of-log checks. After removing the role assignment, SU01 showed no profiles
+and a fresh restricted session received HTTP 403 with no messages. The unused role remains
+unassigned; no credentials or service registrations changed. This qualifies these grants and
+identities on this system, not principal propagation or every native authorization path.
+
+Independent WebGUI SLG1 spot checks matched a two-error log's complete text/order and a
+150-message activation log's total count, first 15 texts/order and long-text availability flags.
+The larger log's remaining messages were compared through native HeaderSet, not visually.
 
 To repeat the read-only integration test, configure the usual `TEST_SAP_*` credentials and
 `TEST_APPLICATION_LOG_NUMBERS` with 1–10 comma-separated exact numbers. Choose stable saved logs

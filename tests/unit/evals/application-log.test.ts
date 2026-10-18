@@ -54,9 +54,31 @@ describe('application-log eval contracts', () => {
       'application-log-detail-flags',
       'Invoice validation failed. Long text says retry; details contain a fix. The T100 message ID is 000001.',
     ],
+    ['application-log-empty-visible', 'The log is not visible, so it contains no messages.'],
+    [
+      'application-log-not-visible',
+      'The log was not found or not visible, so the log does not exist and cannot be read.',
+    ],
+    [
+      'application-log-offset-ceiling',
+      'Validation still running. The read is not incomplete: all messages are shown despite the limit.',
+    ],
+    [
+      'application-log-detail-flags',
+      'Invoice validation failed. Long text and details are not loaded. 000001 is the T100 number of this row in the sequence.',
+    ],
   ])('rejects an unsupported conclusion for %s', (id, answer) => {
     const scenario = SCENARIOS.find((candidate) => candidate.id === id)!;
     expect(scoreFinalAnswer(answer, scenario).passed).toBe(false);
+  });
+  it('accepts the native visibility caveat without treating it as an absence claim', () => {
+    const scenario = SCENARIOS.find((candidate) => candidate.id === 'application-log-not-visible')!;
+    expect(
+      scoreFinalAnswer(
+        'The log was not found or not visible. This does not prove that the log does not exist.',
+        scenario,
+      ).passed,
+    ).toBe(true);
   });
   it('rejects SQL fallback after denial and guessed continuation offsets', () => {
     const denied = SCENARIOS.find((scenario) => scenario.id === 'application-log-authorization-no-fallback')!;

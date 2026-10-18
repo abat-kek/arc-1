@@ -75,7 +75,7 @@ const scenarios: Omit<EvalScenario, 'category'>[] = [
     mockResponses: { SAPQuery: JSON.stringify({ ...base, offset: 0, messages: [], more: false }) },
     finalAnswer: {
       required: [/visible|accessible|exists/i, /no messages|empty/i],
-      forbidden: [/does not exist|not_found_or_not_visible/i],
+      forbidden: [/does not exist|not_found_or_not_visible/i, /\bnot (?:visible|accessible|found)\b/i],
       requireNonEmpty: true,
     },
   },
@@ -93,7 +93,10 @@ const scenarios: Omit<EvalScenario, 'category'>[] = [
     },
     finalAnswer: {
       required: [/not found or not visible|not_found_or_not_visible/i, /cannot|does not prove|unknown/i],
-      forbidden: [/log is empty|log contains no messages/i],
+      forbidden: [
+        /log is empty|log contains no messages/i,
+        /(?<!prove that (?:the )?)\blog (?:does not|doesn't) exist\b/i,
+      ],
       requireNonEmpty: true,
     },
   },
@@ -113,7 +116,10 @@ const scenarios: Omit<EvalScenario, 'category'>[] = [
     },
     finalAnswer: {
       required: [/Validation still running/i, /incomplete|partial/i, /limit|ceiling/i],
-      forbidden: [/\ball messages (?:have been|were) (?:read|retrieved)|\blog (?:is|was) complete\b/i],
+      forbidden: [
+        /\ball messages (?:have been|were) (?:read|retrieved)|\blog (?:is|was) complete\b/i,
+        /\bnot incomplete\b|\ball messages (?:are|were) (?:shown|returned|read)\b/i,
+      ],
       requireNonEmpty: true,
     },
   },
@@ -141,7 +147,10 @@ const scenarios: Omit<EvalScenario, 'category'>[] = [
         /row|sequence/i,
         /T100/i,
       ],
-      forbidden: [/long text (?:says|reads)|details (?:say|contain)|T100 message (?:ID|number) (?:is )?000001/i],
+      forbidden: [
+        /long text (?:says|reads)|details (?:say|contain)|T100 message (?:ID|number) (?:is )?000001/i,
+        /\bis (?:the|its) T100 (?:message )?(?:id|number)\b/i,
+      ],
       requireNonEmpty: true,
     },
   },

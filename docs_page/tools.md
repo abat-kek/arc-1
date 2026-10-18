@@ -1515,6 +1515,10 @@ targets and deployments with `SAP_BLOCKED_DATA_SOURCES` configured are unsupport
 the selected log internally even when ARC-1 returns a small page. To disable this action alone,
 set `SAP_DENY_ACTIONS=SAPQuery.application_log`.
 
+If SAP returns `No service found` (`/IWFND/MED/170`), ask Basis to check this service's Gateway
+registration in `/IWFND/MAINT_SERVICE`. That response can be HTTP 403; it does not establish
+that the user lacks log permissions. ARC-1 does not activate services or bypass the error.
+
 ### Freestyle SQL behavior
 
 To save queries as a native SAP VS Code notebook, use the

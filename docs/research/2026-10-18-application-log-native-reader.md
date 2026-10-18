@@ -13,8 +13,8 @@ ABAP, call RFC, install helpers, or copy code from #844. See [ADR-0009](../adr/0
 
 ## Why the native service
 
-SAP documents [Application Logs app activation](https://help.sap.com/docs/ABAP_PLATFORM_NEW/dd52b271fd064d84b4085a87209cb1bd/087c5416539445fa8fcf0fdbd10b96d5.html?version=202310.000)
-and [reuse-library service/authorization setup](https://help.sap.com/docs/ABAP_PLATFORM_NEW/b5670aaaa2364a29935f40b16499972d/69263dfde8814ed19646a68675bb5143.html).
+SAP documents [Application Logs app activation](https://help.sap.com/docs/ABAP_PLATFORM_NEW/b5670aaaa2364a29935f40b16499972d/087c5416539445fa8fcf0fdbd10b96d5.html?version=202310.002)
+and [on-premise application-log authorization](https://help.sap.com/docs/ABAP_PLATFORM_NEW/b5670aaaa2364a29935f40b16499972d/238dc17aeea4498d8cf687f890f2194c.html?version=202310.latest).
 This is an SAP-delivered UI service; those documents do not establish a stable released remote API.
 Availability must be checked on each landscape. SAP's documented application-log uses include
 [diagnosing asynchronous planning-data uploads](https://help.sap.com/docs/SAP_S4HANA_ON-PREMISE/e296651f454c4284ade361292c633d69/d2c2524cf40a4405a382091f31731532.html?version=2022.000).
@@ -67,8 +67,8 @@ Live probes on 2026-10-18:
 | Target | Result |
 | --- | --- |
 | 7.58 | Expanded public `data`-scoped reads matched 4,527 native message projections across 35 logs / 11 object-subobject families. All 59 paging/end/ceiling checks passed, including five empty logs and offset 5000 in a 12,920-message log. This is bounded sampling, not a full read of the largest log. |
-| 8.16 | Native service metadata returned 403; direct table preview worked. This does not identify the cause of the 403 or qualify native reads. |
-| 7.50 | Native service metadata returned 403; the tested ADT preview endpoint returned 404. No positive application-log read qualification. |
+| 8.16 SP01 | Metadata returned 403 with Gateway `/IWFND/MED/170` (service not found). Backend registration exists, but the frontend registration is absent. No positive application-log read qualification. |
+| 7.50 SP02 | Metadata returned the same service-not-found error; the accessible Gateway catalog contains no matching service. Provider classes exist, but table preview returned 404, so registration tables could not be checked. No positive application-log read qualification. |
 
 The expanded sample includes Gateway runtime errors, Fiori repository logs, master-data updates,
 SPAU, ATC, repository/content activation, archives and CTS. Message types E/W/I/S were present;
@@ -81,12 +81,33 @@ default-size pages, plus page sizes 1/2/100 and exact-end/beyond-end checks. Rea
 verified cumulative byte-limit rejection, cancellation during a native GET and queued admission,
 and successful reads after each failure. No reader defect was found in these runs.
 
-All probes were read-only; private responses and SAP source remain outside the repository. Native
-service metadata still returned 403 on 8.16/7.50; the earlier public-tool checks preserved those errors.
+All probes were read-only; private responses and SAP source remain outside the repository. The
+public-tool checks preserved native errors without a table/RFC fallback.
 Comparisons use native HeaderSet navigation as the reference, not an independent SLG1/BAL oracle.
 The attempted SLG1 UI comparison stopped at unusable GUI text input; its test session was logged off.
 Restricted users, PP, BTP ABAP, additional active-service releases, non-Latin text, exception-specific
 rendering and independent screen comparisons remain unqualified; no universal compatibility claim.
+
+### Service setup and restricted-user follow-up
+
+On 8.16, `/IWBEP/I_MGW_SRH` contains version 0001 of the service, while `/IWFND/I_MED_SRH`
+contains no matching frontend service. On 7.58 both registrations exist. The documented
+[Gateway catalog](https://help.sap.com/saphelp_em92/helpdata/en/7c/a326519eff236ee10000000a445394/content.htm)
+returned HTTP 200 on all three systems: filtering `ServiceCollection` by the exact service title
+returned one entry on 7.58 and none on 8.16/7.50. This supports a service-setup diagnosis, not a
+failed `S_APPL_LOG` check. Check registration/routing in `/IWFND/MAINT_SERVICE` and
+`/IWBEP/REG_SERVICE` before changing user permissions. No services were activated.
+
+SAP [KBA 2679134](https://me.sap.com/notes/2679134) describes a registration issue for specific
+7.50/7.51 support packages; neither tested failing release falls in that range. Its workaround
+was not applied. An HTTP 403 alone does not identify an authorization failure.
+
+No suitable restricted identity is available yet: the proposed accounts were absent from the
+tested client, had no roles/profiles, or had `SAP_ALL`. A valid test needs one identity with native
+service access and `S_APPL_LOG` display activity 03 for one object/subobject, plus existing logs
+outside that grant. Verify the allowed log against SLG1, verify that denied logs disclose no
+header/messages, and repeat privileged → restricted → privileged calls to check session isolation.
+A service-level 403 or a nonexistent log does not establish log-level authorization enforcement.
 
 To repeat the read-only integration test, configure the usual `TEST_SAP_*` credentials and
 `TEST_APPLICATION_LOG_NUMBERS` with 1–10 comma-separated exact numbers. Choose stable saved logs

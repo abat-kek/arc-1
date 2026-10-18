@@ -55,3 +55,7 @@ A valid empty native envelope cannot mean success. Messages belong to the trigge
 report; a linked message location is not a replacement owner. Namespace normalization must not
 accept arbitrary URI suffixes. Preserve single-object output exactly and stay within main's
 catalog ceiling; any wording changes need focused regression coverage.
+
+## Validation record
+
+See the [live evidence, model comparison and review](../research/2026-10-19-bounded-syntax-extraction.md).

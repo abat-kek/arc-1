@@ -65,7 +65,13 @@ const absent = await call<Batch>('SAPDiagnose', {
   action: 'syntax',
   objects: [objects[0], { type: 'PROG', name: 'ZARC1_NO_SUCH_BATCH_1011' }],
 });
-const singles: Array<{ type: string; name: string; checked: boolean; hasErrors: boolean; messages: number }> = [];
+const singles: Array<{
+  type: string;
+  name: string;
+  checked: boolean;
+  hasErrors: boolean;
+  messages: SyntaxCheckResult['messages'];
+}> = [];
 for (const object of objects) {
   const result = await call<SyntaxCheckResult>('SAPRead', {
     type: 'SYNTAX',
@@ -73,14 +79,14 @@ for (const object of objects) {
     name: object.name,
     version: 'active',
   });
-  singles.push({ ...object, checked: result.checked, hasErrors: result.hasErrors, messages: result.messages.length });
+  singles.push({ ...object, checked: result.checked, hasErrors: result.hasErrors, messages: result.messages });
 }
 const comparable = active.results.map((result) => ({
   type: result.type,
   name: result.name,
   checked: result.checked,
   hasErrors: result.hasErrors,
-  messages: result.messages.length,
+  messages: result.messages,
 }));
 const summary = {
   revision: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
@@ -92,7 +98,7 @@ const summary = {
   syntaxRequests: requests,
   mutations: 0,
   activeMatchesSingles: JSON.stringify(comparable) === JSON.stringify(singles),
-  absentNotPassed: absent.results[1]?.status !== 'passed',
+  absentNotPassed: absent.results.length === 2 && ['failed', 'not-checked'].includes(absent.results[1].status),
   cases: [active, inactive, absent].map((result, index) => ({
     label: ['active', 'inactive', 'absent'][index],
     status: result.status,

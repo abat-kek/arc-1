@@ -60,8 +60,16 @@ for (const model of models) {
           .reverse()
           .map(([, uri]) => {
             const name = decodeURIComponent(uri.split('/').at(-1)).toUpperCase();
-            const object = objects.find((entry) => entry.name === name);
-            observed.add(name);
+            const paths = {
+              CLAS: 'oo/classes',
+              INTF: 'oo/interfaces',
+              PROG: 'programs/programs',
+              DDLS: 'ddic/ddl/sources',
+            };
+            const object = objects.find(
+              (entry) => uri.toLowerCase() === `/sap/bc/adt/${paths[entry.type]}/${entry.name}`.toLowerCase(),
+            );
+            if (object) observed.add(name);
             if (!object || object.status === 'not-checked') return '';
             const message =
               object.status === 'failed'

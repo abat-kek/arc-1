@@ -81,10 +81,15 @@ alias argument is needed. The scope ∧ safety ∧ SAP authorization invariant r
 
 ## Automated verification
 
-Final run: `npm test -- --maxWorkers=1` passed **331 files / 9,338 tests**, no failures or skips.
-Typecheck, lint, policy validation, build, file/schema budgets and strict MkDocs also passed. Earlier
-concurrent full runs hit subprocess startup deadlines; affected tests passed in isolation and in the
-final serial run. No assertions or timeouts were weakened.
+Feature implementation `acdbc6bd`: `npm test -- --maxWorkers=1` passed **331 files / 9,338 tests**,
+no failures or skips. After merging current main (#1008) into `dbb32dec`, the expanded suite passed
+**9,402 / 9,403 tests**; one existing shutdown subprocess missed its startup deadline. All **12
+shutdown tests passed** on an isolated rerun of that same merged build. Earlier concurrent full runs
+also hit subprocess startup deadlines. No assertions or timeouts were weakened.
+
+Typecheck, lint, policy validation, build, file/schema budgets, the 14-call HTTP smoke and strict
+MkDocs passed again on the merged build. The only merge conflict combined request-header and
+cancellation-signal fields in a test helper; both are preserved. CI status is tracked in the PR.
 
 `tests/unit/server/ide-request.test.ts` covers exact client/route alias matching, Unicode and spaces,
 server/client opt-outs, wrong clients, duplicate/conflicting keys, invalid and double encodings,

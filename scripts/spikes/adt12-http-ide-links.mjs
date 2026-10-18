@@ -1,0 +1,119 @@
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+import { pathToFileURL } from 'node:url';
+
+// Research only: npm run build && node scripts/spikes/adt12-http-ide-links.mjs
+// No credentials, SAP requests, persistent listener, or production feature enablement.
+const root = new URL('../../', import.meta.url);
+const require = createRequire(new URL('package.json', root));
+const express = require('express');
+const { Client } = await import(pathToFileURL(require.resolve('@modelcontextprotocol/sdk/client/index.js')));
+const { StreamableHTTPClientTransport } = await import(
+  pathToFileURL(require.resolve('@modelcontextprotocol/sdk/client/streamableHttp.js'))
+);
+const { McpServer } = await import(pathToFileURL(require.resolve('@modelcontextprotocol/sdk/server/mcp.js')));
+const { createMcpHandler } = await import(new URL('dist/server/http.js', root));
+const { buildVsCodeLink, appendIdeLinks } = await import(new URL('dist/server/ide-links.js', root));
+const { DEFAULT_CONFIG } = await import(new URL('dist/server/types.js', root));
+// Deliberately local transport spike, not a BTP deployment or production parser.
+const target = 'A4H/001';
+const payload = JSON.stringify({ objectType: 'CLAS', objectName: 'CL_ABAP_TYPEDESCR', target });
+let calls = 0;
+const app = express();
+app.use(express.json());
+app.post(
+  '/A4H/001/mcp',
+  createMcpHandler(() => {
+    const server = new McpServer({ name: 'request-header-research', version: '1.0.0' });
+    server.registerTool(
+      'research',
+      { description: 'Synthetic object identity; no SAP request', inputSchema: {} },
+      async (_args, extra) => {
+        calls++;
+        let alias;
+        const header = extra.requestInfo?.headers?.['x-arc1-ide-context'];
+        if (typeof header === 'string' && header.length < 4096 && header.startsWith('v1.')) {
+          try {
+            const preferences = JSON.parse(Buffer.from(header.slice(3), 'base64url').toString('utf8'));
+            if (preferences.client === 'vscode' && Object.hasOwn(preferences.targets ?? {}, target))
+              alias = preferences.targets[target];
+          } catch {
+            /* malformed optional preferences mean no link in this spike */
+          }
+        }
+        const link =
+          typeof alias === 'string' ? buildVsCodeLink(alias, { type: 'CLAS', name: 'CL_ABAP_TYPEDESCR' }) : undefined;
+        return { content: [{ type: 'text', text: payload }, ...(link ? [{ type: 'text', text: link }] : [])] };
+      },
+    );
+    return server;
+  }),
+);
+const listener = await new Promise((resolve) => {
+  const l = app.listen(0, '127.0.0.1', () => resolve(l));
+});
+const url = new URL(`http://127.0.0.1:${listener.address().port}/A4H/001/mcp`);
+const encode = (targets) => `v1.${Buffer.from(JSON.stringify({ client: 'vscode', targets })).toString('base64url')}`;
+const cases = [
+  ['first workspace', encode({ [target]: 'DEV-ALICE' }), 'DEV-ALICE'],
+  ['second workspace', encode({ [target]: 'DEV-BOB' }), 'DEV-BOB'],
+  ['Unicode/spaced alias bytes', encode({ [target]: 'DÉV 系統 (001)' }), 'DÉV 系統 (001)'],
+  ['no preference', undefined, undefined],
+  ['different client', encode({ 'A4H/100': 'WRONG' }), undefined],
+  ['invalid alias', encode({ [target]: '../other' }), undefined],
+  ['malformed header', 'v1.!', undefined],
+];
+try {
+  await Promise.all(
+    cases.map(async ([label, header, expected]) => {
+      const client = new Client({ name: label, version: '1.0' });
+      await client.connect(
+        new StreamableHTTPClientTransport(url, {
+          requestInit: { headers: header ? { 'X-ARC1-IDE-Context': header } : {} },
+        }),
+      );
+      try {
+        // Repeated calls prove metadata is available after initialize in stateless mode.
+        const results = await Promise.all([
+          client.callTool({ name: 'research', arguments: {} }),
+          client.callTool({ name: 'research', arguments: {} }),
+        ]);
+        for (const result of results) {
+          assert.equal(result.content[0].text, payload);
+          assert.equal(result.content.length, expected ? 2 : 1);
+          if (expected) {
+            const outer = new URL(result.content[1].text);
+            const inner = new URL(outer.searchParams.get('abapUri'));
+            assert.equal(decodeURIComponent(inner.pathname.split('/')[2]), expected);
+          }
+        }
+        console.log(`PASS ${label}`);
+      } finally {
+        await client.close();
+      }
+    }),
+  );
+  assert.equal(calls, 14);
+  const original = { content: [{ type: 'text', text: 'CLASS cl_abap_typedescr DEFINITION.' }] };
+  assert.equal(
+    appendIdeLinks(
+      original,
+      'SAPRead',
+      { type: 'CLAS', name: 'CL_ABAP_TYPEDESCR' },
+      { ...DEFAULT_CONFIG, transport: 'http-streamable', ideLinks: 'vscode', ideDestination: 'DEV' },
+    ),
+    original,
+  );
+  console.log('PASS current PR still suppresses HTTP decoration (not an implemented feature)');
+  console.log(
+    JSON.stringify({
+      calls,
+      concurrentClients: cases.length,
+      sapRequests: 0,
+      sourceBlocksUnchanged: true,
+      btpDeployed: false,
+    }),
+  );
+} finally {
+  await new Promise((resolve) => listener.close(resolve));
+}

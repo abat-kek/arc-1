@@ -75,7 +75,7 @@ sequence.
 | [COMPAT-16](#compat-16) | API-release directory cleanup | P2 | S | Needs research | Compatibility |
 | [COMPAT-17](#compat-17) | Package contents without filtered search | P2 | M | Needs research | Compatibility |
 | [COMPAT-18](#compat-18) | Newly created program metadata on 7.50 | P2 | S | Needs research | Compatibility |
-| [COMPAT-19](#compat-19) | Per-client IDE destination mapping | P2 | M | Needs research | Compatibility |
+| [COMPAT-19](#compat-19) | Per-client IDE destination mapping | P1 | M | Ready | Compatibility |
 | [COMPAT-20](#compat-20) | Canonical ADT editor identity for AI edits | P2 | M | Needs research | Compatibility |
 | [COMPAT-10](#compat-10) | CDS set-operation lineage | P2 | M | Needs research | Compatibility |
 | [COMPAT-12](#compat-12) | Deletion with another user's text draft | P3 | S | Needs research | Compatibility |
@@ -368,19 +368,27 @@ fixtures avoid the pre-delete, but do not fix this runtime gap; do not add a ski
 <a id="compat-19"></a>
 ### COMPAT-19 — Per-client IDE destination mapping
 
-- **Priority / effort / status:** P2 / M / Needs research
+- **Priority / effort / status:** P1 / M / Ready
 - **Category:** Compatibility
 
-**Remaining gap.** Native ADT 1.2 source links work with one explicit local destination alias over
-stdio. Shared HTTP/BTP and multi-target callers need a per-client mapping from an authorized target
-to their own IDE alias. A workspace root or client name does not prove that mapping. Older bridge
-links and auto-detection in closed [PR #676](https://github.com/arc-mcp/arc-1/pull/676) do not solve it.
+**Remaining gap.** The user's intended deployment is BTP. The native-link draft only supports
+local stdio; it is not completion of that requirement. Shared HTTP and multi-target research need
+a mapping from the authorized public target/client to each developer's local ADT alias, scoped to
+the MCP server connection and workspace. A client name, SID or root does not prove correspondence.
 
-**Resume with.** First qualify client-side composition of ARC-1 object evidence with SAP
-`abap_object_get_file_uri`; its installed 1.2 implementation exists, but it was unavailable in the
-tested Copilot tool inventory. If core mapping is still needed, define a client-scoped contract
-that survives multiple workspaces, prevents cross-target confusion, and fails closed when
-ambiguous. Verify with two clients whose aliases differ. See the [native-link research](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-17-adt12-native-ide-links.md).
+**Resume with.** Implement admin-opted-in, request-scoped presentation metadata from VS Code's
+HTTP headers. The installed SDK already exposes `extra.requestInfo.headers`; a transport spike
+through ARC-1's real HTTP handler passed 14 calls from seven concurrent clients. Match the exact
+authorized target before decoration, preserve all authentication/safety gates and source payloads,
+and never cache personal aliases or forward them to SAP. Share one target lookup for pinned and
+aggregate routing; qualify both. Verify the real CF route, reconnects, multiple workspaces and
+local ADT connectivity. Do not just remove the transport guard.
+
+The [BTP design and acceptance tests](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-18-btp-native-ide-links.md)
+also cover client-side composition with SAP's native canonical resolver. That remains useful for
+editor identity (COMPAT-20), but its absence from the current Copilot inventory should not block
+basic BTP navigation. Existing bridge links in closed
+[PR #676](https://github.com/arc-mcp/arc-1/pull/676) lack the required target binding.
 
 <a id="compat-20"></a>
 ### COMPAT-20 — Canonical ADT editor identity for AI edits

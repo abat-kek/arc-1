@@ -113,3 +113,16 @@ Tool names and availability depend on SAP's installed version and configuration.
 
 The implementation and read-only live verification record are in the
 [ADT 1.2 research dossier](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-17-adt12-native-ide-links.md).
+
+## BTP deployment gap
+
+BTP can return a native link that opens on the developer's computer. The current HTTP restriction
+is a guardrail in this draft, not a transport limitation. General BTP support needs request-scoped
+mapping from an authorized ARC-1 target to the caller's local ADT alias; one global alias is
+insufficient. VS Code supports custom MCP HTTP headers, and a local protocol spike verified that
+ARC-1's SDK exposes them on individual tool calls without storing a session.
+
+The [BTP research and implementation plan](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-18-btp-native-ide-links.md)
+records the recommended contract, alternatives and acceptance checks. Those headers are a proposal,
+not supported configuration yet. The local ADT connection still needs its own SAP logon and network
+route; BTP's Cloud Connector route does not automatically provide laptop connectivity.

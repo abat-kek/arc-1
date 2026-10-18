@@ -77,6 +77,7 @@ sequence.
 | [COMPAT-18](#compat-18) | Newly created program metadata on 7.50 | P2 | S | Needs research | Compatibility |
 | [COMPAT-19](#compat-19) | Remaining BTP IDE navigation qualification | P1 | S | Needs environment | Compatibility |
 | [COMPAT-20](#compat-20) | Canonical ADT editor identity for AI edits | P2 | M | Needs research | Compatibility |
+| [COMPAT-21](#compat-21) | Eclipse Copilot links and exact project selection | P2 | M | Needs research | Compatibility |
 | [COMPAT-10](#compat-10) | CDS set-operation lineage | P2 | M | Needs research | Compatibility |
 | [COMPAT-12](#compat-12) | Deletion with another user's text draft | P3 | S | Needs research | Compatibility |
 | [COMPAT-15](#compat-15) | Empty inactive text-pool recovery | P2 | M | Needs research | Compatibility |
@@ -404,13 +405,38 @@ already have a dirty `repotree-v1` editor. Successful navigation does not establ
 Keep/Undo, save, validation, transport assignment, or activation parity. The
 [ABAP Bridge](https://github.com/arc-mcp/arc1-abap-bridge) still supports validation and editable diffs.
 
-**Resume with.** Qualify the availability and returned URIs of SAP
-`abap_object_get_file_uri`/`abap_object_list_file_uris`, already found in the ADT 1.2 distribution.
-Test canonical editor identity and dirty-buffer reuse on disposable objects with unsaved edits.
+**New evidence.** SAP `abap_object_get_file_uri`/`abap_object_list_file_uris` succeeded against live
+SAP through ADT 1.2's local MCP server (3.62.0, 33 tools). An older 1.1.2 process owning the configured
+port explained the previously missing tools. Class object resolution returned metadata; source URI,
+source AFF filename or `mainFile` selection returned canonical source URIs. Browser opening then
+encountered destination disconnects, including after successful browser logon.
+
+**Resume with.** Resolve that connection/opening failure and verify actual canonical source opening.
+Then test canonical editor identity and dirty-buffer reuse on disposable objects with unsaved edits.
 Qualify each edit/save operation separately before replacing
 the bridge workflow; keep navigation available independently. Evidence: the
 [ADT 1.2 research record](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-17-adt12-native-ide-links.md)
 and closed [PR #676](https://github.com/arc-mcp/arc-1/pull/676).
+
+<a id="compat-21"></a>
+### COMPAT-21 — Eclipse Copilot links and exact project selection
+
+- **Priority / effort / status:** P2 / M / Needs research
+- **Category:** Compatibility
+
+**Remaining gap.** Eclipse ADT 3.60.2 opened live source through Open ADT Link and a registered
+Chrome `adt://` link. Eclipse Copilot 0.21.0 rendered the same scheme but did not navigate on click.
+SID-only links showed both A4H projects, even though they represent different backends with the same
+client. PR #1025 still supports only `off` and `vscode`; it does not ship Eclipse decoration.
+
+**Resume with.** Qualify direct Copilot scheme dispatch before adding server output. Test SAP's richer
+project-matching format without credentials/project creation, or a local companion mapping service
+identity plus public target to an existing project. Preserve per-request client opt-in and fail closed
+on unknown mappings; never pick the first matching SID. Cover single-system local stdio, single HTTP,
+pinned and aggregate BTP independently. A one-time configuration picker can simplify VS Code/Claude
+setup without sharing one alias across unrelated servers or enabling links in every client.
+
+Evidence and acceptance conditions: [editor links and setup research](https://github.com/arc-mcp/arc-1/blob/codex/adt12-ide-links/docs/research/2026-10-19-editor-links-and-setup.md).
 
 <a id="sec-14"></a>
 ### SEC-14 — DNS rebinding and Host-header hardening

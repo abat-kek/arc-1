@@ -6,6 +6,25 @@ navigation path. This opt-in compatibility feature is qualified against 1.2.0; i
 representation is not a documented stable SAP API. Links are off by default. Local stdio and HTTP/BTP connections are supported; HTTP
 requires explicit preferences on every request, scoped to the VS Code MCP connection.
 
+This feature is currently in [draft PR #1025](https://github.com/arc-mcp/arc-1/pull/1025).
+The local `npx` checks used a package built from that branch, not the published `arc-1@latest`.
+Use a build containing the PR before applying these settings.
+
+## Choose the smallest setup
+
+| Where ARC-1 runs | Additional setup for VS Code links |
+|---|---|
+| Local `npx`, one SAP system | Two environment variables in that client's MCP entry: `ARC1_IDE_LINKS=vscode`, `ARC1_IDE_DESTINATION=DEV-001` |
+| Local, several independent stdio servers | The same two variables per server, with its own matching local alias |
+| HTTP/BTP, traditional single-system `/mcp` | Admin enables links; client sends `Arc1-Ide-Client: vscode` and `Arc1-Ide-Destinations-V1: @single=DEV-001` |
+| HTTP/BTP, pinned `/<target>/<client>/mcp` | Same client marker; one mapping such as `A4H/001=DEV-001` |
+| HTTP/BTP, aggregate `/multi/mcp` | Same client marker; mappings for the selected public targets |
+| Claude plugin | Local stdio rules apply; the current plugin has no IDE preference fields. See the scoped setup below |
+
+A single pinned target still uses its exact public target ID, even if it is the only system you use.
+The `@single` key describes the traditional endpoint implementation, not the number of local IDE projects.
+You do not need the bridge or SAP's local MCP server for ARC-1's direct links.
+
 ## Configure the local destination
 
 1. Install SAP's `sapse.adt-vscode` extension, version 1.2.0 or later, open its ABAP workspace, and
@@ -33,6 +52,62 @@ Unicode aliases are accepted but have not been live-qualified. Unsupported alias
 fail configuration validation.
 For stdio, put these variables only in VS Code’s server entry, not a shared shell environment or
 configuration used by other clients. HTTP uses the separate request contract below.
+
+For an existing `npx` setup, keep its SAP credentials and launch command and add the two variables.
+A complete VS Code entry can use a private, untracked environment file:
+
+```json
+{
+  "servers": {
+    "arc-1-local": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "arc-1@<version-containing-PR-1025>"],
+      "envFile": "/ABSOLUTE/PRIVATE/PATH/arc1-sap.env",
+      "env": {
+        "ARC1_IDE_LINKS": "vscode",
+        "ARC1_IDE_DESTINATION": "DEV-001"
+      }
+    }
+  }
+}
+```
+
+Replace the version placeholder with an available build containing this feature. The private file
+holds your existing `SAP_URL`, `SAP_CLIENT`, and authentication settings; keep write gates disabled
+unless separately needed. No port, HTTP headers, or BTP destination map is needed for this stdio case.
+For a local source checkout, use `command: "node"` and `args: ["/ABSOLUTE/PATH/arc-1/dist/index.js"]`
+after building it. MCP clients use different configuration schemas; `servers` and `envFile` above are
+VS Code fields, not a universal plugin format.
+
+### Claude plugin and other local clients
+
+The Claude plugin launches a local stdio ARC-1 process. Its current manifest exposes SAP connection
+and safety settings but no IDE link controls. The portable plugin also launches `npx arc-1@latest`
+from `${PLUGIN_DATA}`; see [agent plugin setup](agent-plugin.md). Neither entry currently pins the
+unreleased feature branch.
+
+For a process that is deliberately meant to open objects in desktop VS Code, a scoped launch is an
+option once its ARC-1 package contains this feature:
+
+```sh
+ARC1_IDE_LINKS=vscode ARC1_IDE_DESTINATION=DEV-001 claude
+```
+
+This is explicit opt-in for that Claude process, including any of its stdio ARC-1 connections. It
+does not detect whether Claude is running inside VS Code. Use a dedicated MCP server entry with
+those variables when different local servers need different destinations. Keep a shared plugin
+environment or `${PLUGIN_DATA}/.env` free of IDE preferences when other clients use it too.
+Launching the Claude VS Code extension from an already-running editor does not imply it inherits
+environment variables from a subsequently opened terminal.
+
+Claude Code 2.1.302 was tested with a read-only MCP probe, both directly and through a temporary
+plugin, that reports only these two non-secret variables. This verifies subprocess preference inheritance; it does not qualify clickable links in
+Claude Desktop, terminal chat, or the Claude VS Code webview. The packed ARC-1 stdio process was
+tested separately against live SAP. A future plugin settings picker could remove manual environment
+editing, but would still need an explicit editor preference and exact local alias. A temporary
+manifest with a string `options: ["off", "vscode"]` picker and destination field passed strict
+validation on 2.1.302; that picker requires Claude Code 2.1.271 or later and is not included in this PR.
 
 ## Use the links in Copilot
 
@@ -100,17 +175,44 @@ equivalent replacement for checking an unsaved candidate buffer.
 
 ## Compose ARC-1 with SAP's native resolver
 
-The installed ADT 1.2.0 distribution also supplies `abap_object_get_file_uri` and
-`abap_object_list_file_uris`. When your client's SAP MCP tool list exposes them, it can pass the
-ADT object URI returned by ARC-1 search and the exact local destination to SAP's resolver. SAP
-is inspected to return the canonical `abap:/repotree-v1/…` file URI; listing AFF files can identify a specific
-include. Follow the exposed schema rather than guessing tool arguments or localized tree paths.
+The installed ADT 1.2.0 distribution supplies `abap_object_get_file_uri` and
+`abap_object_list_file_uris`. Both were called successfully against live SAP through SAP's local MCP
+server, which reported version 3.62.0 and 33 tools. This offers another approach: ARC-1 returns normal
+research, then the client asks SAP's resolver for the local file URI. ARC-1's IDE variables and headers
+can remain off. The client still needs a confirmed mapping to the same SAP system and client.
 
-This client-side composition is also a candidate for users of a shared ARC-1 HTTP service. It does
-not require ARC-1 to call SAP's local MCP server or handle its bearer token. Each server keeps its
-own identity and access restrictions. The resolver was inspected in the bundled language-server jars, but was
-unavailable in the Copilot session used for this run; its end-to-end workflow remains unqualified.
-Tool names and availability depend on SAP's installed version and configuration.
+Enable SAP's MCP server in ADT settings, allow the intended destination in its access restrictions,
+and log on to that destination. An empty destination restriction denied calls in the tested setup.
+Keep its object-change permissions empty for navigation-only use. Confirm the running tool list:
+an older ADT 1.1.2 process occupied the shared port 2237 on the test machine and exposed 20 older
+tools despite 1.2 being installed. A temporary separate workspace port exposed the new resolver.
+Restart stale editor windows or assign a distinct local port when testing multiple versions.
+
+For example, pass an ARC-1 ADT URI to `abap_object_list_file_uris`:
+
+```json
+{
+  "destination": "DEV-001",
+  "objectIdentifier": {"uri": "/sap/bc/adt/oo/classes/cl_abap_typedescr"}
+}
+```
+
+Use its `mainFile` and matching entry in `files.uris`. Alternatively, `abap_object_get_file_uri`
+accepted the explicit source URI `/sap/bc/adt/oo/classes/cl_abap_typedescr/source/main` or AFF filename
+`cl_abap_typedescr.clas.abap`. Passing only the class object URI to that tool returned **`.clas.json`
+metadata**, not source. Definitions and a namespaced CDS object also resolved successfully.
+Follow the exposed schema rather than guessing localized tree paths or choosing the first file.
+
+These calls return canonical `abap:/repotree-v1/…` URIs. The existing native handler accepts an
+encoded URI as `vscode://sapse.adt-vscode/open?abapUri=<encodeURIComponent(returnedUri)>`. However,
+the canonical-URI browser opening test encountered a destination disconnect, including after a
+successful browser logon. Resolver success is verified; that opening path and automated Copilot
+composition remain unqualified. The earlier direct flat-link qualification is a separate result.
+
+The client performs this composition locally; BTP never calls the laptop MCP endpoint or receives
+its bearer token. Each server retains its own authentication and safety controls. This can reduce
+manual ARC-1 configuration for users already using SAP's MCP server, but adds a local server and
+tool call for those who are not. Native resolution is therefore an optional approach, not required setup.
 
 The implementation and read-only live verification record are in the
 [ADT 1.2 research dossier](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-17-adt12-native-ide-links.md).
@@ -184,3 +286,37 @@ around a stale client schema.
 
 See the [BTP implementation and verification record](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-18-btp-native-ide-links.md)
 for tested behavior and remaining deployment limitations.
+
+## Eclipse: verified navigation and remaining integration work
+
+Eclipse ADT has its own link format:
+
+```text
+adt://A4H/sap/bc/adt/oo/classes/cl_abap_typedescr
+```
+
+Use **Open ADT Link** in Eclipse (Cmd+Alt+O on the tested macOS installation), paste the URI, and
+select the correct project if asked. For external browser clicks, enable `adt` under **Preferences →
+General → Link Handlers**. SAP documents this in its
+[ADT link guide](https://help.sap.com/docs/ABAP_Cloud/abap-development-tools-user-guide/4ec63adf6e391014adc9fffe4e204223.html).
+Both the dialog path and Chrome → Eclipse path opened live source in ADT 3.60.2 on macOS.
+
+There are two unresolved problems before adding automatic Eclipse links to ARC-1:
+
+- **Project identity:** Eclipse's generated Share Link contained SID `A4H`, while two local projects
+  represented different A4H installations with client 001. Eclipse displayed both projects. A SID
+  is insufficient to select the backend researched through a BTP target. Replacing it with the local
+  project name was not a valid general solution; the tested `A4H.2023` variant was rejected.
+- **Copilot click handling:** Eclipse Copilot 0.21.0 rendered an `adt://` Markdown link, but clicking
+  it did not open a project chooser or source. External handler registration was enabled during the
+  test. Copying the URI into Open ADT Link is the verified fallback; direct Copilot opening is not.
+
+The current PR accepts only `off` and `vscode`; `Arc1-Ide-Client: eclipse` deliberately receives no
+VS Code links. Eclipse support needs a separate, explicit client preference plus a qualified click
+handler and a policy for ambiguous projects. Exact project selection may require a local Eclipse
+companion mapping each public ARC-1 target to an existing project. Do not put credentials or
+project-creation connection parameters into shared links. BTP deployment alone cannot provide the
+local Eclipse project, SAP logon, or laptop network route.
+
+The [editor setup research record](https://github.com/arc-mcp/arc-1/blob/codex/adt12-ide-links/docs/research/2026-10-19-editor-links-and-setup.md)
+contains the experiment matrix and proposed follow-up order.

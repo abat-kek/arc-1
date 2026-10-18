@@ -188,6 +188,7 @@ export async function handleSAPContext(
     const siblingCheck = args.siblingCheck !== false;
     const siblingMaxCandidates = parseSiblingMaxCandidates(args.siblingMaxCandidates);
     let downstream = classifyCdsImpact([], { includeIndirect });
+    let searchedFor: string | undefined;
     const warnings: string[] = [];
     const consistencyHints: string[] = [];
     let siblingExtensionAnalysis:
@@ -221,8 +222,7 @@ export async function handleSAPContext(
     try {
       const lookup = await findWhereUsedWithScope(client.http, client.safety, objectUrlForType('DDLS', name));
       downstream = classifyCdsImpact(lookup.results, { includeIndirect });
-      if (lookup.results.length === 0 && lookup.searchedFor)
-        warnings.push(`SAP where-used response: ${lookup.searchedFor}`);
+      searchedFor = lookup.searchedFor;
     } catch (err) {
       if (err instanceof AdtApiError && [404, 405, 415, 501].includes(err.statusCode)) {
         warnings.push('Where-used endpoint not available on this system');
@@ -382,6 +382,7 @@ export async function handleSAPContext(
       type: 'DDLS',
       upstream,
       downstream: boundedDownstream,
+      ...(searchedFor ? { searchedFor } : {}),
       summary: {
         upstreamCount,
         downstreamTotal: downstream.summary.total,

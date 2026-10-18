@@ -983,7 +983,7 @@ export const SAPNavigateSchema = z
           .toUpperCase()
           .min(1)
           .max(30)
-          .regex(/^(?:\$TMP|[A-Z0-9_/]+)$/),
+          .regex(/^\$?[A-Z0-9_/]+$/),
       )
       .min(1)
       .max(20)

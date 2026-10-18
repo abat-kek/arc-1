@@ -5,6 +5,7 @@ import { parseWhereUsedResponse } from './codeintel.js';
 import { DataResponseBudget } from './data-result-context.js';
 import { AdtApiError } from './errors.js';
 import type { AdtRequestOptions } from './http-deadline.js';
+import { AdtAnalysisDeadlineError, isDeadlineFailure } from './request-attempt-budget.js';
 import { checkOperation, OperationType } from './safety.js';
 import { escapeXmlAttr, findDeepNodes, parseXml } from './xml-parser.js';
 
@@ -18,17 +19,23 @@ export interface UsageOptions {
 
 export function matchesUsageType(type: string, filter: string): boolean {
   const wanted = filter.trim().toUpperCase();
-  return type.toUpperCase() === wanted || type.toUpperCase().startsWith(`${wanted}/`);
+  const actual = type.trim().toUpperCase();
+  return actual === wanted || actual.startsWith(`${wanted}/`);
 }
 
 async function post(client: AdtClient, path: string, body: string, family: string, options: AdtRequestOptions) {
-  return client.http.post(
-    `${BASE}${path}`,
-    body,
-    `application/vnd.sap.adt.repository.${family}.request.v1+xml`,
-    { Accept: `application/vnd.sap.adt.repository.${family}.result.v1+xml` },
-    options,
-  );
+  try {
+    return await client.http.post(
+      `${BASE}${path}`,
+      body,
+      `application/vnd.sap.adt.repository.${family}.request.v1+xml`,
+      { Accept: `application/vnd.sap.adt.repository.${family}.result.v1+xml` },
+      options,
+    );
+  } catch (error) {
+    if (isDeadlineFailure(error, options)) throw new AdtAnalysisDeadlineError();
+    throw error;
+  }
 }
 
 /** Discovery can contain many workspaces; the generic first-match XML helper is insufficient. */
@@ -46,12 +53,7 @@ function discoveryNodes(root: unknown, key: string): Record<string, unknown>[] {
   return found;
 }
 
-export async function loadNativeUsages(
-  client: AdtClient,
-  uri: string,
-  filter: string | undefined,
-  options: UsageOptions,
-) {
+export async function loadNativeUsages(client: AdtClient, uri: string, options: UsageOptions) {
   checkOperation(client.safety, OperationType.Intelligence, 'FindWhereUsed');
   const requestOptions: AdtRequestOptions = {
     deadline: Date.now() + 30_000,
@@ -60,17 +62,29 @@ export async function loadNativeUsages(
   let discovery: Record<string, unknown> = {};
   try {
     discovery = parseXml(
-      (await client.http.get('/sap/bc/adt/discovery', { Accept: 'application/atomsvc+xml' }, requestOptions)).body,
+      (
+        await client.http.get(
+          '/sap/bc/adt/discovery',
+          { Accept: 'application/atomsvc+xml' },
+          { ...requestOptions, probe: true },
+        )
+      ).body,
     );
   } catch (error) {
-    if (!(error instanceof AdtApiError) || ![404, 405, 415, 501].includes(error.statusCode)) throw error;
+    if (isDeadlineFailure(error, requestOptions)) throw new AdtAnalysisDeadlineError();
+    // Discovery can be denied independently of the read endpoints (S_ADT_RES).
+    if (!(error instanceof AdtApiError)) throw error;
   }
   const supportsScope = discoveryNodes(discovery, 'templateLink').some(
     (n) => n['@_rel'] === 'http://www.sap.com/adt/relations/informationsystem/usageReferences/scope',
   );
-  const supportsSnippets = discoveryNodes(discovery, 'collection').some((n) => n['@_href'] === `${BASE}usageSnippets`);
+  const supportsSnippets = discoveryNodes(discovery, 'collection').some(
+    (n) =>
+      typeof n['@_href'] === 'string' &&
+      new URL(n['@_href'], 'https://discovery.invalid').pathname === `${BASE}usageSnippets`,
+  );
   let scopeXml = '';
-  if (supportsScope && (filter || options.packages?.length)) {
+  if (supportsScope && options.packages?.length) {
     const response = await post(
       client,
       `usageReferences/scope?uri=${encodeURIComponent(uri)}`,
@@ -79,17 +93,11 @@ export async function loadNativeUsages(
       requestOptions,
     );
     const scope = findDeepNodes(parseXml(response.body), 'usageScopeResult')[0];
-    if (!scope || typeof scope.payload !== 'string') throw new Error('SAP returned an invalid where-used scope.');
-    const types = findDeepNodes(scope, 'type');
-    // PROG/P is the result type; the scope separates reports, subroutine pools and type pools.
-    const wanted = filter?.toUpperCase() === 'PROG/P' ? ['PROG/1P', 'PROG/1F', 'PROG/1T'] : undefined;
-    const selected = types.filter(
-      (t) => !filter || (wanted ? wanted.includes(String(t['@_name'])) : matchesUsageType(String(t['@_name']), filter)),
-    );
-    // Unadvertised aliases must not accidentally select no types and hide every result.
-    for (const type of types) type['@_isSelected'] = String(selected.length === 0 || selected.includes(type));
+    if (!scope) throw new Error('SAP returned an invalid where-used scope.');
+    // Scope categories are not result types. Keep all types; objectType is filtered locally.
+    for (const type of findDeepNodes(scope, 'type')) type['@_isSelected'] = 'true';
     const echoed: Record<string, unknown> = {};
-    for (const key of ['objectIdentifier', 'grade', 'objectTypes', 'programs', 'payload'])
+    for (const key of ['objectIdentifier', 'objectTypes', 'programs', 'payload'])
       if (scope[key] !== undefined) echoed[key] = scope[key];
     if (options.packages?.length) echoed.propertyFilter = { '@_filter': `package:${options.packages.join(',')}` };
     scopeXml = builder.build({ scope: echoed });
@@ -130,7 +138,7 @@ export async function loadUsageSnippets(
     deadline,
     responseBudget: new DataResponseBudget(2 * 1024 * 1024, 'where-used snippets'),
   });
-  const root = findDeepNodes(parseXml(response.body), 'usageSnippetResult')[0];
+  const root = findDeepNodes(parseXml(response.body, true), 'usageSnippetResult')[0];
   if (!root) throw new Error('SAP returned an invalid usage snippet response.');
   return findDeepNodes(root, 'codeSnippetObject').flatMap((object) =>
     findDeepNodes(object, 'codeSnippet').map((snippet) => ({

@@ -60,27 +60,50 @@ it('keeps default lookups to the legacy request and does not expose expansion to
   expect(JSON.stringify(output)).not.toContain('objectIdentifier');
   expect(output.searchedFor).toBe('References for ROOT');
 });
-it('uses advertised native types and exact packages, then filters objects locally', async () => {
+it('scopes exact packages across all advertised types and filters object types locally', async () => {
   const output = JSON.parse((await navigate({ objectType: 'CLAS', packages: ['$TMP'] })).content[0]!.text!);
   const request = requests.find((r) => r.url.endsWith('/usageReferences'))!;
   expect(request.body).toContain('name="CLAS/OC" isSelected="true"');
-  expect(request.body).toContain('name="TABL/DS" isSelected="false"');
-  expect(request.body).toContain('indirectReferences="true"');
+  expect(request.body).toContain('name="TABL/DS" isSelected="true"');
+  expect(request.body).not.toContain('<grade');
   expect(request.body).toContain('package:$TMP');
   expect(request.body).toContain('<payload>a&amp;b</payload>');
   expect(output).toMatchObject({ total: 1, scopeFiltering: 'server' });
 });
-it.each([undefined, 'UNADVERTISED'])(
-  'does not silently narrow types for a package-only or unknown-type filter (%s)',
-  async (objectType) => {
-    await loadNativeUsages(createClient(), '/root', objectType, { packages: ['$TMP'] });
-    expect(requests.find((r) => r.url.endsWith('/usageReferences'))!.body.match(/isSelected="true"/g)).toHaveLength(5);
-  },
-);
-it('maps the result PROG/P alias to all three advertised program types', async () => {
-  await loadNativeUsages(createClient(), '/root', 'PROG/P', {});
-  const body = requests.find((r) => r.url.endsWith('/usageReferences'))!.body;
-  for (const type of ['PROG/1P', 'PROG/1F', 'PROG/1T']) expect(body).toContain(`name="${type}" isSelected="true"`);
+it('keeps objectType-only requests on the existing path when discovery is forbidden', async () => {
+  const client = createClient();
+  const { AdtApiError } = await import('../../../src/adt/errors.js');
+  const get = vi
+    .spyOn(client.http, 'get')
+    .mockRejectedValue(new AdtApiError('Forbidden', 403, '/sap/bc/adt/discovery'));
+  const result = await handleToolCall(client, DEFAULT_CONFIG, 'SAPNavigate', {
+    action: 'references',
+    type: 'CLAS',
+    name: 'ZCL_ROOT',
+    objectType: 'CLAS',
+  });
+  expect(result.isError).toBeUndefined();
+  expect(JSON.parse(result.content[0]!.text!).total).toBe(1);
+  expect(get).not.toHaveBeenCalled();
+  expect(requests.filter((r) => r.body)).toHaveLength(1);
+});
+it('uses local package filtering when optional discovery is forbidden', async () => {
+  const client = createClient();
+  const { AdtApiError } = await import('../../../src/adt/errors.js');
+  vi.spyOn(client.http, 'get').mockRejectedValue(new AdtApiError('Forbidden', 403, '/sap/bc/adt/discovery'));
+  const result = await handleToolCall(client, DEFAULT_CONFIG, 'SAPNavigate', {
+    action: 'references',
+    type: 'CLAS',
+    name: 'ZCL_ROOT',
+    packages: ['$TMP'],
+    detail: 'snippets',
+  });
+  expect(result.isError).toBeUndefined();
+  expect(JSON.parse(result.content[0]!.text!)).toMatchObject({
+    total: 2,
+    scopeFiltering: 'client',
+    usageDetails: { identifiersExpanded: 0, warning: expect.stringContaining('unavailable') },
+  });
 });
 it('uses local package/type filters on systems without scope', async () => {
   setup({ hasScope: false });
@@ -120,7 +143,7 @@ it('reports nonexpandable entries and absent snippet capability without guessing
     unexpandedEntries: 1,
     truncated: true,
   });
-  expect(output.usageDetails.warning).toContain('does not advertise');
+  expect(output.usageDetails.warning).toContain('unavailable');
   expect(requests.some((r) => r.url.includes('usageSnippets'))).toBe(false);
 });
 it('enforces the 10-identifier and output caps, and truncates long snippet lines explicitly', async () => {
@@ -184,7 +207,10 @@ it.each([['Z*'], [], Array(21).fill('ZPKG'), ['ZPKG,OTHER'], ['Z&X']].map((packa
   },
 );
 it('normalizes exact packages and rejects detail arguments on unrelated actions', () => {
-  expect(SAPNavigateSchema.parse({ action: 'references', packages: [' zpkg '] }).packages).toEqual(['ZPKG']);
+  expect(SAPNavigateSchema.parse({ action: 'references', packages: [' zpkg ', '$zdemo'] }).packages).toEqual([
+    'ZPKG',
+    '$ZDEMO',
+  ]);
   expect(SAPNavigateSchema.safeParse({ action: 'completion', detail: 'snippets' }).success).toBe(false);
 });
 
@@ -244,4 +270,103 @@ it.each(['impact', 'usages'])('preserves the unsupported-position explanation in
   });
   expect(result.isError).toBeUndefined();
   expect(result.content[0]!.text).toContain('Unsupported position');
+});
+
+it('keeps snippet indentation so native columns still refer to the returned line', async () => {
+  setup({ snippetXml: snippet('a&amp;b', 1, '    result = root=&gt;marker.  ') });
+  const result = await navigate({ detail: 'snippets' });
+  expect(JSON.parse(result.content[0]!.text!).usageDetails.usages[0].snippet).toBe('    result = root=>marker.  ');
+});
+it('does not count a package container as a package-filtered usage', async () => {
+  setup({
+    referenceXml: refs.replace(
+      '<referencedObjects>',
+      '<referencedObjects><referencedObject uri="/pkg" isResult="false"><adtObject name="$TMP" type="DEVC/K"><packageRef name="$TMP"/></adtObject></referencedObject>',
+    ),
+  });
+  const result = await navigate({ packages: ['$TMP'] });
+  expect(JSON.parse(result.content[0]!.text!).references.map((row: { name: string }) => row.name)).toEqual([
+    'ZCL_OWNER',
+    'CALCULATE',
+  ]);
+});
+it('reports why package-filtered interface results omit optional implementer enrichment', async () => {
+  const client = createClient();
+  const query = vi.spyOn(client, 'runQuery');
+  const result = await handleToolCall(client, DEFAULT_CONFIG, 'SAPNavigate', {
+    action: 'references',
+    type: 'INTF',
+    name: 'ZIF_ROOT',
+    packages: ['$TMP'],
+  });
+  expect(result.isError).toBeUndefined();
+  expect(JSON.parse(result.content[0]!.text!).warning).toContain('SEOMETAREL does not provide packages');
+  expect(query).not.toHaveBeenCalled();
+});
+it('reports unexpanded legacy references when details are requested', async () => {
+  const client = createClient();
+  const { AdtApiError } = await import('../../../src/adt/errors.js');
+  vi.spyOn(client.http, 'post').mockRejectedValue(new AdtApiError('Missing', 404, `${base}usageReferences`));
+  vi.spyOn(client.http, 'get').mockImplementation(async (path) => ({
+    body: path.includes('discovery')
+      ? discovery(false, false)
+      : '<objectReferences><objectReference uri="/class" name="ZCL_OWNER" type="CLAS/OC"/></objectReferences>',
+    statusCode: 200,
+    headers: {},
+    notModified: false,
+  }));
+  const result = await handleToolCall(client, DEFAULT_CONFIG, 'SAPNavigate', {
+    action: 'references',
+    type: 'CLAS',
+    name: 'ZCL_ROOT',
+    detail: 'positions',
+  });
+  expect(result.isError).toBeUndefined();
+  expect(JSON.parse(result.content[0]!.text!)).toMatchObject({
+    total: 1,
+    usageDetails: { unexpandedEntries: 1, warning: expect.stringContaining('unavailable') },
+  });
+});
+it.each(['where-used', 'where-used snippets'])('gives analysis guidance for %s budget exhaustion', async (family) => {
+  const client = createClient();
+  const { AdtResponseLimitError } = await import('../../../src/adt/errors.js');
+  vi.spyOn(client.http, 'post').mockRejectedValue(new AdtResponseLimitError(100, 101, family));
+  const result = await handleToolCall(client, DEFAULT_CONFIG, 'SAPNavigate', {
+    action: 'references',
+    type: 'CLAS',
+    name: 'ZCL_ROOT',
+    detail: 'positions',
+  });
+  expect(result.isError).toBe(true);
+  expect(result.content[0]!.text).toContain('analysis limit');
+  expect(result.content[0]!.text).toContain('maxResults does not reduce');
+  expect(result.content[0]!.text).not.toMatch(/maxRows|WHERE clause|Cannot reach/);
+});
+it('reports a native deadline as an analysis limit rather than a connectivity failure', async () => {
+  const client = createClient();
+  const { AdtNetworkError } = await import('../../../src/adt/errors.js');
+  vi.spyOn(client.http, 'post').mockImplementation(async (_path, _body, _type, _headers, options) => {
+    vi.spyOn(Date, 'now').mockReturnValue(options!.deadline! + 1);
+    throw new AdtNetworkError('Request deadline reached');
+  });
+  const result = await handleToolCall(client, DEFAULT_CONFIG, 'SAPNavigate', {
+    action: 'references',
+    type: 'CLAS',
+    name: 'ZCL_ROOT',
+    detail: 'positions',
+  });
+  expect(result.isError).toBe(true);
+  expect(result.content[0]!.text).toContain('analysis time limit');
+  expect(result.content[0]!.text).not.toContain('Cannot reach');
+});
+it('accepts a native scope without the optional payload', async () => {
+  const client = createClient();
+  const original = client.http.post.bind(client.http);
+  vi.spyOn(client.http, 'post').mockImplementation(async (...args) =>
+    args[0].includes('/scope?')
+      ? { body: scope.replace('<payload>a&amp;b</payload>', ''), statusCode: 200, headers: {}, notModified: false }
+      : original(...args),
+  );
+  const result = await loadNativeUsages(client, '/root', { packages: ['$TMP'] });
+  expect(result.results).toHaveLength(3);
 });

@@ -10,7 +10,7 @@ import { DataSourcePolicyError } from '../adt/data-source-policy.js';
 import { AdtApiError } from '../adt/errors.js';
 import { internalOperationWarning } from '../adt/internal-data-operations.js';
 import { isOperationAllowed, OperationType } from '../adt/safety.js';
-import { loadNativeUsages, type UsageOptions } from '../adt/where-used-native.js';
+import { loadNativeUsages, matchesUsageType, type UsageOptions } from '../adt/where-used-native.js';
 import { normalizeObjectType, objectUrlForType } from './object-types.js';
 import { expandUsageDetails } from './where-used-details.js';
 
@@ -33,14 +33,6 @@ export interface LiveUsageLookup {
   searchedFor?: string;
   scopeFiltering?: 'server' | 'client';
   usageDetails?: Awaited<ReturnType<typeof expandUsageDetails>>;
-}
-
-/** Match a result's ADT type against a filter: "CLAS" matches "CLAS/OC", "CLAS/OC" matches exactly.
- *  Trimmed — a padded `" CLAS "` would otherwise match nothing and read as "no references found". */
-function matchesObjectType(resultType: string, filter: string): boolean {
-  const type = resultType.trim().toUpperCase();
-  const wanted = filter.trim().toUpperCase();
-  return type === wanted || type.startsWith(`${wanted}/`);
 }
 
 /** Resolve the canonical ADT object URI used by the where-used APIs. */
@@ -96,8 +88,8 @@ export async function lookupLiveUsages(
   let native: Awaited<ReturnType<typeof loadNativeUsages>> | undefined;
   try {
     native =
-      options && (filter || options.packages?.length || (options.detail && options.detail !== 'objects'))
-        ? await loadNativeUsages(client, uri, filter, options)
+      options && (options.packages?.length || (options.detail && options.detail !== 'objects'))
+        ? await loadNativeUsages(client, uri, options)
         : undefined;
     ({ results, searchedFor, referencedObjectIdentifier } =
       native ?? (await findWhereUsedWithScope(client.http, client.safety, uri, filter)));
@@ -121,7 +113,13 @@ export async function lookupLiveUsages(
   // Empty also occurs when SAP reports an unsupported search. Require native rows before
   // treating an empty cursor identifier as fallback to the original object.
   if (!fallbackUsed && (!scoped || (referencedObjectIdentifier === '' && results.length > 0))) {
-    warning = await augmentInterfaceImplementers(client, uri, filter, results as WhereUsedResult[]);
+    warning = await augmentInterfaceImplementers(
+      client,
+      uri,
+      filter,
+      results as WhereUsedResult[],
+      Boolean(options?.packages?.length),
+    );
   }
   if (scoped && !searchedFor) {
     const scopeWarning =
@@ -131,9 +129,11 @@ export async function lookupLiveUsages(
 
   const filtered = results.filter(
     (result) =>
-      (!filter || matchesObjectType(result.type, filter)) &&
+      (!filter || matchesUsageType(result.type, filter)) &&
       (!options?.packages?.length ||
-        ('packageName' in result && options.packages.includes(result.packageName.toUpperCase()))),
+        (result.type !== 'DEVC/K' &&
+          'packageName' in result &&
+          options.packages.includes(result.packageName.toUpperCase()))),
   );
   const limit = clampSearchResults(maxResults, DEFAULT_USAGE_RESULTS);
   const usageDetails =
@@ -153,7 +153,7 @@ export async function lookupLiveUsages(
       if ('objectIdentifier' in row) delete row.objectIdentifier;
       return row;
     }),
-    ...(native ? { scopeFiltering: native.scopeFiltering } : {}),
+    ...(native && options?.packages?.length ? { scopeFiltering: native.scopeFiltering } : {}),
     ...(usageDetails ? { usageDetails } : {}),
     total: filtered.length,
     truncated: filtered.length > limit,
@@ -168,6 +168,7 @@ async function augmentInterfaceImplementers(
   uri: string,
   objectType: string | undefined,
   results: WhereUsedResult[],
+  packageFiltered: boolean,
 ): Promise<string | undefined> {
   const intfMatch = uri.match(/\/sap\/bc\/adt\/oo\/interfaces\/([^/?#]+)/i);
   if (!intfMatch || (objectType && !/^CLAS/i.test(objectType))) return undefined;
@@ -175,6 +176,8 @@ async function augmentInterfaceImplementers(
   const interfaceName = decodeURIComponent(intfMatch[1]!).toUpperCase();
   const canFreeSQL = isOperationAllowed(client.safety, OperationType.FreeSQL);
   const canQuery = isOperationAllowed(client.safety, OperationType.Query);
+  if (packageFiltered && (canFreeSQL || canQuery))
+    return 'Interface-implementer enrichment was skipped: SEOMETAREL does not provide packages for filtering. Native results are retained.';
 
   try {
     let implementers: WhereUsedResult[] = [];

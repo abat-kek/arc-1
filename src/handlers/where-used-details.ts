@@ -30,7 +30,9 @@ export async function expandUsageDetails(
     .filter(
       ({ row, owner }) =>
         (!filter || matchesUsageType(owner.type, filter)) &&
-        (!options.packages?.length || options.packages.includes((row.packageName || owner.packageName).toUpperCase())),
+        (!options.packages?.length ||
+          (owner.type !== 'DEVC/K' &&
+            options.packages.includes((row.packageName || owner.packageName || '').toUpperCase()))),
     );
   const identified = new Map(
     relevant.filter(({ row }) => row.objectIdentifier).map((entry) => [entry.row.objectIdentifier!, entry]),
@@ -40,7 +42,7 @@ export async function expandUsageDetails(
   const requested = new Set(identifiers);
   if (snippets.some((snippet) => !requested.has(snippet.objectIdentifier)))
     throw new Error('SAP returned snippets for an unrequested where-used identifier.');
-  const unexpandedEntries = relevant.filter(({ row }) => row.isResult === true && !row.objectIdentifier).length;
+  const unexpandedEntries = relevant.filter(({ row }) => row.isResult !== false && !row.objectIdentifier).length;
   const truncated = identified.size > identifiers.length || snippets.length > limit;
   return {
     detail: options.detail,
@@ -51,7 +53,9 @@ export async function expandUsageDetails(
     unexpandedEntries,
     shown: Math.min(snippets.length, limit),
     truncated,
-    ...(supportsSnippets ? {} : { warning: 'SAP does not advertise usage snippets. Use the object list and SAPRead.' }),
+    ...(supportsSnippets
+      ? {}
+      : { warning: 'Usage snippets are unavailable for this lookup. Use the object list and SAPRead.' }),
     countMeaning:
       'Usage entries from at most 10 expandable nodes; entries without native identifiers are not expanded. Not a complete inventory.',
     coordinateMeaning:
@@ -61,7 +65,7 @@ export async function expandUsageDetails(
       const fragment = new URLSearchParams(snippet.uri.split('#')[1]?.replaceAll(';', '&'));
       const start = fragment.get('start')?.split(',');
       const column = start?.[1] ?? /^(\d+)-/.exec(snippet.matches)?.[1];
-      const content = snippet.content.trim();
+      const content = snippet.content;
       return {
         object: owner.name,
         type: owner.type,

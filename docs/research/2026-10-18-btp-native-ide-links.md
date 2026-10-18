@@ -9,10 +9,12 @@ ARC-1 now supports request-scoped native IDE links over HTTP, including BTP pinn
 routing. The administrator enables the feature; the caller explicitly opts into VS Code presentation
 and supplies a map for its own workspace. Other callers receive unchanged output.
 
-The core implementation and real HTTP routing tests pass. A real Copilot → HTTP ARC-1 → SAP read →
-clickable link → native ADT editor flow also succeeded locally. Cloud Foundry staged the candidate,
-but the account's route and memory quotas prevented starting an isolated application. **Live BTP
-runtime, public-router forwarding and OAuth/Copilot acceptance are still unverified.**
+The core implementation, HTTP routing tests and live BTP pinned/aggregate reads pass. On the user's
+existing BTP test deployment, real XSUAA OAuth, public-router preference forwarding, Copilot tool
+calls and native ADT opening succeeded. The earlier isolated-deployment quota blocker was avoided
+by temporarily using the existing test app with a saved rollback. A4H client 100 still times out;
+Copilot aggregate reconnect hit a client validation error, and second-user/PP-only multi-instance
+acceptance remains open.
 
 ```mermaid
 flowchart LR
@@ -87,6 +89,14 @@ no failures or skips. After merging current main (#1008) into `dbb32dec`, the ex
 shutdown tests passed** on an isolated rerun of that same merged build. Earlier concurrent full runs
 also hit subprocess startup deadlines. No assertions or timeouts were weakened.
 
+CI subsequently passed on the exact deployed commit `adfae1e1addbe2b785089458316d0b5dae39e006`:
+[Test workflow 39109307531](https://github.com/arc-mcp/arc-1/actions/runs/39109307531).
+Downloaded result artifacts confirm **9,403/9,403 unit tests passed on each of Node 22 and 24**,
+with no skips; integration **261 passed / 96 skipped**; E2E **143 passed / 4 skipped**. No failures.
+The skipped integration/E2E cases are not live qualification of those scenarios. CodeQL, dependency
+review, MTA validation, docs and reliability checks were also green. This supersedes the local
+shutdown timing concern without changing its assertion or timeout.
+
 Typecheck, lint, policy validation, build, file/schema budgets, the 14-call HTTP smoke and strict
 MkDocs passed again on the merged build. The only merge conflict combined request-header and
 cancellation-signal fields in a test helper; both are preserved. CI status is tracked in the PR.
@@ -157,15 +167,108 @@ The stopped candidate was deleted, removing its temporary bindings; existing ser
 roles, routes and applications were not modified. No existing app was stopped to free capacity.
 Do not count the successful staging as a live BTP runtime test.
 
-Resume COMPAT-19 when isolated CF capacity is available:
+### Existing BTP test deployment: live qualification
 
-- Deploy the reviewed candidate, verify XSUAA OAuth with the real Copilot HTTP connection, and read
-  over both pinned and aggregate routes through the public CF router.
-- Verify custom-header forwarding across reconnects/restarts; interleave two workspaces/users.
-- Exercise matching/wrong/absent mappings, same SID with distinct clients and route aliases, target
-  authorization denials, and native opening on a connected local ADT destination.
-- For PP-only deployments that use multiple instances, qualify requests across instances. Shared
-  Basic mode retains its existing one-instance constraint; do not scale it for this test.
+Later on 2026-10-18, the user explicitly authorized using the existing `arc1-multi-beta` test app.
+The reviewed commit `adfae1e1` was built and deployed to its existing public route with its existing
+XSUAA, Destination and Connectivity bindings. No additional route, service or memory allocation was
+needed. The app retained one 512 MiB instance, its standard authorization mode and mutation-free
+multi-target configuration. Only `ARC1_IDE_LINKS=vscode` was added to the environment. Existing data/
+SQL settings were preserved; only catalog and class-source reads were invoked.
+
+Deployment identity: candidate droplet `c55c4904-c5a6-4a9b-8885-cf2d235f60ae`; compiled JavaScript tree
+SHA-256 `818848c290dc72f7230b473421535b736ab48212a78a205e75965ce6a37ba433`.
+Public route: `https://arc1-multi-beta.cfapps.us10-001.hana.ondemand.com`.
+
+A real browser OAuth authorization-code/PKCE flow authenticated the MCP SDK harness through XSUAA.
+The live catalog advertised five targets. Each successful source read used `CL_ABAP_TYPEDESCR`:
+
+| Target | Catalog identity | Pinned | Aggregate |
+|---|---|---|---|
+| `A4H/001` | Per-user | Source + exact mapped link | Source + exact mapped link |
+| `A4H-2025/001` | Per-user, duplicate-SID route alias | Source + exact mapped link | Source + exact mapped link |
+| `NPL/001` | Per-user | Source + exact mapped link | Source + exact mapped link |
+| `A4H-BASIC/001` | Explicit shared Basic | Source + exact mapped link | Source + exact mapped link |
+| `A4H/100` | Per-user | `SAP_REQUEST_FAILED` after 121 seconds | Client timeout at 90 seconds; server `AdtNetworkError` at 120 seconds |
+
+The initial matrix performed **30 reads: 29 successful reads with 29 passing link/source assertions,
+zero assertion failures, and the A4H/100 timeout**. The separate pinned A4H/100 diagnostic returned
+one error block and no alias/link. Its backend connectivity/authentication path needs owner diagnosis;
+this evidence does not identify a root cause or qualify distinct SAP clients live.
+
+For `A4H/001`, both routes passed absent preferences, user-agent-only, wrong client marker, wrong
+public-target map and conflicting-map suppression. A percent-encoded Unicode alias round-tripped
+correctly. Two SDK clients interleaved different workspace aliases over pinned/aggregate routes,
+then a subsequent absent-preference call returned no link. All source hashes stayed equal to the
+corresponding target's undecorated baseline. A4H/001 source SHA-256:
+`631ff0819d097f18752a7cab744dc95b61fc6ce76282857012d5ec4b4eff58f0`.
+
+These were **two workspace preferences for the same authenticated human**, not two SAP identities.
+The synthetic aliases used for non-A4H targets verify map selection only; no claim is made that those
+aliases connect a laptop to those other backends. Only the real A4H/001 alias was clicked in ADT.
+
+Three additional live negative checks passed: no bearer token on the pinned route returned 401;
+an unknown pinned target returned 404; an unknown aggregate target returned an error. None leaked a
+mapped alias or IDE link. Live denial of a *known but ungranted* target in `xsuaa-attribute` mode was
+not exercised; deterministic tests cover it.
+
+The candidate was restarted without restaging. **Eight more successful SDK source reads passed**:
+both routes with and without preferences, first reusing the existing bearer token, then after a
+successful `refresh_token` grant using the existing DCR registration. No browser reauthorization was
+needed. The advertised schemas also validated both forms of arguments with Ajv, including aggregate
+`target`. These checks confirm public-router forwarding and request-local preferences across restart,
+reconnect and token refresh on the actual CF runtime.
+
+### Copilot over the public BTP route
+
+Temporary HTTP entries in VS Code's user MCP configuration supplied the two IDE preference headers;
+they contained no bearer token. VS Code completed its own browser OAuth sign-in. The pinned entry
+advertised eight tools; the aggregate entry advertised nine (including `SAPTargets`).
+
+- **Pinned:** explicitly attaching its `SAPRead` tool read `CL_ABAP_TYPEDESCR` and returned the exact
+  native link with local alias `A4H2023-2`. A first prompt naming the server alone had not selected it.
+- **Aggregate:** a fresh chat read `CL_ABAP_CLASSDESCR` with `target=A4H/001` and returned the exact
+  native link. The first actual invocation omitted the required target and failed; a retry with
+  target succeeded. Copilot's intermediate schema complaints were not reproduced by Ajv against the
+  live advertised schema and are not evidence of a server-schema defect.
+- Clicking the returned aggregate link invoked SAP ADT's normal URI confirmation. The laptop's
+  existing destination had expired independently of BTP OAuth. After **Retry Logon** and the normal
+  SAP browser sign-in, the same link freshly loaded `cl_abap_classdescr.clas.abap`, with the class
+  definition and source visible. No file was created, edited, saved or activated.
+
+A post-restart Copilot call did not pass consistently: the model omitted `target`, and a subsequent
+clean chat after **MCP: Reset Cached Tools** and **Restart Server** reported client-side
+`must NOT have additional properties` validation. The same target-bearing SDK input passed Ajv and
+live execution on both sides of restart/token refresh. The cause is not established (client/model
+schema handling or tool identity remains a possibility); no server validation was relaxed. **Copilot
+aggregate reconnect is not qualified**, even though one pre-restart aggregate Copilot call and native
+opening succeeded. These runs used Copilot's Gemini 3.8 Flash model; other Copilot models were not
+qualified in this BTP pass.
+
+The exact aggregate link was:
+
+```text
+vscode://sapse.adt-vscode/open?abapUri=abap%3A%2Fflat%2FA4H2023-2%2Fcl_abap_classdescr.clas.abap
+```
+
+### Rollback and cleanup
+
+After the checks, the existing test app was restored to its original droplet
+`6f485d59-0037-4b8b-aa42-3c9ef4356ea2`. Health returned `ok`, version `0.9.27`, with startup time
+`2026-10-18T20:31:31.388Z`. API comparisons confirmed the original environment, process command,
+instance/memory/disk sizing, routes and service bindings. Temporary pinned/aggregate VS Code server
+entries were removed; other server definitions matched the saved original configuration. Temporary
+local OAuth tokens, binding credentials, configuration backups and raw logs were removed after
+verification. No SAP objects, users, roles, destinations or Cloud Connector settings were changed.
+The candidate is evidence from a temporary test, not a permanent upgrade of this shared test app.
+
+### Remaining live scope
+
+COMPAT-19 now covers A4H/100 diagnosis, two distinct authorized SAP users/workspaces, a live known-
+ungranted target under `xsuaa-attribute`, and a separate PP-only deployment spanning multiple instances.
+The shared-Basic test app retains its one-instance constraint and must not be scaled for that test.
+VS Code/Copilot aggregate tool selection should also be kept in client acceptance checks: an omitted
+`target` must fail, and model retries do not establish first-attempt reliability.
 
 ## Review and wider gaps
 

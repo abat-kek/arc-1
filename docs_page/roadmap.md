@@ -75,7 +75,7 @@ sequence.
 | [COMPAT-16](#compat-16) | API-release directory cleanup | P2 | S | Needs research | Compatibility |
 | [COMPAT-17](#compat-17) | Package contents without filtered search | P2 | M | Needs research | Compatibility |
 | [COMPAT-18](#compat-18) | Newly created program metadata on 7.50 | P2 | S | Needs research | Compatibility |
-| [COMPAT-19](#compat-19) | Live BTP IDE navigation qualification | P1 | S | Ready | Compatibility |
+| [COMPAT-19](#compat-19) | Remaining BTP IDE navigation qualification | P1 | S | Needs environment | Compatibility |
 | [COMPAT-20](#compat-20) | Canonical ADT editor identity for AI edits | P2 | M | Needs research | Compatibility |
 | [COMPAT-10](#compat-10) | CDS set-operation lineage | P2 | M | Needs research | Compatibility |
 | [COMPAT-12](#compat-12) | Deletion with another user's text draft | P3 | S | Needs research | Compatibility |
@@ -367,21 +367,25 @@ trace the SAP response before changing package resolution. Preserve fail-closed 
 fixtures avoid the pre-delete, but do not fix this runtime gap; do not add a skip for it.
 
 <a id="compat-19"></a>
-### COMPAT-19 — Live BTP IDE navigation qualification
+### COMPAT-19 — Remaining BTP IDE navigation qualification
 
-- **Priority / effort / status:** P1 / S / Ready
+- **Priority / effort / status:** P1 / S / Needs environment
 - **Category:** Compatibility
 
-**Remaining gap.** [PR #1025](https://github.com/arc-mcp/arc-1/pull/1025) implements request-scoped
-VS Code opt-in and exact public target/client mapping for single-target HTTP, pinned and aggregate
-routes. Local HTTP authorization/isolation tests and real Copilot → HTTP → SAP → native ADT opening
-pass. Cloud Foundry staged the candidate, but the organization had all 10 routes and 4096 MiB in use;
-quota prevented isolated runtime acceptance. The stopped candidate was removed.
+**Remaining gap.** [PR #1025](https://github.com/arc-mcp/arc-1/pull/1025) now has live public-router,
+XSUAA OAuth, pinned/aggregate PP and shared-Basic reads, request-local workspace mapping,
+restart/token-refresh and Copilot-to-native-ADT evidence from the existing BTP test app. A4H/100
+still times out on both routes. Two distinct SAP identities, a known-but-ungranted target under
+`xsuaa-attribute`, and PP-only multi-instance routing remain unqualified live. Copilot aggregate
+reconnect also hit an unresolved client-side additional-properties validation error after resetting tools. Automated coverage
+exists for both authorization modes and distinct clients/users; it does not replace these live checks.
 
-**Resume with.** Available isolated CF capacity, then verify the actual public router, XSUAA OAuth,
-pinned/aggregate source links, two users/workspaces, reconnect/restart and (PP-only) multiple instances.
-Do not stop unrelated apps or widen auth to obtain a passing result. Preferences deliberately opt in
-presentation; they do not attest the client application or prove a local alias's backend identity.
+**Resume with.** Have the SAP/Connectivity owner diagnose A4H/100's 120-second backend timeout, obtain
+a second authorized test identity and a denied-target test account, and use an isolated PP-only
+multi-instance deployment. Keep aggregate Copilot target selection in acceptance: the model omitted
+`target` before a successful retry, then failed the post-restart clean-chat check. The existing
+shared-Basic test app must retain one instance.
+Preferences opt in presentation; they do not attest the application or prove a local alias's backend.
 
 The [implementation and acceptance record](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-18-btp-native-ide-links.md)
 keeps these deployment gaps distinct from canonical editor identity (COMPAT-20). Closed

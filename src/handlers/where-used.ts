@@ -10,7 +10,9 @@ import { DataSourcePolicyError } from '../adt/data-source-policy.js';
 import { AdtApiError } from '../adt/errors.js';
 import { internalOperationWarning } from '../adt/internal-data-operations.js';
 import { isOperationAllowed, OperationType } from '../adt/safety.js';
+import { loadNativeUsages, type UsageOptions } from '../adt/where-used-native.js';
 import { normalizeObjectType, objectUrlForType } from './object-types.js';
+import { expandUsageDetails } from './where-used-details.js';
 
 export type LiveUsageResult = WhereUsedResult | ReferenceResult;
 
@@ -29,6 +31,8 @@ export interface LiveUsageLookup {
   warning?: string;
   /** The symbol SAP searched for, from its result scope (absent on the fallback endpoint). */
   searchedFor?: string;
+  scopeFiltering?: 'server' | 'client';
+  usageDetails?: Awaited<ReturnType<typeof expandUsageDetails>>;
 }
 
 /** Match a result's ADT type against a filter: "CLAS" matches "CLAS/OC", "CLAS/OC" matches exactly.
@@ -63,17 +67,19 @@ export async function resolveWhereUsedUri(
  * Run the live SAP-authorized where-used lookup shared by SAPNavigate.references and
  * SAPContext.usages. Older systems fall back to the simple references endpoint.
  *
- * Filtering and paging are both client-side: SAP's `usageReferences` endpoint declares only
+ * Legacy filtering and paging are client-side: the older `usageReferences` endpoint declares only
  * `{?uri}` and ignores every limit/filter we can send — `objectTypeFilter` in the body, and
  * `maxResults`/`maxItemCount`/`searchFromIndex` as query params all return byte-identical
  * responses (verified live on 758, 9 variants). So the full set always crosses the wire; we bound
- * what reaches the model, not what SAP computes.
+ * what reaches the model, not what SAP computes. SAPNavigate optionally uses native scope
+ * on systems advertising it; paging remains client-side.
  */
 export async function lookupLiveUsages(
   client: AdtClient,
   uri: string,
   objectType?: string,
   maxResults?: number,
+  options?: UsageOptions,
 ): Promise<LiveUsageLookup> {
   // Normalize the filter ONCE, at the entry, and use only this value below. A whitespace-only filter
   // means "no filter" (matching the empty type would match nothing and read as "No references
@@ -87,23 +93,34 @@ export async function lookupLiveUsages(
   let searchedFor: string | undefined;
   let referencedObjectIdentifier: string | undefined;
   let fallbackUsed = false;
+  let native: Awaited<ReturnType<typeof loadNativeUsages>> | undefined;
   try {
-    ({ results, searchedFor, referencedObjectIdentifier } = await findWhereUsedWithScope(
-      client.http,
-      client.safety,
-      uri,
-      filter,
-    ));
+    native =
+      options && (filter || options.packages?.length || (options.detail && options.detail !== 'objects'))
+        ? await loadNativeUsages(client, uri, filter, options)
+        : undefined;
+    ({ results, searchedFor, referencedObjectIdentifier } =
+      native ?? (await findWhereUsedWithScope(client.http, client.safety, uri, filter)));
   } catch (err) {
-    if (!(err instanceof AdtApiError) || ![404, 405, 415, 501].includes(err.statusCode)) throw err;
+    if (
+      !(err instanceof AdtApiError) ||
+      ![404, 405, 415, 501].includes(err.statusCode) ||
+      !/\/usageReferences(?:\?|$)/.test(err.path)
+    )
+      throw err;
+    if (options?.packages?.length)
+      throw new Error(
+        'This legacy reference endpoint cannot provide package-filtered results. Retry without packages.',
+      );
     results = await findReferences(client.http, client.safety, uri);
     fallbackUsed = true;
   }
 
   // Kept outside the try: an augment failure must not be mistaken for a missing where-used endpoint.
   let warning: string | undefined;
-  // Empty is SAP's explicit fallback to the original object; absent/nonempty cannot justify enrichment.
-  if (!fallbackUsed && (!scoped || referencedObjectIdentifier === '')) {
+  // Empty also occurs when SAP reports an unsupported search. Require native rows before
+  // treating an empty cursor identifier as fallback to the original object.
+  if (!fallbackUsed && (!scoped || (referencedObjectIdentifier === '' && results.length > 0))) {
     warning = await augmentInterfaceImplementers(client, uri, filter, results as WhereUsedResult[]);
   }
   if (scoped && !searchedFor) {
@@ -112,10 +129,32 @@ export async function lookupLiveUsages(
     warning = warning ? `${warning} ${scopeWarning}` : scopeWarning;
   }
 
-  const filtered = filter ? results.filter((result) => matchesObjectType(result.type, filter)) : results;
+  const filtered = results.filter(
+    (result) =>
+      (!filter || matchesObjectType(result.type, filter)) &&
+      (!options?.packages?.length ||
+        ('packageName' in result && options.packages.includes(result.packageName.toUpperCase()))),
+  );
   const limit = clampSearchResults(maxResults, DEFAULT_USAGE_RESULTS);
+  const usageDetails =
+    options?.detail && options.detail !== 'objects'
+      ? await expandUsageDetails(
+          client,
+          results as WhereUsedResult[],
+          filter,
+          options,
+          limit,
+          native?.supportsSnippets ?? false,
+          native?.deadline ?? Date.now(),
+        )
+      : undefined;
   return {
-    results: filtered.slice(0, limit),
+    results: filtered.slice(0, limit).map(({ ...row }) => {
+      if ('objectIdentifier' in row) delete row.objectIdentifier;
+      return row;
+    }),
+    ...(native ? { scopeFiltering: native.scopeFiltering } : {}),
+    ...(usageDetails ? { usageDetails } : {}),
     total: filtered.length,
     truncated: filtered.length > limit,
     fallbackUsed,

@@ -12,7 +12,7 @@ import {
   type SiblingExtensionCandidate,
 } from '../adt/cds-impact.js';
 import { type AdtClient, clampSearchResults, type SourceReadResult } from '../adt/client.js';
-import { findWhereUsed } from '../adt/codeintel.js';
+import { findWhereUsed, findWhereUsedWithScope } from '../adt/codeintel.js';
 import { decodeKtdText } from '../adt/ddic-xml.js';
 import { AdtApiError, isNotFoundError } from '../adt/errors.js';
 import { mapSapReleaseToAbaplintVersion } from '../adt/features.js';
@@ -147,6 +147,7 @@ export async function handleSAPContext(
         shown: lookup.results.length,
         truncated: lookup.truncated,
         ...(lookup.warning ? { warning: lookup.warning } : {}),
+        ...(lookup.searchedFor ? { searchedFor: lookup.searchedFor } : {}),
         ...(lookup.truncated
           ? { hint: `Showing ${lookup.results.length} of ${lookup.total} usages. Raise maxResults (max 1000).` }
           : {}),
@@ -218,8 +219,10 @@ export async function handleSAPContext(
       | undefined;
 
     try {
-      const whereUsed = await findWhereUsed(client.http, client.safety, objectUrlForType('DDLS', name));
-      downstream = classifyCdsImpact(whereUsed, { includeIndirect });
+      const lookup = await findWhereUsedWithScope(client.http, client.safety, objectUrlForType('DDLS', name));
+      downstream = classifyCdsImpact(lookup.results, { includeIndirect });
+      if (lookup.results.length === 0 && lookup.searchedFor)
+        warnings.push(`SAP where-used response: ${lookup.searchedFor}`);
     } catch (err) {
       if (err instanceof AdtApiError && [404, 405, 415, 501].includes(err.statusCode)) {
         warnings.push('Where-used endpoint not available on this system');

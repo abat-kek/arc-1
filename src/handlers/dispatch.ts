@@ -194,8 +194,14 @@ function buildBaseErrorMessage(
     }
     return `${detail}\nCreate completion is unconfirmed. ${inspection} Do not blindly repeat create.`;
   }
+  if (err instanceof AdtResponseLimitError && ['where-used', 'where-used snippets'].includes(err.endpointFamily)) {
+    return `${message} Narrow with packages where native scope is supported, a cursor, or a smaller root. maxResults does not reduce SAP's native response size. This is an analysis limit, not a connectivity failure.`;
+  }
   if (err instanceof AdtResponseLimitError && err.endpointFamily === 'repository-relations') {
     return `${message} Reduce depth or choose a smaller root. maxResults does not reduce SAP's native response size. This is an analysis limit, not a connectivity failure.`;
+  }
+  if (err instanceof AdtResponseLimitError && err.endpointFamily === 'transport-review') {
+    return `${message} The request inventory is too large for an automated review page; review it in SAP. This is an analysis limit, not a connectivity failure.`;
   }
   if (err instanceof AdtResponseLimitError) {
     const mebibytes = err.limitBytes / (1024 * 1024);
@@ -733,6 +739,14 @@ export function classifyMultiTargetSapError(
     };
   }
   const classification = classifySapDomainError(error.statusCode, error.responseBody, error.path);
+  if (classification?.category === 'gateway-service-not-found') {
+    return {
+      code: 'SAP_REQUEST_FAILED',
+      event: 'sap_service_unavailable',
+      message: `SAP Gateway could not resolve the OData service required by ${toolName} on target ${target}. Ask Basis to check service registration and routing in /IWFND/MAINT_SERVICE and /IWBEP/REG_SERVICE before retrying.`,
+      retryable: false,
+    };
+  }
   if (classification?.category === 'icf-service-inactive') {
     return {
       code: 'SAP_SERVICE_INACTIVE',

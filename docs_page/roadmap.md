@@ -1,6 +1,6 @@
 # ARC-1 Idea Roadmap
 
-**Last reviewed:** 2026-10-17
+**Last reviewed:** 2026-10-18
 
 This page is ARC-1's idea parking lot. It records worthwhile work that is **not implemented now** so
 it does not disappear, but it is not a delivery schedule and it does not answer "what should we do
@@ -101,12 +101,15 @@ sequence.
 | [FEAT-09](#feat-09) | Cross Trace result reader | P2 | M | Needs research | Diagnostics |
 | [FEAT-69](#feat-69) | Mass syntax check | P2 | S | Needs research | Diagnostics |
 | [FEAT-71](#feat-71) | Dictionary activation log | P3 | M | Needs research | Diagnostics |
-| [FEAT-89](#feat-89) | Validate the legacy dump user filter | P2 | S | Needs research | Diagnostics |
+| [FEAT-91](#feat-91) | Validate the legacy dump user filter | P2 | S | Needs research | Diagnostics |
 | [FEAT-74](#feat-74) | Qualify dump-filter matching | P2 | S | Needs research | Diagnostics |
 | [FEAT-50](#feat-50) | ADT type-probe fixture coverage | P3 | XS each | Contributor-driven | Diagnostics |
 | [FEAT-32](#feat-32) | Stable data-preview pagination | P3 | M | Needs research | Data access |
 | [FEAT-86](#feat-86) | Additional stored-text profiles and persistence | P3 | M | Needs research | Data access |
 | [FEAT-87](#feat-87) | Preserve repeated spaces in general data queries | P2 | S | Needs research | Data access |
+| [FEAT-88](#feat-88) | Application-log discovery and wider qualification | P3 | M | Needs research | Data access |
+| [FEAT-89](#feat-89) | Additional typed data-cluster use cases | P3 | M | Needs research | Data access |
+| [FEAT-90](#feat-90) | Historical transport scope beyond source | P2 | M | Needs research | Developer workflow |
 | [FEAT-36](#feat-36) | Type information | P3 | S | Blocked | Code intelligence |
 | [FEAT-79](#feat-79) | DDIC-aware dependency context | P2 | M | Needs research | Code intelligence |
 | [FEAT-42](#feat-42) | Additional CI output formats | P3 | XS | Revisit on trigger | CI |
@@ -555,6 +558,25 @@ live pair in one call on both releases; the integration suite uses it for cleanu
 (`tests/integration/crud-harness.ts`). Enforce the package gate for every object before sending,
 report SAP's per-object `isDeleted` result, gate on discovery, and stop suggesting circular orders.
 
+<a id="feat-90"></a>
+### FEAT-90 — Historical transport scope beyond source
+
+- **Priority / effort / status:** P2 / M / Needs research
+- **Category:** Developer workflow
+
+**Remaining gap.** Source diffs leave Dictionary objects, text pools, function-group sources, metadata,
+deletions and Customizing keys unreviewed. Keep these gaps explicit; current metadata is not
+historical evidence.
+
+**Evidence.** [#1008](https://github.com/arc-mcp/arc-1/pull/1008) narrows the implementation to
+bounded MCP source review. Fresh A4H/001 probes found DOMA/DTEL/TTYP history feeds, but their
+advertised content URIs returned HTTP 403 “Request version … is not supported”, including
+with the exact advertised media types. [Research and family matrix](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-18-transport-review-mcp.md).
+
+**Resume with.** A real review needs one specific missing family and a read-only probe returns
+two retrievable historical payloads, transport attribution and the native content contract.
+Start with that family; no generic serializer, guessed URL or ABAP/RFC helper fallback.
+
 ## Integration and localization
 
 <a id="feat-76"></a>
@@ -566,13 +588,16 @@ report SAP's per-object `isDeleted` result, gate on discovery, and stop suggesti
 **Remaining gap.** [#884](https://github.com/arc-mcp/arc-1/issues/884) needs structured parameters
 and results for custom report/SmartForms functions. Existing `ctx.run` operations are name-in,
 text-out; raw HTTP requires explicit write authorization. The contributor's generic SOAP 6.20
-endpoint is deprecated, and no supported binding has been verified for a core helper.
+endpoint is deprecated, and no supported binding has been verified for an extension helper.
 
 **Resume with.** A redacted binding WSDL and harmless request/response/fault samples from an
 authorized supported service, including table and empty-value behavior, auth route and retry
 semantics. Start with a small transport-independent codec only if that contract supports it; a
 named executor additionally needs explicit operation authorization and bounded results. Keep the
-single-target identity and write ceiling. [Investigation](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-09-29-plugin-post-rfc.md).
+single-target identity and write ceiling. Execution remains extension-only under
+[ADR-0009](https://github.com/arc-mcp/arc-1/blob/main/docs/adr/0009-abap-execution-and-rfc-belong-in-extensions.md);
+do not add built-in report/class execution or direct RFC calls.
+[Investigation](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-09-29-plugin-post-rfc.md).
 
 <a id="feat-77"></a>
 ### FEAT-77 — Verified read-only POST operations for extensions
@@ -777,8 +802,8 @@ misinterpreted historical evidence despite explicit caveats; other types/release
 native correlation evidence. Keep the experiment deferred and never label saved messages as proof
 of a recent activation. [Failed controls](https://github.com/arc-mcp/arc-1/blob/5725fab6515f7a410e3e488003ae1a7aa3d8c249/docs/research/2026-10-17-diagnostic-main-decision.md).
 
-<a id="feat-89"></a>
-### FEAT-89 — Validate the legacy dump user filter
+<a id="feat-91"></a>
+### FEAT-91 — Validate the legacy dump user filter
 
 - **Priority / effort / status:** P2 / S / Needs research
 - **Category:** Diagnostics
@@ -846,8 +871,10 @@ layouts need separate API evidence; they cannot be inferred from ordinary table 
 fixtures for that profile or persistence route. Preserve exact keys, typed errors, current-user
 identity, data gates/blocklists, cumulative budgets, and content-redacted audit logs. Matching
 rereads are not a snapshot; opaque compressor trailers are not authenticated. Keep
-[#1000](https://github.com/arc-mcp/arc-1/issues/1000)'s broader companion-service option and FEAT-76's
-parameterized-service work separate. No RFC or dynamically executed ABAP fallback belongs in the reader.
+[#1000](https://github.com/arc-mcp/arc-1/issues/1000)'s companion-service option extension-only
+and separate from this reader, as with FEAT-76.
+No RFC or dynamically executed ABAP fallback belongs in the reader
+([ADR-0009](https://github.com/arc-mcp/arc-1/blob/main/docs/adr/0009-abap-execution-and-rfc-belong-in-extensions.md)).
 
 <a id="feat-87"></a>
 ### FEAT-87 — Preserve repeated spaces in general data queries
@@ -862,6 +889,38 @@ The stored-text reader preserves its own literals; the general query paths still
 **Resume with.** Positive and negative live cases for leading, internal and trailing spaces in
 equality, LIKE and IN predicates. Preserve existing query semantics and safety gates; qualify the
 backend grammar before generalizing the stored-text workaround.
+
+<a id="feat-88"></a>
+### FEAT-88 — Application-log discovery and wider qualification
+
+- **Priority / effort / status:** P3 / M / Needs research
+- **Category:** Data access
+
+**Remaining gap.** Exact `SAPQuery(application_log)` reads use SAP's native OData service;
+restricted-user allow/deny checks passed on 7.58. Finding logs by object/time range, message
+details, BTP ABAP, principal propagation and additional active-service releases remain unqualified. Positive `$top`
+limits output, not SAP's full-log load. Do not add `/$count`, broad text searches, or BALDAT fallback
+without separate authorization and resource-cost evidence.
+
+**Resume with.** A concrete support workflow and an active service on the target landscape.
+Qualify native filters, time zones, DCL/BAdI restrictions and pagination before expanding the tool.
+See the [native-reader investigation](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-18-application-log-native-reader.md).
+
+<a id="feat-89"></a>
+### FEAT-89 — Additional typed data-cluster use cases
+
+- **Priority / effort / status:** P3 / M / Needs research
+- **Category:** Data access
+
+**Remaining gap.** [PR #844](https://github.com/arc-mcp/arc-1/pull/844) also proposes INDX/custom
+clusters, DDIC layouts and legacy formats. Stored SAPscript texts and native application-log reads
+do not replace these capabilities. Broad integration is deferred: the proposed parser needs
+independent allocation/row/depth limits, exact fragment identity, and qualified encoding/layout
+semantics. Prefer purpose-specific native APIs where available.
+
+**Resume with.** A named customer workflow that cannot use an existing API, plus sanitized native
+fixtures and expected values across the relevant releases/platforms. Preserve data gates, blocklists,
+current-user identity, and bounded output; no RFC or executed ABAP fallback in core (ADR-0009).
 
 <a id="feat-36"></a>
 ### FEAT-36 — Type information

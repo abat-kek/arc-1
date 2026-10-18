@@ -821,7 +821,8 @@ This helps pinpoint the exact failing field/annotation instead of retrying blind
 - Delete hints include cycle-break guidance for mutually-dependent projection graphs (strip redirected/composition clauses, activate stripped versions, then delete).
 - If delete guidance lists dependents that were just deleted, treat it as possible stale SAP active dependency/index state and retry after a short wait before deeper cleanup.
 - If SAP reports a delete dependency error but current where-used results are empty, ARC-1 now adds stale active-dependency guidance: wait/retry after recent cleanup, activate restored/stripped sources first, then re-check references/locks.
-- ARC-1 combines unfiltered ADT where-used results with scoped object-type filters where available. This avoids under-reporting dependents on SAP systems that return only a shallow default usageReferences result.
+- CDS hints use one unfiltered ADT where-used request and deduplicate its results.
+- Empty CDS results retain SAP's explanation when supplied; HTTP 200 alone does not prove the search was supported.
 - If the where-used endpoint is unavailable on the backend, ARC-1 keeps the CRUD action behavior unchanged and adds a short "impact unavailable" note instead of failing the call.
 
 **Blue framework package handling:** `TABL` and `BDEF` create calls now pass package in both the XML (`packageRef`) and URL query (`_package=<pkg>`), alongside transport (`corrNr`) when provided.
@@ -1320,7 +1321,9 @@ The existing actions below are unchanged.
 | `uri` | string | No | Source URI of the object. Optional for `references` if `type`+`name` are provided. |
 | `type` | string | No | Object type (PROG, CLAS, INTF, FUNC, etc.) — alternative to `uri` for `references`. |
 | `name` | string | No | Object name — alternative to `uri` for `references`. |
-| `objectType` | string | No | For `references`: keep only results of this ADT type, slash format (`CLAS/OC`, `PROG/P`, `FUGR/FF`). A bare prefix (`CLAS`) matches every subtype. Applied client-side. |
+| `objectType` | string | No | For `references`: keep only results of this ADT type, slash format (`CLAS/OC`, `PROG/P`, `FUGR/FF`). A bare prefix (`CLAS`) matches every subtype. Always filtered locally. |
+| `packages` | string[] | No | For `references`: 1–20 exact package names, e.g. `["$TMP"]`. No wildcards or implicit subpackages. |
+| `detail` | string | No | For `references`: `objects` (default), `positions`, or `snippets`. Details expand at most 10 native nodes. |
 | `maxResults` | number | No | For `references`: max entries (default 100, max 1000). `total` counts every match of the filter. |
 | `line` | number | No | Line number (1-based). For `references`, together with `column`: search the symbol at that position. |
 | `column` | number | No | ADT cursor column (0-based integer) |
@@ -1346,9 +1349,9 @@ For `relations`, use only `action`, `type`, `name` and its four optional paramet
 navigation parameters (`uri`, `objectType`, `line`, `column`, `source`) are rejected. See the
 [experimental guide](live-relations.md) for coverage limits and examples.
 
-**References action (Where-Used):** Uses the full scope-based Where-Used API, returning detailed results with package info. Falls back to the simpler reference lookup on older SAP systems that don't support the scope endpoint.
+**References action (Where-Used):** Uses SAP's Where-Used API and returns reference entries with package info. Ordinary lookups fall back to the simpler reference API when the main endpoint is unavailable. A missing native scope endpoint alone does not require that fallback.
 
-Returns a paged envelope — `{total, countMeaning, shown, truncated, hint?, searchedFor?, warning?, references}` — because where-used is
+Returns a paged envelope — `{total, countMeaning, shown, truncated, hint?, searchedFor?, warning?, scopeFiltering?, usageDetails?, references}` — because where-used is
 unbounded: `CL_ABAP_TYPEDESCR` has 6,644 references (~968K tokens, several times a context window).
 **`total` counts matching reference entries before paging, not distinct consumer objects or runtime
 calls.** The `countMeaning` field states this explicitly. Tree/container rows and multiple references
@@ -1356,17 +1359,34 @@ to one object can appear; even an untruncated or empty page is not proof of syst
 If optional interface-implementer enrichment fails, native results are retained with a `warning`.
 An absent warning does not prove that enrichment ran or that the result is complete.
 
-Paging and `objectType` filtering are both client-side, and deliberately so: SAP's
-`usageReferences` endpoint declares only `{?uri}` and ignores every limit or filter we can send
-(verified live across nine request variants, all byte-identical). The full set therefore still
-crosses the wire — this bounds what reaches the model, not what SAP computes.
+`packages` uses native scope when discovery advertises it (verified on 2025 and BTP).
+Otherwise package filtering is local and the full native result still crosses the wire.
+`scopeFiltering` reports `server` or `client` for package-filtered requests. `objectType` filtering
+and paging always happen locally; object-type-only lookups keep the existing request path.
+Package filters exclude package container rows. Optional interface-implementer enrichment is
+skipped with a warning because that lookup provides no package names.
+
+`detail="positions"` or `"snippets"` adds `usageDetails.usages`: object, component, URI, position
+and SAP's raw `matches` (access/grade). Snippets also include up to 1,000 characters of the code
+line, with `snippetTruncated` when cut. Method positions can be relative to the named component;
+use the URI and component together, rather than treating every line as a full-class source line.
+Snippets come from SAP's working-area source, which can include unactivated edits and differ
+from the indexed source.
+
+Details expand at most 10 native identifiers in one request. `identifiersAvailable`,
+`identifiersExpanded`, `unexpandedEntries`, `shown` and `truncated` expose the limits; entries
+without identifiers remain in the object list but cannot be expanded. `identifiersWithoutUsages`
+counts expanded nodes for which SAP returned no usage entries. `maxResults` caps each
+returned list. The native request sequence has a 30-second deadline, an 8 MiB metadata budget
+and a separate 2 MiB snippet budget. Budget or authorization failures return errors. Missing
+snippet capability is reported explicitly; ARC-1 does not guess usages by scanning source.
 
 Without a position, `references` searches the whole object. With `line` and `column` (both, as ADT
 cursor coordinates: line from 1, column from 0) it searches the symbol at that position in the source
 behind `uri`, for example one method of a class; `type`+`name` positions refer to the main source.
 ARC-1 sends the cursor as the URI fragment `#start=<line>,<column>`, replacing any fragment already in
 `uri`. When the cursor is not on an identifier, SAP silently searches the whole object instead. A
-position search therefore returns `searchedFor`: SAP's result description, verbatim, which names
+search therefore returns `searchedFor` when SAP supplies it: SAP's result description, verbatim, which names
 what was searched, for example `References for: /SCWM/CL_TM - CLEANUP (Method) [SID]` or, after a
 fallback, `References for: /SCWM/CL_TM (Class) [SID]`. The wording differs by release. If SAP omits
 the description (including on the older fallback endpoint), a `warning` says the searched symbol
@@ -1389,6 +1409,7 @@ not enumerate subclasses or prove a complete inheritance/implementation list.
 SAPNavigate(action="definition", uri="/sap/bc/adt/programs/programs/ztest/source/main", line=10, column=5, source="...")
 SAPNavigate(action="references", uri="/sap/bc/adt/oo/classes/zcl_order")
 SAPNavigate(action="references", type="CLAS", name="ZCL_ORDER")
+SAPNavigate(action="references", type="CLAS", name="ZCL_ORDER", packages=["ZORDERS"], detail="snippets")
 SAPNavigate(action="references", type="CLAS", name="ZCL_ORDER", line=12, column=12)
 SAPNavigate(action="references", type="CLAS", name="ZCL_ORDER", objectType="PROG/P")
 SAPNavigate(action="completion", uri="/sap/bc/adt/programs/programs/ztest/source/main", line=10, column=15, source="...")
@@ -1419,21 +1440,22 @@ proposals, without proving that no matching identifier exists.
 ## SAPQuery
 
 `SAPQuery` has distinct paths for semantic data actions and freestyle ABAP SQL. Choose
-`action="long_text"` for saved SAPscript texts; use `sql` for an arbitrary ABAP SQL query. These
-paths have separate authorization gates. The long-text action requires the `data` scope and
+`action="long_text"` for saved SAPscript texts or `action="application_log"` for a known SLG1 log;
+use `sql` for an arbitrary ABAP SQL query. The bounded actions require the `data` scope and
 `SAP_ALLOW_DATA_PREVIEW=true`; freestyle SQL requires `sql` scope and `SAP_ALLOW_FREE_SQL=true`.
-Both capabilities are disabled by default. Long-text access does not enable or require free SQL.
+All are disabled by default. Bounded data access does not enable or require free SQL.
 
-**Upgrading with data preview already enabled:** eligible callers also gain `long_text`.
-Add `SAPQuery.long_text` to `SAP_DENY_ACTIONS` to keep it disabled.
+**Upgrading with data preview already enabled:** eligible callers gain both bounded actions.
+Use `SAP_DENY_ACTIONS` to disable `SAPQuery.long_text` or `SAPQuery.application_log` individually.
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `action` | string | No | Set to `"long_text"` for the bounded stored-SAPscript contract below. Omit it or use `"sql"` for freestyle ABAP SQL. |
+| `action` | string | No | `"long_text"` for stored SAPscript or `"application_log"` for saved SLG1 messages. Omit it or use `"sql"` for freestyle ABAP SQL. |
 | `longText` | object | For `action="long_text"` | Required request: `mode="discover"` with `object`+`namePrefix` (optional `id`, `language`, `limit`), `mode="read"` with `keys`, or `mode="search"` with `keys`+`phrase`. |
-| `sql` | string | For freestyle SQL | ABAP SQL SELECT statement; omit for `action="long_text"`. |
+| `applicationLog` | object | For `action="application_log"` | Exact `logNumber`, optional `maxRows` (default 50, max 100) and `offset` (default 0, max 5000). |
+| `sql` | string | For freestyle SQL | ABAP SQL SELECT statement; omit for bounded data actions. |
 | `maxRows` | number | No | Freestyle SQL only: maximum rows (default 100, clamped to 10,000). Wide results can hit the server byte ceiling much earlier. |
 
 <a id="stored-sapscript-long-texts"></a>
@@ -1486,7 +1508,42 @@ Reads detect observed changes but do not guarantee a transactional snapshot. Thi
 from ABAP `TEXT_ELEMENTS`, message-class texts, and form layouts. See the
 [qualification evidence and technical limits](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-17-stored-text-integration-evals.md).
 
+### Saved application logs (`action="application_log"`)
+
+Read a known **SLG1 log number** using SAP's `APL_LOG_MANAGEMENT_SRV` service. Enable
+`SAP_ALLOW_DATA_PREVIEW=true`; authenticated callers need `data` scope and SAP service/log
+authorizations. No RFC, ABAP helper, or free SQL is used.
+
+Use this to inspect errors from a saved import, background job, or activation log. If you only
+know the job or business document, first find its log number in SAP (for example, SLG1).
+
+```json
+{"action":"application_log","applicationLog":{"logNumber":"00000000000000000042","maxRows":50}}
+```
+
+Copy the exact 20-digit number from SAP, including leading zeros. The result contains the log
+header and SAP-rendered messages. When `more=true`, use the returned `nextOffset` as `offset`.
+Default page size is 50, maximum 100; offsets stop at 5000. `limitReached=true` means the read
+is incomplete and cannot continue through this action. Paging is not a snapshot.
+`not_found_or_not_visible` means no log is visible for that number, not proof that it does not exist.
+A successful empty result contains no messages on that page. `hasLongText` and `hasDetails`
+indicate availability; their contents are not returned. Message `number` identifies a row in
+the log, not a T100 message class/number.
+
+This first version does not discover logs or expand message details/long texts. It is qualified
+on the tested 7.58 system; other systems need the native service enabled and accessible. BTP ABAP
+targets and deployments with `SAP_BLOCKED_DATA_SOURCES` configured are unsupported. SAP loads
+the selected log internally even when ARC-1 returns a small page. To disable this action alone,
+set `SAP_DENY_ACTIONS=SAPQuery.application_log`.
+
+If SAP returns `No service found` (`/IWFND/MED/170`), ask Basis to check this service's Gateway
+registration in `/IWFND/MAINT_SERVICE`. That response can be HTTP 403; it does not establish
+that the user lacks log permissions. ARC-1 does not activate services or bypass the error.
+
 ### Freestyle SQL behavior
+
+To save queries as a native SAP VS Code notebook, use the
+[notebook authoring guide and example](sql-notebook-authoring.md).
 
 For freestyle SQL, when `SAP_BLOCKED_DATA_SOURCES` is non-empty, SAPQuery is restricted to one statically provable
 `SELECT`/`WITH`. ARC-1 extracts every join/union/subquery/CTE source and checks live CDS plus DDIC
@@ -1524,6 +1581,11 @@ selected columns, or a restrictive, non-overlapping key-range `WHERE` clause.
 
 JOINs, aggregates, and subqueries are supported. For a plain projection `SELECT`, ARC-1 automatically chunks the longest literal `IN (...)` list—even when the query has several `IN` clauses—and merges the rows. Queries with `ORDER BY`, `GROUP BY`, `HAVING`, `DISTINCT`, `UNION`, or aggregates are sent whole because concatenating per-chunk results would change their semantics. If a backend rejects a long list in one of those queries, split the list manually, union the results, and re-sort client-side when needed.
 
+`rowsReturned` counts output rows; SAP's `totalRows` can count matching input records.
+Observed on SAP_BASIS 758: a scalar `COUNT` returns one row even when `totalRows=0`;
+read the count from its result column. Cell values remain strings, including padding and leading zeros.
+Do not infer aggregate completeness by comparing these two metadata counts.
+
 See: [SAPQuery Freestyle Capability Matrix](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-04-21-sapquery-freestyle-capability-matrix.md)
 
 **Examples:**
@@ -1540,9 +1602,8 @@ SAPQuery(sql="SELECT * FROM mara WHERE matnr LIKE 'Z%'", maxRows=50)
 
 Manage CTS transport requests (SE09/SE10 equivalent): list, get details, **diff (review what a transport changed)**, create, release, delete, reassign owner, recursive release, check transport requirements, and inspect an object's current lock/assignment status. The legacy action name for that status lookup is `history`, but it is not complete transport history. `create` uses the ADT `CreateCorrectionRequest` endpoint, which works on both NetWeaver 7.50+ and S/4HANA.
 
-In multi-target v1, only the read-only `list`, `get`, `check`, and `history` actions are listed and
-accepted. Transport mutations and topology actions remain structurally unavailable; `diff` is also
-excluded there because it fans out many source reads per call.
+In multi-target v1, `list`, `get`, `diff`, `check`, and `history` are available under the
+selected target's identity and read policy. Transport mutations remain unavailable.
 
 ### `action="diff"` — reviewing what a transport changed
 
@@ -1554,15 +1615,21 @@ Every part carries the evidence behind its diff — read `baselineStatus` before
 
 | `baselineStatus` | Meaning |
 |---|---|
-| `prior-revision` | The diff is what this transport changed. |
+| `prior-revision` | Attributed source-part pair; inspect CTS scope and history completeness before attributing individual hunks. |
 | `prior-revision-unverified` | A predecessor exists, but the "after" side was only guessed — it may belong to another change. |
-| `no-prior-snapshot` | Created in this transport. |
-| `baseline-ambiguous` | No usable baseline. An all-additions block is **not** proof of creation. |
-| `baseline-unavailable` | The read failed. Never report this as unchanged. |
+| `no-prior-snapshot` | No predecessor found; this does **not** prove creation in this transport. |
+| `baseline-ambiguous` | Missing or uncertain baseline chronology. Candidate hunks are **not** proof of creation. |
+| `baseline-unavailable` | No usable comparison: missing matching revision, failed read or work limit. Never report this as unchanged. |
 
-Objects with no source revision feed (domains, data elements, function-group sources, …) are returned
-with an `inventoryReason` instead of parts: they are in scope, just not diffable. Long diffs are
-truncated per part with `diffTruncated: true`; `added`/`removed` still reflect the full change.
+Objects without a verified historical adapter return an `inventoryReason`. Missing class parts
+stay visible; `notCompared` lists non-source scope such as text pools and metadata. Released
+requests use attributed historical snapshots; open requests use active source, never drafts.
+`nextOffset` continues a bounded page. Pages reread SAP and are not an atomic snapshot.
+Long hunks set `diffTruncated` or `hunksOmitted`; failed comparisons have unavailable counts.
+See [Transport reviews](review-workflows.md) for the workflow, object support and limits.
+
+Malformed revision feeds fail explicitly in both transport review and `SAPRead VERSIONS`;
+a valid empty Atom feed still returns empty history.
 
 **Parameters:**
 
@@ -1586,7 +1653,7 @@ truncated per part with `diffTruncated: true`; `added`/`removed` still reflect t
 | `owner` | string | No | New owner SAP username (required for reassign) |
 | `recursive` | boolean | No | Apply recursively to child tasks (for delete/reassign). `release_recursive` always recurses. |
 | `removeLockedObjects` | boolean | No | For delete: remove locked object entries from each task before deleting when SAP would otherwise reject the request as containing locked objects. This mutates request contents. |
-| `summary` | boolean | No | For `list` only. **Default `true`** — headers-only: omits each transport's (and task's) `objects[]`, keeping `id`/`description`/`owner`/`status`/`target` plus an `objectCount`. Pass `false` for full object lists (~5x larger). |
+| `summary` | boolean | No | For `diff`, true omits hunks. For `list`, **Default `true`** — headers-only: omits each transport's (and task's) `objects[]`, keeping `id`/`description`/`owner`/`status`/`target` plus an `objectCount`. Pass `false` for full object lists (~5x larger). |
 | `maxResults` | number | No | Maximum list rows or check/history assignment candidates (defaults: list/history 50, check 10; max 1000). |
 | `resultFormat` | string | No | For `release`/`release_recursive`: `legacy` text (default) or `structured` JSON with outcome, per-ID confirmation evidence, polls, elapsed time, and SAP reports. |
 | `timeoutSeconds` | number | No | For `release`/`release_recursive`: terminal-state verification budget; default `300`, range `1..1800`. |
@@ -1853,7 +1920,7 @@ shortcut is no longer used. See
 
 ### action="structure" — DDIC includes + append structures (TABL only)
 
-Returns a JSON tree for a DDIC structure or transparent table. ARC-1 parses embedded includes from the TABL source (`include <name>;`, named includes, and classic `.INCLUDE`) and resolves append/extension structures through ADT where-used. Append candidates are only returned after ARC-1 reads the candidate source and confirms it contains `extend type <base> with`; `.APPEND` is not parsed from the base source because ADT does not emit append structures there.
+Returns a JSON tree for a DDIC structure or transparent table. ARC-1 parses embedded includes from the TABL source (`include <name>;`, named includes, and classic `.INCLUDE`) and resolves append/extension structures through ADT where-used. Append candidates are only returned after ARC-1 reads the candidate source and confirms it contains `extend type <base> with`; `.APPEND` is not parsed from the base source because ADT does not emit append structures there. A missing where-used endpoint or more than 50 structure candidates leaves the include tree intact and adds an incomplete-discovery warning. Large where-used searches can add latency even when the candidate cap stops source inspection. Results reflect SAP’s current index; an empty result does not prove that no append exists.
 
 **Example:**
 ```json
@@ -1985,7 +2052,8 @@ entries before paging, not distinct objects or runtime calls** (`shown` is the p
 `countMeaning` explains the count; an optional `warning` reports failed interface-implementer
 enrichment without discarding native results. No warning is not proof of complete coverage.
 For class-only results use `SAPNavigate(action="references", objectType="CLAS/OC", type=..., name=...)`;
-`SAPContext.usages` has no result-type filter. Navigation uses `total` and `references` instead of
+`SAPContext.usages` has no result-type filter. Both `usages` and `impact` preserve SAP’s search
+explanation in `searchedFor` when supplied, including unsupported-position explanations. Navigation uses `total` and `references` instead of
 `usageCount` and `usages`. `SAPContext(action="impact")` caps each downstream bucket while `summary`
 keeps the unsliced bucket counts, not a guarantee of every system dependency.
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { SAPQuerySchema } from '../../../src/handlers/query-input.js';
-import { runScenario, scoreScenarioTrace } from '../../evals/harness.js';
+import { runScenario, scoreFinalAnswer, scoreScenarioTrace } from '../../evals/harness.js';
 import { SCENARIOS } from '../../evals/scenarios/application-log.js';
 import { SCENARIO_FILES } from '../../evals/scenarios/index.js';
 import type { LLMProvider, LLMResponse, LLMToolCall } from '../../evals/types.js';
@@ -10,6 +10,10 @@ const answers = [
   'Please provide the exact log number.',
   'HTTP 403: authorization denied. S_APPL_LOG permission is required.',
   'Validation started; Invoice validation failed.',
+  'The saved log is visible and empty: no messages were returned.',
+  'The log was not found or not visible. Its existence and messages remain unknown.',
+  'Validation still running. This read is incomplete because the offset limit was reached.',
+  'Invoice validation failed. Long text and details are flagged as available but not loaded. 000001 is a row sequence number, not a T100 identity.',
   'Payment within 30 days.',
 ];
 // Scripted providers check deterministic contracts only; these are not actual model scores.
@@ -42,6 +46,18 @@ describe('application-log eval contracts', () => {
       expect((await runScenario(provider, scenario, [])).passed).toBe(true);
     },
   );
+  it.each([
+    ['application-log-empty-visible', 'The log does not exist.'],
+    ['application-log-not-visible', 'The log is empty and contains no messages.'],
+    ['application-log-offset-ceiling', 'Validation still running. The log is complete.'],
+    [
+      'application-log-detail-flags',
+      'Invoice validation failed. Long text says retry; details contain a fix. The T100 message ID is 000001.',
+    ],
+  ])('rejects an unsupported conclusion for %s', (id, answer) => {
+    const scenario = SCENARIOS.find((candidate) => candidate.id === id)!;
+    expect(scoreFinalAnswer(answer, scenario).passed).toBe(false);
+  });
   it('rejects SQL fallback after denial and guessed continuation offsets', () => {
     const denied = SCENARIOS.find((scenario) => scenario.id === 'application-log-authorization-no-fallback')!;
     const first: LLMToolCall = {
@@ -63,6 +79,21 @@ describe('application-log eval contracts', () => {
         calls,
         calls.map((call) => [call]),
         paging,
+      ).tracePassed,
+    ).toBe(false);
+    const capped = SCENARIOS.find((scenario) => scenario.id === 'application-log-offset-ceiling')!;
+    const cappedCalls = [5000, 5001].map((offset) => ({
+      name: 'SAPQuery',
+      arguments: {
+        action: 'application_log',
+        applicationLog: { logNumber: '00000000000000000001', maxRows: 1, offset },
+      },
+    }));
+    expect(
+      scoreScenarioTrace(
+        cappedCalls,
+        cappedCalls.map((call) => [call]),
+        capped,
       ).tracePassed,
     ).toBe(false);
   });

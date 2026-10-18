@@ -1493,14 +1493,21 @@ Read a known **SLG1 log number** using SAP's `APL_LOG_MANAGEMENT_SRV` service. E
 `SAP_ALLOW_DATA_PREVIEW=true`; authenticated callers need `data` scope and SAP service/log
 authorizations. No RFC, ABAP helper, or free SQL is used.
 
+Use this to inspect errors from a saved import, background job, or activation log. If you only
+know the job or business document, first find its log number in SAP (for example, SLG1).
+
 ```json
 {"action":"application_log","applicationLog":{"logNumber":"00000000000000000042","maxRows":50}}
 ```
 
 Copy the exact 20-digit number from SAP, including leading zeros. The result contains the log
 header and SAP-rendered messages. When `more=true`, use the returned `nextOffset` as `offset`.
-Default page size is 50, maximum 100; offsets stop at 5000. Paging is not a snapshot.
+Default page size is 50, maximum 100; offsets stop at 5000. `limitReached=true` means the read
+is incomplete and cannot continue through this action. Paging is not a snapshot.
 `not_found_or_not_visible` means no log is visible for that number, not proof that it does not exist.
+A successful empty result contains no messages on that page. `hasLongText` and `hasDetails`
+indicate availability; their contents are not returned. Message `number` identifies a row in
+the log, not a T100 message class/number.
 
 This first version does not discover logs or expand message details/long texts. It is qualified
 on the tested 7.58 system; other systems need the native service enabled and accessible. BTP ABAP

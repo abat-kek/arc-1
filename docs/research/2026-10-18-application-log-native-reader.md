@@ -66,20 +66,44 @@ Live probes on 2026-10-18:
 
 | Target | Result |
 | --- | --- |
-| 7.58 | Metadata and both navigation routes succeeded for three saved logs. Public `data`-scoped tool output matched 400 native message projections across 20 saved logs; three page-size-1 / offset-1 checks and the absent-number result passed. These samples contained no non-ASCII message text. |
+| 7.58 | Expanded public `data`-scoped reads matched 4,527 native message projections across 35 logs / 11 object-subobject families. All 59 paging/end/ceiling checks passed, including five empty logs and offset 5000 in a 12,920-message log. This is bounded sampling, not a full read of the largest log. |
 | 8.16 | Native service metadata returned 403; direct table preview worked. This does not identify the cause of the 403 or qualify native reads. |
 | 7.50 | Native service metadata returned 403; the tested ADT preview endpoint returned 404. No positive application-log read qualification. |
 
-All probes were read-only. Private responses and SAP source remain outside the repository.
-The public tool preserved the native access failure on both 8.16 and 7.50. Comparisons above use
-direct native-service output, not an independent SLG1 or BAL function-module oracle.
-Restricted users, PP, BTP ABAP, additional active-service releases, Unicode/exception varieties,
-and native SLG1 screen comparisons remain qualification work; no universal compatibility claim.
+The expanded sample includes Gateway runtime errors, Fiori repository logs, master-data updates,
+SPAU, ATC, repository/content activation, archives and CTS. Message types E/W/I/S were present;
+the first pages contained 185 long-text and 301 detail availability flags (bodies were not read).
+Eight English/German pairs matched SAP's rendering for 67 messages: 25 texts changed with language,
+and 23 German messages contained non-ASCII characters. Technical/free text may remain untranslated.
+
+A separate repeatable integration run passed for nine families: 991 messages read completely in
+default-size pages, plus page sizes 1/2/100 and exact-end/beyond-end checks. Real HTTP probes also
+verified cumulative byte-limit rejection, cancellation during a native GET and queued admission,
+and successful reads after each failure. No reader defect was found in these runs.
+
+All probes were read-only; private responses and SAP source remain outside the repository. Native
+service metadata still returned 403 on 8.16/7.50; the earlier public-tool checks preserved those errors.
+Comparisons use native HeaderSet navigation as the reference, not an independent SLG1/BAL oracle.
+The attempted SLG1 UI comparison stopped at unusable GUI text input; its test session was logged off.
+Restricted users, PP, BTP ABAP, additional active-service releases, non-Latin text, exception-specific
+rendering and independent screen comparisons remain unqualified; no universal compatibility claim.
+
+To repeat the read-only integration test, configure the usual `TEST_SAP_*` credentials and
+`TEST_APPLICATION_LOG_NUMBERS` with 1–10 comma-separated exact numbers. Choose stable saved logs
+with at most 200 messages each; include an empty log and different application families. Then run:
+
+```sh
+npm run test:integration -- tests/integration/application-log.integration.test.ts
+```
+
+The test fails on native errors when fixtures are configured; without numbers it records an explicit
+fixture skip. It does not discover logs, create data, enable services, or change authorizations.
 
 Unit coverage checks input/response validation, scope and safety denials, privacy, paging, native
-errors, and standard/hyperfocused tool contracts. Five model-evaluation scenarios cover routing,
-missing identity, continuation, authorization failure and SO10 distinction. Their scripted replay
-tests validate the scenarios; no actual-model accuracy score is claimed.
+errors, and standard/hyperfocused tool contracts. Nine model-evaluation scenarios cover routing,
+missing identity, continuation, authorization failure, SO10 distinction, empty/hidden logs,
+the offset ceiling and detail flags. Scripted replay tests validate these contracts; no actual-model
+accuracy score is claimed.
 
 ## Generic cluster proposal
 

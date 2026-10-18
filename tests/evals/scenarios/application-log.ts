@@ -68,6 +68,84 @@ const scenarios: Omit<EvalScenario, 'category'>[] = [
     finalAnswer: { required: [/Validation started/i, /Invoice validation failed/i], requireNonEmpty: true },
   },
   {
+    id: 'application-log-empty-visible',
+    description: 'An accessible saved log with no messages is an empty visible log.',
+    prompt: `Read SLG1 log ${logNumber} and explain whether it exists and contains messages.`,
+    optimal: [readCall()],
+    mockResponses: { SAPQuery: JSON.stringify({ ...base, offset: 0, messages: [], more: false }) },
+    finalAnswer: {
+      required: [/visible|accessible|exists/i, /no messages|empty/i],
+      forbidden: [/does not exist|not_found_or_not_visible/i],
+      requireNonEmpty: true,
+    },
+  },
+  {
+    id: 'application-log-not-visible',
+    description: 'No visible overview match does not establish that the saved log is absent.',
+    prompt: `Read SLG1 log ${logNumber} and explain whether it exists and contains messages.`,
+    optimal: [readCall()],
+    mockResponses: {
+      SAPQuery: JSON.stringify({
+        status: 'not_found_or_not_visible',
+        logNumber,
+        message: 'No visible saved log for this number. This does not prove that the log does not exist.',
+      }),
+    },
+    finalAnswer: {
+      required: [/not found or not visible|not_found_or_not_visible/i, /cannot|does not prove|unknown/i],
+      forbidden: [/log is empty|log contains no messages/i],
+      requireNonEmpty: true,
+    },
+  },
+  {
+    id: 'application-log-offset-ceiling',
+    description: 'At offset 5000, limitReached without nextOffset means an incomplete read and no continuation.',
+    prompt: `Read one message from SLG1 log ${logNumber} at offset 5000, continue if supported, and report completeness.`,
+    optimal: [readCall(5000)],
+    mockResponses: {
+      SAPQuery: JSON.stringify({
+        ...base,
+        offset: 5000,
+        messages: [{ number: '005001', text: 'Validation still running', type: 'I' }],
+        more: true,
+        limitReached: true,
+      }),
+    },
+    finalAnswer: {
+      required: [/Validation still running/i, /incomplete|partial/i, /limit|ceiling/i],
+      forbidden: [/\ball messages (?:have been|were) (?:read|retrieved)|\blog (?:is|was) complete\b/i],
+      requireNonEmpty: true,
+    },
+  },
+  {
+    id: 'application-log-detail-flags',
+    description: 'Availability flags do not load bodies; a six-digit row number is not a T100 message identity.',
+    prompt: `Read SLG1 log ${logNumber}. Include its message, long text and details if available, and explain the message number.`,
+    optimal: [readCall()],
+    mockResponses: {
+      SAPQuery: JSON.stringify({
+        ...base,
+        offset: 0,
+        messages: [
+          { number: '000001', text: 'Invoice validation failed', type: 'E', hasLongText: true, hasDetails: true },
+        ],
+        more: false,
+      }),
+    },
+    finalAnswer: {
+      required: [
+        /Invoice validation failed/i,
+        /long text/i,
+        /details/i,
+        /not (?:loaded|returned|retrieved)/i,
+        /row|sequence/i,
+        /T100/i,
+      ],
+      forbidden: [/long text (?:says|reads)|details (?:say|contain)|T100 message (?:ID|number) (?:is )?000001/i],
+      requireNonEmpty: true,
+    },
+  },
+  {
     id: 'application-log-so10-distinction',
     description: 'A saved SO10 standard text uses long_text rather than the application log action.',
     prompt:

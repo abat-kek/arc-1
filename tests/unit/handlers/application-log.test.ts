@@ -125,23 +125,38 @@ describe('application_log authorization and dispatch', () => {
     expect(output.content[0]!.text).toContain('Native authorization denied');
     expect(mockFetch).not.toHaveBeenCalled();
   });
-  it('preserves a missing Gateway service as an error, not an invisible log or a permission diagnosis', async () => {
-    // Live 7.50/8.16 return HTTP 403 for missing service registration, not just authorization failures.
-    const body = JSON.stringify({
-      error: { code: '/IWFND/MED/170', message: { lang: 'en', value: 'No service found for APL_LOG_MANAGEMENT_SRV' } },
-    });
-    const sap = client();
-    const sql = vi.spyOn(sap, 'runQueryBatch');
-    vi.mocked(readApplicationLog).mockRejectedValue(
-      new AdtApiError(body, 403, '/sap/opu/odata/sap/APL_LOG_MANAGEMENT_SRV/ApplicationLogOverviewSet', body),
-    );
-    const output = await handleToolCall(sap, config, 'SAPQuery', args, auth(['data']));
-    expect(output.isError).toBe(true);
-    expect(output.content[0]!.text).toContain('No service found');
-    expect(output.content[0]!.text).not.toMatch(/not_found_or_not_visible|lacks required authorization/);
-    expect(sql).not.toHaveBeenCalled();
-    expect(mockFetch).not.toHaveBeenCalled();
-  });
+  it.each([false, true])(
+    'gives service setup guidance for a missing Gateway service (cookies: %s)',
+    async (cookies) => {
+      // Live 7.50/8.16 return HTTP 403 for missing service registration, not just authorization failures.
+      const body = JSON.stringify({
+        error: {
+          code: '/IWFND/MED/170',
+          message: { lang: 'en', value: 'No service found for APL_LOG_MANAGEMENT_SRV' },
+        },
+      });
+      const sap = client();
+      const sql = vi.spyOn(sap, 'runQueryBatch');
+      vi.mocked(readApplicationLog).mockRejectedValue(
+        new AdtApiError(body, 403, '/sap/opu/odata/sap/APL_LOG_MANAGEMENT_SRV/ApplicationLogOverviewSet', body),
+      );
+      const output = await handleToolCall(
+        sap,
+        { ...config, ...(cookies ? { cookieString: 'test-session' } : {}) },
+        'SAPQuery',
+        args,
+        auth(['data']),
+      );
+      expect(output.isError).toBe(true);
+      expect(output.content[0]!.text).toContain('No service found');
+      expect(output.content[0]!.text).toContain('/IWFND/MAINT_SERVICE');
+      expect(output.content[0]!.text).not.toMatch(
+        /not_found_or_not_visible|authorization error|lack.*permissions|cookies have expired|SAP_PASSWORD/i,
+      );
+      expect(sql).not.toHaveBeenCalled();
+      expect(mockFetch).not.toHaveBeenCalled();
+    },
+  );
   it('prunes visibility and requirements without leaving SQL access', () => {
     const definition = createQueryDefinition({ ...config, allowFreeSQL: true })!;
     const dataOnly = filterToolsByAuthScope([definition], ['data'])[0]!;

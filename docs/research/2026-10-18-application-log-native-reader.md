@@ -102,6 +102,12 @@ SAP [KBA 2679134](https://me.sap.com/notes/2679134) describes a registration iss
 7.50/7.51 support packages; neither tested failing release falls in that range. Its workaround
 was not applied. An HTTP 403 alone does not identify an authorization failure.
 
+The follow-up review caught a misleading generic authorization hint on this error. ARC-1 now
+recognizes the exact JSON error code on an OData 403 and points to service registration, including
+in multi-target error handling. Unit tests cover unrelated codes, malformed bodies and cookie
+sessions. Fresh public-tool calls verified the corrected hint on 7.50/8.16 and a successful 7.58
+control read. This correction does not enable the missing service or qualify those two releases.
+
 No suitable restricted identity is available yet: the proposed accounts were absent from the
 tested client, had no roles/profiles, or had `SAP_ALL`. A valid test needs one identity with native
 service access and `S_APPL_LOG` display activity 03 for one object/subobject, plus existing logs

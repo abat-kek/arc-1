@@ -27,9 +27,8 @@ integration test's 30-second timeout. These timings are from 816, not latency gu
 
 ## Live evidence, 17 October 2026
 
-Disposable append creation was unavailable through the tested ADT routes. The two
-positive append cases below use existing objects read-only; append discovery is
-not live-verified on BTP or 750.
+Disposable append creation failed through the tested ADT routes. Positive append
+checks use existing objects read-only; additional 750/BTP checks are recorded below.
 
 - 758: `/AIF/FHEAD` has append `/AIF/ECATT`. Main returned zero appends with a
   scope warning; the fix returns the append with no warning.
@@ -54,6 +53,22 @@ Raw discovery rechecked on 18 October after [kts982's correction](https://github
 That link is absent on our 750 and 758 systems. The earlier absence claim came
 from ARC-1's collection/MIME map, which does not retain nested template links.
 Future native scope support can use this relation as its discovery gate.
+
+## Remaining-limit checks, 18 October 2026
+
+- 750: `BAPI0002_2` resolves `APPEND_BAPI0002_2_2`, without warnings.
+- BTP: `/AIF/T_FINF` resolves `/AIF/ODATA_SRV` and `/AIFX/APPEND_ST`, including
+  the latter's nested `/AIFX/ECH_APPEND_ST`, without warnings.
+- The 750 CDS fixture still returns the unsupported-position message. CRUD hints
+  now preserve SAP's explanation for empty results verbatim; they do not infer
+  support from HTTP 200 or classify translated text. The fixtures were deleted.
+- Regression tests cover exactly 50 candidates, the existing over-limit case,
+  retaining root appends after a nested scan stops, and candidate-read 403 errors.
+
+The candidate bound limits additional source scans, not SAP's initial where-used
+response or total graph work. The latest CI BAPIRET2 call passed in 25.3 seconds
+within its 30-second timeout. Native narrowing remains #1018 work; do not remove
+the incomplete-result warning or treat an empty result as proof of no appends.
 
 #1018's package filtering and bounded position/snippet retrieval remain separate
 research. Correcting request headers alone would not fix the callers' assumptions.

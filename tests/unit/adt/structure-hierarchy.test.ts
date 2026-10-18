@@ -158,6 +158,68 @@ define structure zbase {
       await expect(buildStructureHierarchy(client, 'ZBASE')).rejects.toBe(error);
     });
 
+    it('still finds the last append when exactly 50 candidates are returned', async () => {
+      const candidates = Array.from({ length: 50 }, (_, i) => ({
+        name: `ZREF${String(i).padStart(2, '0')}`,
+        type: 'TABL/DS',
+        uri: `/sap/bc/adt/ddic/structures/zref${i}`,
+      }));
+      const sources = Object.fromEntries(candidates.map(({ name }) => [name, `define structure ${name} { }`]));
+      sources.ZBASE = 'define structure zbase { }';
+      sources.ZREF49 = 'extend type zbase with zref49 { }';
+      const client = makeStructureClient(
+        sources,
+        vi.fn(async (path: string) => ({ body: whereUsedXml(path.endsWith('ZBASE') ? candidates : []) })),
+      );
+
+      const result = await buildStructureHierarchy(client, 'ZBASE');
+      expect(result.tree.children).toEqual([{ structure: 'ZREF49', kind: 'append', attribute: null, children: [] }]);
+      expect(result.warnings).toBeUndefined();
+    });
+
+    it('retains collected root appends when a nested include exceeds the scan limit', async () => {
+      const post = vi.fn(async (path: string) => ({
+        body: whereUsedXml(
+          path.endsWith('ZBASE')
+            ? [{ name: 'ZAPPEND', type: 'TABL/DS', uri: '/sap/bc/adt/ddic/structures/zappend' }]
+            : Array.from({ length: 51 }, (_, i) => ({
+                name: `ZREF${i}`,
+                type: 'TABL/DS',
+                uri: `/sap/bc/adt/ddic/structures/zref${i}`,
+              })),
+        ),
+      }));
+      const client = makeStructureClient(
+        {
+          ZBASE: 'define structure zbase {\n include zinc;\n}',
+          ZINC: 'define structure zinc { }',
+          ZAPPEND: 'extend type zbase with zappend { }',
+        },
+        post,
+      );
+      const result = await buildStructureHierarchy(client, 'ZBASE');
+      expect(result.summary).toMatchObject({ includes: 1, appends: 1 });
+      expect(result.warnings?.[0]).toContain('51 structure candidates for ZINC');
+      expect(post).toHaveBeenCalledTimes(2);
+    });
+
+    it('propagates a candidate source authorization failure', async () => {
+      const client = makeStructureClient(
+        { ZBASE: 'define structure zbase { }' },
+        vi.fn(async () => ({
+          body: whereUsedXml([{ name: 'ZDENIED', type: 'TABL/DS', uri: '/sap/bc/adt/ddic/structures/zdenied' }]),
+        })),
+      );
+      const error = new AdtApiError('Forbidden', 403, '/sap/bc/adt/ddic/structures/zdenied');
+      vi.mocked(client.getTabl).mockResolvedValueOnce({
+        source: 'define structure zbase { }',
+        notModified: false,
+        statusCode: 200,
+      });
+      vi.mocked(client.getTabl).mockRejectedValueOnce(error);
+      await expect(buildStructureHierarchy(client, 'ZBASE')).rejects.toBe(error);
+    });
+
     it('marks recursive include cycles without treating shared children as cycles', async () => {
       const client = makeStructureClient(
         {

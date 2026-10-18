@@ -822,6 +822,7 @@ This helps pinpoint the exact failing field/annotation instead of retrying blind
 - If delete guidance lists dependents that were just deleted, treat it as possible stale SAP active dependency/index state and retry after a short wait before deeper cleanup.
 - If SAP reports a delete dependency error but current where-used results are empty, ARC-1 now adds stale active-dependency guidance: wait/retry after recent cleanup, activate restored/stripped sources first, then re-check references/locks.
 - CDS hints use one unfiltered ADT where-used request and deduplicate its results.
+- Empty CDS results retain SAP's explanation when supplied; HTTP 200 alone does not prove the search was supported.
 - If the where-used endpoint is unavailable on the backend, ARC-1 keeps the CRUD action behavior unchanged and adds a short "impact unavailable" note instead of failing the call.
 
 **Blue framework package handling:** `TABL` and `BDEF` create calls now pass package in both the XML (`packageRef`) and URL query (`_package=<pkg>`), alongside transport (`corrNr`) when provided.

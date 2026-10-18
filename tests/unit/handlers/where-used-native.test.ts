@@ -234,6 +234,7 @@ it.each(['impact', 'usages'])('preserves the unsupported-position explanation in
   vi.spyOn(client, 'getDdls').mockResolvedValue({
     source: 'define view zi_root as select from t000 { key mandt }',
     statusCode: 200,
+    notModified: false,
   });
   const result = await handleToolCall(client, DEFAULT_CONFIG, 'SAPContext', {
     action,

@@ -7,8 +7,11 @@ It reuses the existing bounded object-list input. Single-object checks, ATC and 
 remain separate. There is no collector, scheduler, source cache or automatic retry.
 
 The [plan](../plans/2026-10-19-bounded-syntax-checks.md) records the reviewed contract.
-Implementation starts at `e3a5fd95384130149d2d4f25835e774a7615674a`, based on #1020 head
-`c23d6291ce4960f04356aad6001b8b0f3c0f0571`.
+Measurements used `e3a5fd95`, based on #1020 head `c23d6291`. After #1020 merged as
+`b57006ff`, [draft #1029](https://github.com/arc-mcp/arc-1/pull/1029) was rebased onto main.
+Published implementation `033ec8cc` has the same tree as `e3a5fd95`; rebased evidence commit
+`e1752f3e` has the same tree as pre-rebase `f5140ebe`. Both comparisons passed. The validation
+below therefore applies unchanged; the final follow-up only updates research status.
 
 ## Live SAP evidence
 
@@ -86,7 +89,7 @@ four cases. These changes do not add model trials or alter their recorded grades
 
 ## What remains from #1011
 
-Dump filters are preserved in #1020; this extraction preserves bounded syntax checks.
+Dump filters are merged through #1020; this extraction preserves bounded syntax checks.
 The broad diagnostic framework is unnecessary. DDIC logs remain deferred: a readable saved
 log does not establish the latest activation attempt, and prior model controls misread it.
 Keep FEAT-71 and the immutable [failed controls and decision](https://github.com/arc-mcp/arc-1/blob/5725fab6515f7a410e3e488003ae1a7aa3d8c249/docs/research/2026-10-17-diagnostic-main-decision.md).

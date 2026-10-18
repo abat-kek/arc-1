@@ -165,3 +165,24 @@ gates, verified preservation of main and the exact 100-byte trim. Its pending-va
 is resolved by the merged-head checks above. The older-example citation is clarified above.
 The new PR head's CI is a separate run; its current status is recorded on
 [draft #1020](https://github.com/arc-mcp/arc-1/pull/1020).
+
+## Final main reconciliation
+
+Runtime review at `4f7813ae`, against main `2827948e` (18 October):
+
+- The filter parser/compiler, paging hook, validation and handler are unchanged from the
+  previously Claude-reviewed implementation. Main's application-log and where-used additions remain.
+- Resolved file/schema ratchets and shortened dump guidance; the existing 75,000-byte catalog
+  ceiling is unchanged (combined full catalog: 74,997 bytes).
+- Renamed the legacy dump-user research item to FEAT-91 because merged main already uses
+  FEAT-89 for data-cluster work. The DDIC-log roadmap now retains the verified saved-log GET
+  and the unresolved latest-attempt correlation.
+- Full Node 24 unit suite: 339 files / 9,488 tests passed. Build, typecheck, lint, policy,
+  file/schema budgets and strict docs passed. No runtime assertions or timeouts were relaxed.
+- Repeated the bounded A4H/001 real-dispatcher probe: positive filter returned the same existing
+  dump; negative control returned no rows. Five successful GETs, zero mutations. Release remains
+  the previously recorded 758 SP02; no new BTP/PP or wider-operator qualification is claimed.
+
+This reconciliation was reviewed by Codex. The earlier Claude GUI reviews are preserved above;
+a fresh Claude GUI review was not available because macOS denied assistive access. Final CI and
+merge state are recorded in [#1020](https://github.com/arc-mcp/arc-1/pull/1020).

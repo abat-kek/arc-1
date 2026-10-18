@@ -2203,8 +2203,8 @@ administrators can disable them with `SAP_DENY_ACTIONS`.
 | `user` | string | No | SAP-user filter for dumps, runtime feeds, or `authorization_trace` |
 | `filters` | array | No | Dumps list only: target-advertised `{attribute, operator, values}` conditions, combined with AND; eight conditions including `user` |
 | `authObject` | string | No | For `authorization_trace`: filter to one authorization object, for example `S_TCODE` |
-| `from` | string | No | Lower time boundary for `system_messages`/`gateway_errors`. |
-| `to` | string | No | Upper time boundary for `system_messages`/`gateway_errors`. |
+| `from` | string | No | Lower time boundary for `dumps`/`system_messages`/`gateway_errors`. |
+| `to` | string | No | Upper time boundary for `dumps`/`system_messages`/`gateway_errors`. |
 | `onlyFailures` | boolean | No | For `authorization_trace`: return only denied checks (`RC <> 0`) |
 | `maxResults` | number | No | Maximum results (default 50 for dumps/feeds, 100 for `authorization_trace`; safely capped) |
 | `sections` | array | No | Dump chapter IDs for detail mode, e.g. `["kap0","kap3","kap8"]`; omit for focused defaults. |

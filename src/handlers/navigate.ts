@@ -95,7 +95,7 @@ export async function handleSAPNavigate(
         uri = `${uri.split('#')[0]}#start=${line},${column}`;
       }
       // objectType keeps its slash format (CLAS/OC, PROG/P) — do NOT normalize; the suffix is
-      // semantically meaningful. Native scope is an optimization; the final filter still runs locally.
+      // semantically meaningful. Filtering happens client-side.
       const objectType = args.objectType ? String(args.objectType) : undefined;
       const maxResults = args.maxResults === undefined ? undefined : Number(args.maxResults);
       const lookup = await lookupLiveUsages(client, uri, objectType, maxResults, {

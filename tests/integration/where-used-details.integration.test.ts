@@ -54,10 +54,15 @@ ENDCLASS.`,
     expect(failures, 'remove every owned where-used fixture').toEqual([]);
   });
   it('returns the consumer and component-relative native usages, respecting exact packages', async () => {
-    const args = { action: 'references', type: 'CLAS', name: root, objectType: 'CLAS', packages: ['$TMP'] };
-    const objects = JSON.parse(await call('SAPNavigate', args));
+    const args = { action: 'references', type: 'CLAS', name: root, objectType: 'CLAS' };
+    const ordinary = JSON.parse(await call('SAPNavigate', args));
+    const objects = JSON.parse(await call('SAPNavigate', { ...args, packages: ['$TMP'] }));
+    const uris = (rows: { uri: string }[]) => rows.map((row) => row.uri).sort();
+    expect(uris(objects.references)).toEqual(
+      uris(ordinary.references.filter((row: { packageName: string }) => row.packageName === '$TMP')),
+    );
     expect(objects.references).toContainEqual(expect.objectContaining({ name: consumer }));
-    const detailed = JSON.parse(await call('SAPNavigate', { ...args, detail: 'snippets' }));
+    const detailed = JSON.parse(await call('SAPNavigate', { ...args, packages: ['$TMP'], detail: 'snippets' }));
     expect(detailed.usageDetails.usages).toContainEqual(
       expect.objectContaining({ object: consumer, component: 'CALCULATE', snippet: expect.stringContaining(root) }),
     );

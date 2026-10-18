@@ -96,8 +96,9 @@ export async function loadNativeUsages(client: AdtClient, uri: string, options: 
     if (!scope) throw new Error('SAP returned an invalid where-used scope.');
     // Scope categories are not result types. Keep all types; objectType is filtered locally.
     for (const type of findDeepNodes(scope, 'type')) type['@_isSelected'] = 'true';
+    // Ordinary mode enables indirect references even when its response echoes false; keep SAP's proposed grade.
     const echoed: Record<string, unknown> = {};
-    for (const key of ['objectIdentifier', 'objectTypes', 'programs', 'payload'])
+    for (const key of ['objectIdentifier', 'grade', 'objectTypes', 'programs', 'payload'])
       if (scope[key] !== undefined) echoed[key] = scope[key];
     if (options.packages?.length) echoed.propertyFilter = { '@_filter': `package:${options.packages.join(',')}` };
     scopeXml = builder.build({ scope: echoed });

@@ -65,7 +65,7 @@ it('scopes exact packages across all advertised types and filters object types l
   const request = requests.find((r) => r.url.endsWith('/usageReferences'))!;
   expect(request.body).toContain('name="CLAS/OC" isSelected="true"');
   expect(request.body).toContain('name="TABL/DS" isSelected="true"');
-  expect(request.body).not.toContain('<grade');
+  expect(request.body).toContain('indirectReferences="true"');
   expect(request.body).toContain('package:$TMP');
   expect(request.body).toContain('<payload>a&amp;b</payload>');
   expect(output).toMatchObject({ total: 1, scopeFiltering: 'server' });

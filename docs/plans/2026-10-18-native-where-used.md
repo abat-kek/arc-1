@@ -4,7 +4,7 @@
 
 Read-only native probes and temporary class fixtures on 2026-10-18 establish:
 
-- `/usageReferences/scope{?uri}` is advertised as a discovery template link on SAP_BASIS 816 and BTP 920, absent on 750/758. Scope POST needs the URI, vendor MIME and `usageScopeRequest` root. Echo the supplied programs/payload, omit grade to retain ordinary search defaults, select all advertised object types and use `propertyFilter package:A,B` for exact packages.
+- `/usageReferences/scope{?uri}` is advertised as a discovery template link on SAP_BASIS 816 and BTP 920, absent on 750/758. Scope POST needs the URI, vendor MIME and `usageScopeRequest` root. Echo the supplied grade/programs/payload, select all advertised object types and use `propertyFilter package:A,B` for exact packages.
 - Scope XML must emit explicit boolean attribute values. SAP defaults omit several object types; a package query must select every advertised type.
 - `/usageSnippets` is a discovery collection on all four systems. Its MIME family is `usagesnippets`, not `usagereferences.snippet`. Expand the opaque identifiers on reference nodes, including `isResult=false, canHaveChildren=true` nodes. Class method nodes inherit their owner's type for filtering.
 - 750 snippet URIs can omit columns (`#type=CLAS%2FOM;name=CALCULATE;start=2`); match ranges supply columns. Method positions are relative to that component, not necessarily the complete class source.
@@ -49,6 +49,10 @@ whose only purpose would be evading the size guard.
 Claude Opus 5.5 max found three issues: ordinary objectType-only lookups changed paths,
 SAPContext impact descriptions suppressed sibling checks, and analysis limits gave data-query
 or connectivity advice. Keep objectType filtering local, return searchedFor separately, and
-classify limits explicitly. Native scopes no longer echo the proposed indirect-reference grade.
+classify limits explicitly. Native scopes retain SAP’s proposed grade: omitting it dropped a
+reference in both 816/BTP fixtures despite matching the ordinary response’s echoed grade.
+The native handler’s compatibility branch enables indirect references when no scope is supplied;
+the response echo does not establish that effective default. The live regression compares actual
+in-package result URIs, not just the echoed metadata.
 Regression checks also cover discovery denial, package containers and enrichment, local packages,
 legacy detail counts, preserved snippet indentation, and scopes without an optional payload.

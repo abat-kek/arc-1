@@ -87,7 +87,14 @@ describe('parseArgs', () => {
     expect(() => parseArgs(['--ide-links', 'auto'])).toThrow(/must be off or vscode/);
     expect(() => parseArgs(['--ide-destination', 'x?command=evil'])).toThrow(/local ADT alias/);
     expect(() => parseArgs(['--ide-destination', 'DEV '])).toThrow(/local ADT alias/);
-    expect(() => parseArgs(['--transport', 'http-streamable'])).toThrow(/single-target local stdio/);
+    expect(() => parseArgs(['--transport', 'http-streamable'])).toThrow(/stdio-only/);
+  });
+
+  it('permits the HTTP presentation ceiling without a server-global alias', () => {
+    process.env.ARC1_IDE_LINKS = 'vscode';
+    const config = parseArgs(['--transport', 'http-streamable', '--api-keys', 'test-key:viewer']);
+    expect(config.ideLinks).toBe('vscode');
+    expect(config.ideDestination).toBe('');
   });
 
   it('parses CLI flags (--flag value)', () => {

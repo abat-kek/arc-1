@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { logger } from '../../../src/server/logger.js';
 import { DEFAULT_CONFIG } from '../../../src/server/types.js';
 import { mockResponse } from '../../helpers/mock-fetch.js';
 import { createClient, mockFetch } from './setup-undici-mock.js';
@@ -84,5 +85,56 @@ describe('native IDE links through the real dispatcher', () => {
     });
     expect(result.isError).toBeUndefined();
     expect(result.content.filter((item) => item.text.includes('vscode://sapse.adt-vscode/'))).toHaveLength(1);
+  });
+  it.each(['standard', 'hyperfocused'] as const)(
+    'keeps HTTP presentation out of SAP requests and all %s audit previews',
+    async (toolMode) => {
+      const audit = vi.spyOn(logger, 'emitAudit').mockImplementation(() => {});
+      try {
+        const http = { ...config, ideDestination: '', transport: 'http-streamable' as const, toolMode };
+        const name = toolMode === 'hyperfocused' ? 'SAP' : 'SAPRead';
+        const input =
+          toolMode === 'hyperfocused' ? { action: 'read', params: { ...args, include: null, action: '' } } : args;
+        const result = await handleToolCall(
+          createClient(),
+          http,
+          name,
+          input,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          { destination: 'PRIVATE_WORKSPACE' },
+        );
+        expect(result.content).toHaveLength(2);
+        expect(result.content[1].text).toContain('PRIVATE_WORKSPACE');
+        expect(JSON.stringify(audit.mock.calls)).not.toContain('PRIVATE_WORKSPACE');
+        expect(JSON.stringify(mockFetch.mock.calls)).not.toContain('PRIVATE_WORKSPACE');
+        const absent = await handleToolCall(createClient(), http, name, input);
+        expect(absent.content).toHaveLength(1);
+      } finally {
+        audit.mockRestore();
+      }
+    },
+  );
+  it('does not decorate a successful result replaced by the target guard', async () => {
+    const result = await handleToolCall(
+      createClient(),
+      config,
+      'SAPRead',
+      args,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      () => ({ isError: true, content: [{ type: 'text', text: 'Target changed' }] }),
+    );
+    expect(result).toEqual({ isError: true, content: [{ type: 'text', text: 'Target changed' }] });
   });
 });

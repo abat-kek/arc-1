@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 
-// Research only: npm run build && node scripts/spikes/adt12-http-ide-links.mjs
-// No credentials, SAP requests, persistent listener, or production feature enablement.
+// Optional protocol smoke: npm run build && node scripts/spikes/adt12-http-ide-links.mjs
+// Uses the production preference parser/decorator; synthetic tool, no SAP calls or credentials.
 const root = new URL('../../', import.meta.url);
 const require = createRequire(new URL('package.json', root));
 const express = require('express');
@@ -13,7 +13,8 @@ const { StreamableHTTPClientTransport } = await import(
 );
 const { McpServer } = await import(pathToFileURL(require.resolve('@modelcontextprotocol/sdk/server/mcp.js')));
 const { createMcpHandler } = await import(new URL('dist/server/http.js', root));
-const { buildVsCodeLink, appendIdeLinks } = await import(new URL('dist/server/ide-links.js', root));
+const { appendIdeLinks } = await import(new URL('dist/server/ide-links.js', root));
+const { resolveHttpIdeContext } = await import(new URL('dist/server/ide-request.js', root));
 const { DEFAULT_CONFIG } = await import(new URL('dist/server/types.js', root));
 // Deliberately local transport spike, not a BTP deployment or production parser.
 const target = 'A4H/001';
@@ -30,20 +31,20 @@ app.post(
       { description: 'Synthetic object identity; no SAP request', inputSchema: {} },
       async (_args, extra) => {
         calls++;
-        let alias;
-        const header = extra.requestInfo?.headers?.['x-arc1-ide-context'];
-        if (typeof header === 'string' && header.length < 4096 && header.startsWith('v1.')) {
-          try {
-            const preferences = JSON.parse(Buffer.from(header.slice(3), 'base64url').toString('utf8'));
-            if (preferences.client === 'vscode' && Object.hasOwn(preferences.targets ?? {}, target))
-              alias = preferences.targets[target];
-          } catch {
-            /* malformed optional preferences mean no link in this spike */
-          }
-        }
-        const link =
-          typeof alias === 'string' ? buildVsCodeLink(alias, { type: 'CLAS', name: 'CL_ABAP_TYPEDESCR' }) : undefined;
-        return { content: [{ type: 'text', text: payload }, ...(link ? [{ type: 'text', text: link }] : [])] };
+        const config = {
+          ...DEFAULT_CONFIG,
+          transport: 'http-streamable',
+          ideLinks: 'vscode',
+          targetId: target,
+          multiTargetEndpoints: true,
+        };
+        return appendIdeLinks(
+          { content: [{ type: 'text', text: payload }] },
+          'SAPRead',
+          { type: 'CLAS', name: 'CL_ABAP_TYPEDESCR' },
+          config,
+          resolveHttpIdeContext(config, extra.requestInfo?.headers),
+        );
       },
     );
     return server;
@@ -53,7 +54,10 @@ const listener = await new Promise((resolve) => {
   const l = app.listen(0, '127.0.0.1', () => resolve(l));
 });
 const url = new URL(`http://127.0.0.1:${listener.address().port}/A4H/001/mcp`);
-const encode = (targets) => `v1.${Buffer.from(JSON.stringify({ client: 'vscode', targets })).toString('base64url')}`;
+const encode = (targets) =>
+  Object.entries(targets)
+    .map(([key, alias]) => `${key}=${encodeURIComponent(alias)}`)
+    .join(',');
 const cases = [
   ['first workspace', encode({ [target]: 'DEV-ALICE' }), 'DEV-ALICE'],
   ['second workspace', encode({ [target]: 'DEV-BOB' }), 'DEV-BOB'],
@@ -69,7 +73,7 @@ try {
       const client = new Client({ name: label, version: '1.0' });
       await client.connect(
         new StreamableHTTPClientTransport(url, {
-          requestInit: { headers: header ? { 'X-ARC1-IDE-Context': header } : {} },
+          requestInit: { headers: header ? { 'Arc1-Ide-Client': 'vscode', 'Arc1-Ide-Destinations-V1': header } : {} },
         }),
       );
       try {
@@ -82,7 +86,7 @@ try {
           assert.equal(result.content[0].text, payload);
           assert.equal(result.content.length, expected ? 2 : 1);
           if (expected) {
-            const outer = new URL(result.content[1].text);
+            const outer = new URL(result.content[1].text.match(/vscode:\/\/[^\s]+/)[0].replace(/\)$/, ''));
             const inner = new URL(outer.searchParams.get('abapUri'));
             assert.equal(decodeURIComponent(inner.pathname.split('/')[2]), expected);
           }
@@ -104,7 +108,7 @@ try {
     ),
     original,
   );
-  console.log('PASS current PR still suppresses HTTP decoration (not an implemented feature)');
+  console.log('PASS no request preference means no HTTP decoration (global alias ignored)');
   console.log(
     JSON.stringify({
       calls,

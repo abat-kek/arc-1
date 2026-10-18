@@ -36,6 +36,8 @@ function buildReadOnlyRuntimeConfig(
     gzipDataPreviewBody: base.gzipDataPreviewBody,
     userAgent: base.userAgent,
     transport: 'http-streamable',
+    // Only the administrator ceiling; every caller must provide its own alias on each request.
+    ideLinks: base.ideLinks,
     httpAddr: base.httpAddr,
     allowWrites: safety.allowWrites,
     allowDataPreview: safety.allowDataPreview,

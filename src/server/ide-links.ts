@@ -1,7 +1,13 @@
 /** Presentation-only links for SAP's ADT for VS Code 1.2 URI handler. No SAP or filesystem access. */
-import { detectLocalHandlerInclude, normalizeObjectType } from '../handlers/object-types.js';
+import { expandHyperfocusedArgs } from '../handlers/hyperfocused.js';
+import {
+  detectLocalHandlerInclude,
+  normalizeObjectType,
+  normalizeTypeArgsForValidation,
+} from '../handlers/object-types.js';
 import type { ToolResult } from '../handlers/shared.js';
 import { isIdeDestination } from './ide-config.js';
+import type { IdeLinkContext } from './ide-request.js';
 import type { ServerConfig } from './types.js';
 
 export const IDE_LINK_LIMIT = 8;
@@ -109,22 +115,29 @@ export function appendIdeLinks(
   tool: string,
   args: Record<string, unknown>,
   config: ServerConfig,
+  requestContext?: IdeLinkContext,
 ): ToolResult {
-  // One local alias cannot safely map an aggregate/pinned multi-target service or many HTTP users' IDEs.
-  if (
-    result.isError ||
-    config.ideLinks !== 'vscode' ||
-    !config.ideDestination ||
-    config.transport !== 'stdio' ||
-    config.multiTargetEndpoints ||
-    config.targetId ||
-    config.destinationName
-  )
-    return result;
+  if (result.isError || config.ideLinks !== 'vscode') return result;
+  // HTTP presentation comes exclusively from this request. A global stdio alias is never a fallback.
+  const destination =
+    config.transport === 'http-streamable'
+      ? requestContext?.target === config.targetId && (!config.multiTargetEndpoints || !!config.targetId)
+        ? requestContext?.destination
+        : undefined
+      : !config.multiTargetEndpoints && !config.targetId && !config.destinationName
+        ? config.ideDestination
+        : undefined;
+  if (!destination || !isIdeDestination(destination)) return result;
   try {
+    if (tool === 'SAP') {
+      const expanded = expandHyperfocusedArgs(args);
+      if ('error' in expanded) return result;
+      tool = expanded.toolName;
+      args = normalizeTypeArgsForValidation(tool, expanded.expandedArgs);
+    }
     const links = new Map<string, string>();
     for (const object of candidates(tool, args, result)) {
-      const link = buildVsCodeLink(config.ideDestination, object);
+      const link = buildVsCodeLink(destination, object);
       if (!link || links.has(link)) continue;
       links.set(link, `- [${object.name.toUpperCase()} (${normalizeObjectType(object.type)})](${link})`);
       if (links.size >= IDE_LINK_LIMIT) break;
@@ -136,7 +149,7 @@ export function appendIdeLinks(
         ...result.content,
         {
           type: 'text',
-          text: `\nOpen current source in SAP ADT for VS Code (destination: ${config.ideDestination}; up to ${IDE_LINK_LIMIT} links):\n${[...links.values()].join('\n')}`,
+          text: `\nOpen current source in SAP ADT for VS Code (${config.targetId ? `target: ${config.targetId}; ` : ''}destination: ${destination}; up to ${IDE_LINK_LIMIT} links):\n${[...links.values()].join('\n')}`,
         },
       ],
     };

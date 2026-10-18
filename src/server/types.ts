@@ -166,9 +166,9 @@ export interface ServerConfig {
   /** Hide SAP response details from client-facing tool errors while retaining server-side correlation data. */
   minimalErrors: boolean;
 
-  // --- IDE navigation (local stdio only) ---
+  // --- IDE navigation (HTTP requires explicit per-request VS Code preferences) ---
   ideLinks: 'off' | 'vscode';
-  /** Exact local SAP ADT destination alias; never inferred from client roots. */
+  /** Stdio-only local SAP ADT alias; HTTP never inherits this value. */
   ideDestination: string;
 
   // --- Tool Mode ---

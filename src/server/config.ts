@@ -1077,11 +1077,11 @@ export function validateConfig(config: ServerConfig): void {
       'ARC1_IDE_DESTINATION must be a local ADT alias of 1–128 letters, digits, spaces, _, ., -, or parentheses; start with a letter, digit or _, with no surrounding whitespace.',
     );
   }
-  if (config.ideLinks === 'vscode') {
-    if (!config.ideDestination) throw new Error('ARC1_IDE_LINKS=vscode requires ARC1_IDE_DESTINATION.');
-    if (config.transport !== 'stdio' || config.multiTargetEndpoints) {
-      throw new Error('ARC1_IDE_LINKS=vscode supports single-target local stdio only.');
-    }
+  if (config.transport === 'http-streamable' && config.ideDestination) {
+    throw new Error('ARC1_IDE_DESTINATION is stdio-only; HTTP clients supply per-request IDE headers.');
+  }
+  if (config.ideLinks === 'vscode' && config.transport === 'stdio' && !config.ideDestination) {
+    throw new Error('ARC1_IDE_LINKS=vscode requires ARC1_IDE_DESTINATION on stdio.');
   }
 
   if (config.multiTargetAuthorization !== 'standard' && config.multiTargetAuthorization !== 'xsuaa-attribute') {

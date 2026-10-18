@@ -75,7 +75,7 @@ sequence.
 | [COMPAT-16](#compat-16) | API-release directory cleanup | P2 | S | Needs research | Compatibility |
 | [COMPAT-17](#compat-17) | Package contents without filtered search | P2 | M | Needs research | Compatibility |
 | [COMPAT-18](#compat-18) | Newly created program metadata on 7.50 | P2 | S | Needs research | Compatibility |
-| [COMPAT-19](#compat-19) | Per-client IDE destination mapping | P1 | M | Ready | Compatibility |
+| [COMPAT-19](#compat-19) | Live BTP IDE navigation qualification | P1 | S | Ready | Compatibility |
 | [COMPAT-20](#compat-20) | Canonical ADT editor identity for AI edits | P2 | M | Needs research | Compatibility |
 | [COMPAT-10](#compat-10) | CDS set-operation lineage | P2 | M | Needs research | Compatibility |
 | [COMPAT-12](#compat-12) | Deletion with another user's text draft | P3 | S | Needs research | Compatibility |
@@ -366,29 +366,25 @@ trace the SAP response before changing package resolution. Preserve fail-closed 
 fixtures avoid the pre-delete, but do not fix this runtime gap; do not add a skip for it.
 
 <a id="compat-19"></a>
-### COMPAT-19 — Per-client IDE destination mapping
+### COMPAT-19 — Live BTP IDE navigation qualification
 
-- **Priority / effort / status:** P1 / M / Ready
+- **Priority / effort / status:** P1 / S / Ready
 - **Category:** Compatibility
 
-**Remaining gap.** The user's intended deployment is BTP. The native-link draft only supports
-local stdio; it is not completion of that requirement. Shared HTTP and multi-target research need
-a mapping from the authorized public target/client to each developer's local ADT alias, scoped to
-the MCP server connection and workspace. A client name, SID or root does not prove correspondence.
+**Remaining gap.** [PR #1025](https://github.com/arc-mcp/arc-1/pull/1025) implements request-scoped
+VS Code opt-in and exact public target/client mapping for single-target HTTP, pinned and aggregate
+routes. Local HTTP authorization/isolation tests and real Copilot → HTTP → SAP → native ADT opening
+pass. Cloud Foundry staged the candidate, but the organization had all 10 routes and 4096 MiB in use;
+quota prevented isolated runtime acceptance. The stopped candidate was removed.
 
-**Resume with.** Implement admin-opted-in, request-scoped presentation metadata from VS Code's
-HTTP headers. The installed SDK already exposes `extra.requestInfo.headers`; a transport spike
-through ARC-1's real HTTP handler passed 14 calls from seven concurrent clients. Match the exact
-authorized target before decoration, preserve all authentication/safety gates and source payloads,
-and never cache personal aliases or forward them to SAP. Share one target lookup for pinned and
-aggregate routing; qualify both. Verify the real CF route, reconnects, multiple workspaces and
-local ADT connectivity. Do not just remove the transport guard.
+**Resume with.** Available isolated CF capacity, then verify the actual public router, XSUAA OAuth,
+pinned/aggregate source links, two users/workspaces, reconnect/restart and (PP-only) multiple instances.
+Do not stop unrelated apps or widen auth to obtain a passing result. Preferences deliberately opt in
+presentation; they do not attest the client application or prove a local alias's backend identity.
 
-The [BTP design and acceptance tests](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-18-btp-native-ide-links.md)
-also cover client-side composition with SAP's native canonical resolver. That remains useful for
-editor identity (COMPAT-20), but its absence from the current Copilot inventory should not block
-basic BTP navigation. Existing bridge links in closed
-[PR #676](https://github.com/arc-mcp/arc-1/pull/676) lack the required target binding.
+The [implementation and acceptance record](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-18-btp-native-ide-links.md)
+keeps these deployment gaps distinct from canonical editor identity (COMPAT-20). Closed
+[PR #676](https://github.com/arc-mcp/arc-1/pull/676) remains historical bridge context.
 
 <a id="compat-20"></a>
 ### COMPAT-20 — Canonical ADT editor identity for AI edits

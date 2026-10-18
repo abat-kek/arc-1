@@ -73,3 +73,5 @@ the incomplete-result warning or treat an empty result as proof of no appends.
 #1018's package filtering and bounded position/snippet retrieval remain separate
 research. Correcting request headers alone would not fix the callers' assumptions.
 Roadmap checked: no existing item changed by this bug fix.
+
+The `isResult !== false` append-candidate filter is based on the observed append rows, not a universal SAP contract. Other genuine consumers can be expandable `isResult=false` nodes; a future append with that shape would require revisiting this filter.

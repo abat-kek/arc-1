@@ -144,11 +144,11 @@ export async function findWhereUsed(
 /** Where-used results plus the symbol SAP actually searched for. */
 export interface WhereUsedLookup {
   results: WhereUsedResult[];
-  /** SAP's `resultDescription`, verbatim; absent when SAP omits it. It names the searched symbol, e.g.
+  /** SAP's `resultDescription`, verbatim; absent when SAP omits it. It can name the symbol or explain an unsupported search, e.g.
    *  "References for: /SCWM/CL_TM - CLEANUP (Method) [SID]" (7.57) or
    *  "[A4H] Where-Used List: /DMO/BOOKING_DATA (Structure)" (8.16). */
   searchedFor?: string;
-  /** Exact empty means SAP searched the URI's original object; absent leaves the scope unknown. */
+  /** Empty can mean the original object or an unsupported search; it alone does not prove a search ran. */
   referencedObjectIdentifier?: string;
 }
 

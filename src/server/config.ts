@@ -1090,6 +1090,11 @@ export function validateConfig(config: ServerConfig): void {
   if (config.ideLinks === 'eclipse' && !config.multiTargetEndpoints && !config.ideSystemId) {
     throw new Error('ARC1_IDE_LINKS=eclipse requires ARC1_IDE_SYSTEM_ID for a single-target connection.');
   }
+  if (config.ideLinks === 'on' && !config.multiTargetEndpoints && !config.ideSystemId) {
+    logger.warn(
+      'ARC1_IDE_LINKS=on without ARC1_IDE_SYSTEM_ID: Eclipse links are unavailable; VS Code links remain available with a request mapping.',
+    );
+  }
   if (config.ideDestination && !isIdeDestination(config.ideDestination)) {
     throw new Error(
       'ARC1_IDE_DESTINATION must be a local ADT alias of 1–128 letters, digits, spaces, _, ., -, or parentheses; start with a letter, digit or _, with no surrounding whitespace.',

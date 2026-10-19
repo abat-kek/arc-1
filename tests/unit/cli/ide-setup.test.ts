@@ -89,6 +89,30 @@ describe('offline IDE configuration helper', () => {
     expect(() => buildIdeConfigFragment({ client: 'vscode' })).toThrow(/destination/);
     expect(() => buildIdeConfigFragment({ client: 'eclipse', systemId: 'A4H', destination: 'DEV' })).toThrow();
   });
+  it.each(['vscode', 'eclipse', 'claude'] as const)('explains how to disable HTTP links for %s', (client) => {
+    expect(() => buildIdeConfigFragment({ client, editor: 'off', endpoint: 'https://arc.example/mcp' })).toThrow(
+      /sends no Arc1-Ide-\* headers; remove them/,
+    );
+    expect(() => buildIdeConfigFragment({ client: 'claude', endpoint: 'https://arc.example/mcp' })).toThrow(
+      /sends no Arc1-Ide-\* headers/,
+    );
+  });
+  it.each([
+    ['--client', '001', 'config', 'ide', '--mcp-client', 'eclipse', '--system-id', 'A4H'],
+    ['config', 'ide', '--client', 'eclipse', '--endpoint', 'https://arc.example/mcp'],
+  ])('rejects SAP --client instead of silently consuming it (%j)', async (...args) => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const forbidden = vi.fn(() => {
+      throw new Error('Must stay offline');
+    });
+    expect(
+      await main(args, { resolveConfiguration: forbidden, createClient: forbidden, flushLogger: async () => {} }),
+    ).toBe(2);
+    expect(error.mock.calls.flat().join(' ')).toContain('--client is the SAP logon client; use --mcp-client');
+    expect(log).not.toHaveBeenCalled();
+    expect(forbidden).not.toHaveBeenCalled();
+  });
   it('runs through the CLI without resolving SAP config or creating a connection', async () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(console, 'error').mockImplementation(() => {});

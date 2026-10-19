@@ -39,6 +39,11 @@ export function buildIdeConfigFragment(options: IdeSetupOptions): Record<string,
       },
     };
   }
+  if (editor === 'off') {
+    throw new Error(
+      'HTTP links are off when the MCP entry sends no Arc1-Ide-* headers; remove them if present. To enable links, pass --editor vscode|eclipse.',
+    );
+  }
   if (options.systemId) throw new Error('For HTTP, the server supplies the SAP SID; do not set --system-id here.');
   let endpoint: URL;
   try {
@@ -103,7 +108,7 @@ export function registerIdeConfigCommand(parent: Command): void {
       ]),
     )
     .option('--endpoint <url>', 'Existing HTTP MCP URL; omit for local stdio')
-    .option('--destination <alias>', 'Exact local SAP ADT for VS Code alias')
+    .option('--destination <alias>', 'Exact local SAP ADT for VS Code destination alias')
     .option('--system-id <sid>', 'Real SAP SID for local Eclipse navigation')
     .option(
       '--map <target=alias>',
@@ -111,14 +116,17 @@ export function registerIdeConfigCommand(parent: Command): void {
       (value: string, previous: string[]) => [...previous, value],
       [],
     )
-    .action((options: Omit<IdeSetupOptions, 'client'> & { mcpClient: IdeSetupOptions['client'] }) => {
+    .action((options: Omit<IdeSetupOptions, 'client'> & { mcpClient: IdeSetupOptions['client'] }, command: Command) => {
+      if (command.optsWithGlobals().client !== undefined) {
+        throw new Error('--client is the SAP logon client; use --mcp-client to select the MCP client format.');
+      }
       const fragment = buildIdeConfigFragment({ ...options, client: options.mcpClient });
       console.error(
         'Merge this fragment into that client’s existing MCP server entry; preserve its connection and authentication settings.',
       );
       if (options.endpoint)
         console.error(
-          'Server prerequisite: ARC1_IDE_LINKS=on (or the requested editor). Eclipse also needs the configured SAP SID; multi-target destinations already supply it. /mcp mappings require traditional single-target mode.',
+          'Server prerequisite: ARC1_IDE_LINKS=on (or the requested editor). Eclipse also needs the configured SAP SID; multi-target destinations already supply it. /mcp requires traditional single-target mode.',
         );
       console.log(JSON.stringify(fragment, null, 2));
     });

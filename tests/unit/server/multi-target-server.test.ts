@@ -12,8 +12,12 @@ import {
 import { logger } from '../../../src/server/logger.js';
 import { buildTargetCatalog, TARGET_CATALOG_DIAGNOSTIC_LIMIT } from '../../../src/server/multi-target-catalog.js';
 import { buildAggregateToolSurfaceConfig, buildMultiTargetConfig } from '../../../src/server/multi-target-runtime.js';
-import { parseSapTargetsArguments } from '../../../src/server/multi-target-server.js';
+import {
+  buildMultiTargetServerInstructions,
+  parseSapTargetsArguments,
+} from '../../../src/server/multi-target-server.js';
 import { createServer, resolveSingleTargetOverlapState } from '../../../src/server/server.js';
+import { NATIVE_NAVIGATION_INSTRUCTIONS } from '../../../src/server/server-instructions.js';
 import { DEFAULT_CONFIG } from '../../../src/server/types.js';
 
 type RequestHandler = (
@@ -105,6 +109,43 @@ function parseError(result: Record<string, any>) {
 }
 
 describe('multi-target MCP servers', () => {
+  it('keeps a sole granted target with a maximally escaped label within the instruction budget', () => {
+    const targets = registry(1);
+    const target = { ...targets.targets[0], target: `${'A'.repeat(32)}/001`, description: '"'.repeat(160) };
+    const instructions = buildMultiTargetServerInstructions({
+      mode: 'aggregate',
+      registry: targets,
+      instanceConfig: { ...DEFAULT_CONFIG, multiTargetAuthorization: 'xsuaa-attribute' },
+      authorization: {
+        grant: { mode: 'all', status: 'valid' },
+        targets: [target],
+        scopes: ['read'],
+        read: true,
+        admin: false,
+      },
+    });
+    expect(instructions).toContain(JSON.stringify(target.description));
+    expect(instructions).toContain(NATIVE_NAVIGATION_INSTRUCTIONS);
+    expect(instructions.length).toBeLessThan(2048);
+  });
+
+  it.each(['PrincipalPropagation', 'BasicAuthentication'] as const)(
+    'keeps native navigation conditional for aggregate and pinned %s connections',
+    (authentication) => {
+      const targets = registry(2, undefined, { authentication });
+      for (const mode of ['aggregate', 'pinned'] as const) {
+        const instructions = buildMultiTargetServerInstructions({
+          mode,
+          registry: targets,
+          instanceConfig: { ...DEFAULT_CONFIG },
+          target: mode === 'pinned' ? targets.targets[0] : undefined,
+        });
+        expect(instructions).toContain(NATIVE_NAVIGATION_INSTRUCTIONS);
+        expect(instructions.length).toBeLessThan(2048);
+      }
+    },
+  );
+
   it('parses the catalog arguments through one strict runtime contract', () => {
     expect(parseSapTargetsArguments({ query: 'A4H', offset: 50 }, true)).toEqual({
       ok: true,

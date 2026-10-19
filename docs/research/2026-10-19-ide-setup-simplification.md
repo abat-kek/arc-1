@@ -15,7 +15,7 @@ implements that formatter and an offline configuration helper. It is not yet in 
   A process-wide `ARC1_IDE_SYSTEM_ID` is rejected for multi-target startup.
 - Local and traditional single-target HTTP use explicit `ARC1_IDE_SYSTEM_ID=A4H`. This is a
   presentation setting paired with the existing SAP connection, not a routing or authorization input.
-  Single-target `eclipse` requires it. HTTP `on` without a SID can serve VS Code but omits Eclipse links.
+  Single-target `eclipse` requires it. HTTP `on` without a SID warns at startup and can serve VS Code but omits Eclipse links.
 - Known CLAS, INTF, PROG and DDLS main-object endpoints are emitted as `adt://<SID>/sap/bc/adt/...`.
   No version query, fragment, arbitrary URI template, credentials, or project-creation data is accepted.
   Eclipse includes are omitted until separately qualified. Existing tool source/JSON stays unchanged;
@@ -50,7 +50,7 @@ connection installer or a remote/local identity verifier. `--mcp-client` avoids 
 | Check | Result / boundary |
 |---|---|
 | Focused unit/routing/config/CLI tests | 399 passed before review; includes real HTTP pinned/aggregate middleware with synthetic SAP/Destination responses |
-| Full local unit suite | 9,432 passed, 339 files including the plugin-field follow-up; no skipped/failed tests |
+| Full local unit suite | 9,444 passed, 339 files including the subsequent native-composition/setup fixes; no skipped/failed tests |
 | Typecheck, build, lint and size/schema budgets | Passed; lint retained two existing informational diagnostics in unrelated code |
 | Packed `npx`, generated off/vscode/eclipse fragments | Live A4H/001 class reads passed; same source SHA-256 in all modes |
 | Packed `npx`, Eclipse class/interface/program/CDS | All four live SAP reads returned the expected native object URI |
@@ -123,3 +123,11 @@ No user settings, installed plugin caches, or keychain records were edited by th
 - Actual installed ARC-1 plugin configuration UI and Desktop link behavior; a newer dropdown can be considered separately with an explicit minimum-client policy.
 - Canonical SAP VS Code URI/edit lifecycle and existing second-identity/PP deployment gaps remain
   separate. Neither SID navigation nor the helper changes those guarantees.
+
+## Subsequent simple-composition pass
+
+The [native MCP acceptance record](2026-10-19-native-mcp-composition.md) covers the new conditional
+initialize hint, HTTP-off/global-`--client` helper fixes, single-target ceiling tests and actual
+Opus 5.5 Max review. Native resolution succeeded but later native editor logon failed. Copilot kept
+the confirmed alias after the wording fix but did not obey the stop-on-failure instruction.
+This remains experimental; the existing direct-link setup is still the qualified path.

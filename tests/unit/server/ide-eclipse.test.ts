@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { textResult } from '../../../src/handlers/shared.js';
 import { validateConfig } from '../../../src/server/config.js';
 import { appendIdeLinks, buildEclipseLink, IDE_LINK_LIMIT } from '../../../src/server/ide-links.js';
 import { resolveHttpIdeContext } from '../../../src/server/ide-request.js';
+import { logger } from '../../../src/server/logger.js';
 import { DEFAULT_CONFIG, type ServerConfig } from '../../../src/server/types.js';
 
 const source = textResult('CLASS cl_abap_typedescr DEFINITION.');
@@ -95,5 +96,27 @@ describe('native Eclipse navigation', () => {
     expect(() => validateConfig({ ...local, ideSystemId: 'A4H-2025' })).toThrow(/three-character SAP SID/);
     expect(() => validateConfig({ ...local, ideLinks: 'on' })).toThrow(/HTTP-only/);
     expect(() => validateConfig({ ...local, multiTargetEndpoints: true })).toThrow(/single-target only/);
+  });
+
+  it('explains missing Eclipse SID at startup without disabling mapped VS Code navigation', () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    try {
+      const config: ServerConfig = {
+        ...local,
+        transport: 'http-streamable',
+        ideLinks: 'on',
+        ideSystemId: '',
+        allowHttpNoAuth: true,
+      };
+      expect(() => validateConfig(config)).not.toThrow();
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('Eclipse links are unavailable; VS Code links remain available'),
+      );
+      warn.mockClear();
+      validateConfig({ ...config, ideSystemId: 'A4H' });
+      expect(warn).not.toHaveBeenCalledWith(expect.stringContaining('Eclipse links are unavailable'));
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

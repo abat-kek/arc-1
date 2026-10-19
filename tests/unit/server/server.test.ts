@@ -48,6 +48,7 @@ import {
   runStartupAuthPreflightWithClient,
   VERSION,
 } from '../../../src/server/server.js';
+import { NATIVE_NAVIGATION_INSTRUCTIONS } from '../../../src/server/server-instructions.js';
 import { DEFAULT_CONFIG } from '../../../src/server/types.js';
 
 type RequestHandler = (
@@ -111,7 +112,7 @@ describe('MCP Server', () => {
     const labeled = (await initializeServer({ ...DEFAULT_CONFIG, systemLabel: 'ERP production (read-only)' }))
       .instructions;
 
-    expect(baseline).toMatch(/^ARC-1 gives this SAP ABAP system/);
+    expect(baseline).toMatch(/^Use ARC-1 for SAP ABAP source/);
     expect(baseline).not.toContain('Connected SAP system:');
     expect(labeled).toBe(`Connected SAP system: ERP production (read-only).\n\n${baseline}`);
   });
@@ -137,6 +138,7 @@ describe('MCP Server', () => {
       expect(instructions).toContain('finish with observed source behavior and unverified intent/compliance');
       expect(instructions).toContain('Do not broaden the policy search');
       expect(instructions).toContain('Unavailable or failed syntax/ATC/test checks are not passes');
+      expect(instructions).toContain(NATIVE_NAVIGATION_INSTRUCTIONS);
     },
   );
 

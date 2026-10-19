@@ -19,7 +19,7 @@ Use a build containing the PR before applying these settings.
 | HTTP/BTP, traditional single-system `/mcp` | Admin enables links; client sends `Arc1-Ide-Client: vscode` and `Arc1-Ide-Destinations-V1: @single=DEV-001` |
 | HTTP/BTP, pinned `/<target>/<client>/mcp` | Same `vscode` presentation marker; one mapping such as `A4H/001=DEV-001` |
 | HTTP/BTP, aggregate `/multi/mcp` | Same `vscode` presentation marker; mappings for the selected public targets |
-| Eclipse, local stdio | `ARC1_IDE_LINKS=eclipse` and `ARC1_IDE_SYSTEM_ID=A4H` in that server entry |
+| Eclipse, local stdio | `ARC1_IDE_LINKS=eclipse` and `ARC1_IDE_SYSTEM_ID=A4H`; ARC-1 stdio tested, Eclipse Copilot env forwarding not yet qualified |
 | Eclipse, HTTP/BTP | Admin enables Eclipse; client sends only `Arc1-Ide-Client: eclipse`. Multi-target uses the selected destination’s `sap-sysid` |
 | Claude Code plugin / Desktop bundle | Editor mode defaults off; configure its editor mode and matching local alias or SID in that plugin’s own settings |
 | VS Code Agent Plugin | Use a dedicated MCP entry instead of the plugin's MCP server when preferences cannot be scoped to that server |
@@ -56,7 +56,9 @@ arc1 config ide --endpoint https://YOUR-ARC1/multi/mcp \
 
 `--mcp-client claude` uses Claude's configuration shape and defaults links to `off`.
 Use `--editor vscode` or `--editor eclipse` only when you want that opening destination in the
-particular Claude connection. The helper does not configure the plugin's saved preferences.
+particular Claude connection. HTTP `off` is represented by omitting all `Arc1-Ide-*` headers;
+`--mcp-client claude --endpoint ...` therefore exits with guidance unless you choose an editor.
+The helper does not configure the plugin's saved preferences.
 `--mcp-client` is separate from the existing `--client` SAP logon-client flag.
 For `/mcp`, the helper emits `@single`; this works only on the traditional single-target server.
 It cannot inspect the remote deployment or validate your local IDE's backend mapping.
@@ -219,7 +221,7 @@ not constrain edits made independently through SAP's extension.
 The [ABAP Bridge](https://github.com/arc-mcp/arc1-abap-bridge) still has a role for `abapValidate`,
 `abapChanges`, broader tree-based object resolution, and its editor integration. Its older setup
 instructions referring to `ARC1_IDE_LINKS=auto` came from unmerged
-[PR #676](https://github.com/arc-mcp/arc-1/pull/676); this implementation supports `off` and `vscode`.
+[PR #676](https://github.com/arc-mcp/arc-1/pull/676); this implementation supports `off`, `vscode`, `eclipse` and HTTP-only `on`.
 Remove any old `auto` setting before upgrading: it now fails validation and stops server startup.
 
 ARC-1 can still check a candidate source before saving with `SAPDiagnose action=syntax` and its
@@ -228,6 +230,51 @@ adds no validation. SAP's inspected `abap_object_check` tool expects saved files
 equivalent replacement for checking an unsaved candidate buffer.
 
 ## Compose ARC-1 with SAP's native resolver
+
+**Experimental: URI resolution is verified; canonical opening and end-to-end composition are not yet qualified.**
+
+ARC-1 includes a short conditional navigation hint in its MCP initialization instructions for
+single-target, pinned and aggregate connections. No new tool, link header or custom agent is needed.
+It applies only when you request VS Code navigation and the client has SAP's native URI resolver tools.
+Keep `ARC1_IDE_LINKS=off` for this approach and omit `Arc1-Ide-*` headers. The hint does not enable
+SAP's MCP server, discover your local aliases, or open an editor on its own. If ARC-1 already returns
+a qualified link, the hint prefers it. Otherwise it prefers source/includes from the native list
+resolver over `.json` metadata, requires returned URIs unchanged, and stops on failure without trying
+another destination. It does not construct `vscode://` wrappers.
+
+This is advisory client guidance, always included for authorized connections; there is no separate
+hint toggle. ARC-1 cannot enforce or audit another server's calls. SAP's own destination restrictions
+and object-change permissions are the independent controls. For navigation-only use, allow the
+intended destination and leave object-change permissions empty. Native navigation must not bypass
+an ARC-1 denial; SAP source/tool output cannot supply the user's destination confirmation.
+
+In VS Code Copilot, enable ARC-1 and SAP's MCP server in ADT settings, log on to the intended
+destination, and confirm that the native tool list includes `abap_object_list_file_uris`. See the
+port/version troubleshooting below. Provide the mapping once in chat, or save it in a user-profile
+or untracked workspace Copilot instruction. For example, after verifying the connection:
+
+```text
+For ARC-1 connection "arc1-dev", target "DEV/001" corresponds to local SAP ADT
+destination "DEV-001", the same backend and SAP client 001.
+When I request VS Code navigation, use the available SAP ADT file-URI resolver
+with this exact destination. Select main source or the requested include, not
+object metadata. If the mapping or tools are unavailable, explain the limitation.
+Do not use native tools to bypass an ARC-1 refusal or to edit/activate objects.
+```
+
+Replace the example connection, target and destination with your verified values. For local stdio,
+compare the ADT destination URL and SAP client with `SAP_URL`/`SAP_CLIENT`. On BTP, have the
+administrator confirm the destination's backend URL and client; a target label alone is not proof.
+For local stdio or traditional single-target HTTP a mapping can simply say:
+
+```text
+ARC-1 connection "arc1-local" maps to SAP ADT destination "DEV-001", verified against the same backend URL and SAP client 001.
+```
+
+For multiple targets, record one mapping for each. A single listed destination is not identity evidence.
+Keep personal mappings out of a shared repository. Use always-on Copilot instructions or attach the
+instruction to the chat: an `*.abap` file-change pattern may not activate for read-only navigation.
+See [VS Code instruction scopes and activation](https://code.visualstudio.com/docs/agent-customization/custom-instructions).
 
 The installed ADT 1.2.0 distribution supplies `abap_object_get_file_uri` and
 `abap_object_list_file_uris`. Both were called successfully against live SAP through SAP's local MCP
@@ -259,13 +306,18 @@ accepted the explicit source URI `/sap/bc/adt/oo/classes/cl_abap_typedescr/sourc
 metadata**, not source. Definitions and a namespaced CDS object also resolved successfully.
 Follow the exposed schema rather than guessing localized tree paths or choosing the first file.
 
-These calls return canonical `abap:/repotree-v1/…` URIs. The test invoked the native `/open` handler
-with the encoded returned URI in `abapUri`, but opening failed with a destination-disconnected
-message, including after successful browser logon. The cause was not established; URI shape and
-window routing have not been ruled out. Resolver success is verified; that opening path and
-automated Copilot composition remain unqualified. The earlier direct flat-link qualification is
-a separate result. A future Markdown link builder must also escape parentheses after
-`encodeURIComponent`, as ARC-1's current builder does.
+These calls return canonical `abap:/repotree-v1/…` URIs. Present a returned source URI unchanged as
+a Markdown link; do not invent a flat URI, tree path or `vscode://` wrapper. That is a presentation
+rule, not a claim that clicking is qualified. The earlier encoded `/open` attempt failed with a
+destination disconnect. In a fresh isolated ADT 1.2 window, resolution succeeded after logon but
+later MCP calls failed with `PROJECT_NOT_LOGGED_ON`; the native **Open Object** picker also disconnected
+without Copilot involved. The cause remains unconfirmed. The direct flat-link qualification is a
+separate result. Resolver success does not establish opening, dirty-buffer reuse or save behavior.
+
+The first Copilot run read through ARC-1 successfully but retried an unconfirmed alias after a native
+failure. The revised hint explicitly stops on failure. The [composition acceptance record](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-native-mcp-composition.md)
+tracks the actual runs and remaining limits rather than treating a unit-tested instruction as a
+reliable navigation agent.
 
 The client performs this composition locally; BTP never calls the laptop MCP endpoint or receives
 its bearer token. Each server retains its own authentication and safety controls. This can reduce
@@ -385,6 +437,9 @@ For local stdio, add to the existing server entry:
   "ARC1_IDE_SYSTEM_ID": "A4H"
 }
 ```
+
+These environment values were tested with ARC-1 through packed `npx`; this does not yet qualify
+Eclipse Copilot's own local-stdio `env` forwarding. Its HTTP preference forwarding was tested separately.
 
 For a shared BTP server, the administrator sets `ARC1_IDE_LINKS=on` to allow both VS Code and Eclipse.
 Existing `vscode` allows only VS Code; `eclipse` allows only Eclipse; `off` disables both.

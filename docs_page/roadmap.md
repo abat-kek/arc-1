@@ -410,6 +410,11 @@ SAP through ADT 1.2's local MCP server (3.62.0, 33 tools). An older 1.1.2 proces
 port explained the previously missing tools. Class object resolution returned metadata; source URI,
 source AFF filename or `mainFile` selection returned canonical source URIs. Browser opening then
 encountered destination disconnects, including after successful browser logon.
+The simple conditional MCP initialize hint is now in draft PR #1025. A fresh native picker also
+disconnected independently of Copilot. The revised Copilot run preserved the confirmed alias and
+reported failure accurately, but still retried after a resolver error. Native composition remains
+experimental; instructions do not enforce cross-server behavior.
+[Current acceptance record](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-native-mcp-composition.md).
 
 **Resume with.** Resolve that connection/opening failure and verify actual canonical source opening.
 Then test canonical editor identity and dirty-buffer reuse on disposable objects with unsaved edits.
@@ -429,7 +434,9 @@ and closed [PR #676](https://github.com/arc-mcp/arc-1/pull/676).
 CLAS/INTF/PROG/DDLS links opened in native Eclipse ADT. Earlier user screenshots qualify direct
 Eclipse Copilot clicking. New Eclipse output still needs a deployed BTP candidate and a fresh
 real Copilot session. Pinned/aggregate routing is covered by real HTTP middleware tests with
-synthetic SAP/Destination responses, not new live BTP acceptance.
+synthetic SAP/Destination responses, not new live BTP acceptance. HTTP `off` generation, the global
+`--client` ambiguity and missing single-target SID guidance are fixed. Eclipse Copilot local-stdio
+`env` forwarding remains unqualified; a fresh deployment is blocked by expired CF authentication.
 
 Exact project selection remains open. A4H_2023 and A4H_2025 share SID A4H/client 001; native selection
 is not fail-closed and ARC-1 cannot force a chooser. Encoded H01.EN selected H01_EN, but its unavailable

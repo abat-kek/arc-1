@@ -465,8 +465,53 @@ describe('request-scoped VS Code links over real pinned/aggregate HTTP routing',
     expect(JSON.stringify(reads)).not.toMatch(/ALICE_LOCAL|BOB_LOCAL|Arc1-Ide/i);
   });
 
+  it.each([
+    ['on', 'A4H', true, true],
+    ['on', '', false, true],
+    ['eclipse', 'A4H', true, false],
+  ] as const)(
+    'selects traditional HTTP editors with ceiling=%s and SID=%s',
+    async (ideLinks, ideSystemId, eclipse, vscode) => {
+      const config: ServerConfig = {
+        ...CONFIG,
+        url: 'https://sap.example.test',
+        client: '001',
+        xsuaaAuth: false,
+        multiTargetEndpoints: false,
+        multiTargetAuthorization: 'standard',
+        ideLinks,
+        ideSystemId,
+        apiKeys: [{ key: 'single-viewer-key-for-test', profile: 'viewer' }],
+      };
+      setCachedFeatures(featuresOff());
+      await startHttpServer(() => {
+        const server = createServer(config);
+        servers.push(server);
+        return server;
+      }, config);
+      await listen();
+      const params = { name: 'SAPRead', arguments: { type: 'CLAS', name: 'CL_ABAP_TYPEDESCR' } };
+      const token = 'single-viewer-key-for-test';
+      const native = result(await rpc(token, 'tools/call', params, '/mcp', { 'Arc1-Ide-Client': 'eclipse' }));
+      expect(native.isError).not.toBe(true);
+      expect(native.content?.[0]).toEqual({ type: 'text', text: SOURCE });
+      expect(native.content).toHaveLength(eclipse ? 2 : 1);
+      if (eclipse) {
+        expect(native.content![1].text).toContain('SAP SID: A4H; client: 001');
+        expect(native.content![1].text).toContain('(adt://A4H/sap/bc/adt/oo/classes/cl_abap_typedescr)');
+        expect(native.content![1].text).not.toContain('target:');
+      }
+      expectDestination(
+        result(await rpc(token, 'tools/call', params, '/mcp', preference('@single=LOCAL'))),
+        vscode ? 'LOCAL' : undefined,
+      );
+      expectDestination(result(await rpc(token, 'tools/call', params, '/mcp')));
+      expect(resolveDestination).not.toHaveBeenCalled();
+    },
+  );
+
   it('handles duplicate raw header lines without ambiguity or a sticky preference', async () => {
-    await start();
+    await start(makeRegistry(), { ...CONFIG, ideLinks: 'on' });
     const token = addUser(['A4H/000']);
     const address = httpServer.address();
     if (!address || typeof address === 'string') throw new Error('Expected TCP test listener');
@@ -474,6 +519,8 @@ describe('request-scoped VS Code links over real pinned/aggregate HTTP routing',
       [['vscode'], ['A4H/000=DEV', 'A4H/000=DEV'], 'DEV'],
       [['vscode'], ['A4H/000=DEV', 'A4H/000=QA'], undefined],
       [['vscode', 'vscode'], ['A4H/000=DEV'], undefined],
+      [['eclipse', 'eclipse'], [], undefined],
+      [['vscode', 'eclipse'], ['A4H/000=DEV'], undefined],
     ] as const) {
       const body = JSON.stringify({
         jsonrpc: '2.0',

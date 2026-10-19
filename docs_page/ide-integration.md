@@ -19,7 +19,7 @@ Use a build containing the PR before applying these settings.
 | HTTP/BTP, traditional single-system `/mcp` | Admin enables links; client sends `Arc1-Ide-Client: vscode` and `Arc1-Ide-Destinations-V1: @single=DEV-001` |
 | HTTP/BTP, pinned `/<target>/<client>/mcp` | Same `vscode` presentation marker; one mapping such as `A4H/001=DEV-001` |
 | HTTP/BTP, aggregate `/multi/mcp` | Same `vscode` presentation marker; mappings for the selected public targets |
-| Eclipse, local stdio | `ARC1_IDE_LINKS=eclipse` and `ARC1_IDE_SYSTEM_ID=A4H`; ARC-1 stdio tested, Eclipse Copilot env forwarding not yet qualified |
+| Eclipse, local stdio | `ARC1_IDE_LINKS=eclipse` and `ARC1_IDE_SYSTEM_ID=A4H` in that server entry; actual Eclipse Copilot forwarding/read/render verified |
 | Eclipse, HTTP/BTP | Admin enables Eclipse; client sends only `Arc1-Ide-Client: eclipse`. Multi-target uses the selected destination’s `sap-sysid` |
 | Claude Code plugin / Desktop bundle | Editor mode defaults off; configure its editor mode and matching local alias or SID in that plugin’s own settings |
 | VS Code Agent Plugin | Use a dedicated MCP entry instead of the plugin's MCP server when preferences cannot be scoped to that server |
@@ -438,8 +438,10 @@ For local stdio, add to the existing server entry:
 }
 ```
 
-These environment values were tested with ARC-1 through packed `npx`; this does not yet qualify
-Eclipse Copilot's own local-stdio `env` forwarding. Its HTTP preference forwarding was tested separately.
+These environment values were tested both through packed `npx` and an actual Eclipse Copilot
+local-stdio entry. The Eclipse process received both values, its live ARC-1 class read succeeded,
+and Copilot rendered the returned link. The temporary entry was restored after testing. This
+qualifies forwarding/read/render; direct clicking is backed by the earlier user-verified test.
 
 For a shared BTP server, the administrator sets `ARC1_IDE_LINKS=on` to allow both VS Code and Eclipse.
 Existing `vscode` allows only VS Code; `eclipse` allows only Eclipse; `off` disables both.

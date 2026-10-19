@@ -46,6 +46,7 @@ No SAP object was changed, activated, or tested with ATC/ABAP Unit.
 | Copilot first run, Local harness / Gemini 3.8 Flash | One ARC-1 read passed; native resolution failed; the model tried unconfirmed alias `A4H`. Cancelled; not a pass |
 | Copilot revised hint, fresh Local chat / same model | One ARC-1 read passed; all three native calls kept `A4H2023-2`; final answer correctly said neither resolved nor opened, with no fabricated link |
 | Revised stop behavior | **Failed**: the model retried same-destination resolver/search calls after failure; the instruction did not enforce a one-call stop |
+| Eclipse Copilot local stdio | Per-server mode/SID arrived unchanged; one live ARC-1 class read passed and Copilot rendered the generated `adt://` link |
 | BTP redeploy | Blocked by expired/revoked Cloud Foundry session; user asked to reauthenticate. No new candidate deployed in this round |
 
 Both Copilot ARC-1 reads returned the same class source SHA-256:
@@ -78,8 +79,13 @@ cancelled before acceptance; only the explicitly selected Local harness runs abo
   remains unresolved and is why the optional composition stays experimental in a draft PR.
 
 The earlier [packed npx and Eclipse verification](2026-10-19-ide-setup-simplification.md) remains valid.
-Eclipse Copilot local-stdio `env` forwarding itself has not been qualified; the docs distinguish that
-from successful ARC-1 stdio execution. New Eclipse BTP output, exact Eclipse project matching,
+A subsequent actual Eclipse 2026-06 / Copilot 0.21.0 stdio run closed the `env` forwarding gap:
+`ARC1_IDE_LINKS=eclipse` and `ARC1_IDE_SYSTEM_ID=A4H` reached the test launcher unchanged, and
+`SAPRead` returned the same class source hash plus its Eclipse link. Copilot rendered it as a clickable
+link. Automated clicking did not produce a fresh opening, so this run qualifies forwarding/read/render
+only; earlier user-verified direct clicking and native dialog opening remain separate evidence. The
+original MCP configuration and editor layout were restored; no existing server credentials changed.
+New Eclipse BTP output, exact Eclipse project matching,
 second-user PP coverage, and native editor save/identity behavior remain open.
 
 ## Sources and interpretation

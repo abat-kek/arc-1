@@ -56,6 +56,7 @@ connection installer or a remote/local identity verifier. `--mcp-client` avoids 
 | Packed `npx`, Eclipse class/interface/program/CDS | All four live SAP reads returned the expected native object URI |
 | Traditional local HTTP `on` | Eclipse, VS Code, explicit off and missing preference all passed; source stayed identical |
 | Native Eclipse dialog | Generated class, interface, program and CDS links opened their matching active source in A4H_2023 |
+| Eclipse Copilot local stdio | Per-server mode/SID forwarding, one live class read and generated-link rendering passed; original preferences restored |
 | Existing BTP app health | Healthy, original version 0.9.27; this follow-up has not deployed the new Eclipse runtime |
 
 Live checks used `https://a4h.marianzeis.de`, client 001, read-only. The generated object links were:

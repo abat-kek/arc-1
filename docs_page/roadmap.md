@@ -435,8 +435,8 @@ CLAS/INTF/PROG/DDLS links opened in native Eclipse ADT. Earlier user screenshots
 Eclipse Copilot clicking. New Eclipse output still needs a deployed BTP candidate and a fresh
 real Copilot session. Pinned/aggregate routing is covered by real HTTP middleware tests with
 synthetic SAP/Destination responses, not new live BTP acceptance. HTTP `off` generation, the global
-`--client` ambiguity and missing single-target SID guidance are fixed. Eclipse Copilot local-stdio
-`env` forwarding remains unqualified; a fresh deployment is blocked by expired CF authentication.
+`--client` ambiguity and missing single-target SID guidance are fixed. Actual Eclipse Copilot local-stdio
+`env` forwarding, live read and link rendering now pass; a fresh deployment is blocked by expired CF authentication.
 
 Exact project selection remains open. A4H_2023 and A4H_2025 share SID A4H/client 001; native selection
 is not fail-closed and ARC-1 cannot force a chooser. Encoded H01.EN selected H01_EN, but its unavailable

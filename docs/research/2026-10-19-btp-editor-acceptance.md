@@ -19,17 +19,18 @@ one-instance/512 MiB sizing were retained. No SAP object, destination, role or C
 configuration was changed. A normal browser authorization-code/PKCE login supplied the harness's
 user token. CF login and this BTP application login are separate sessions.
 
-The deployment command's `--no-route` option temporarily unmapped the existing route; it was
+`cf push --no-route` (CF CLI 8.14.1) temporarily unmapped the existing route; it was
 immediately mapped back to the same app before authentication and acceptance. No new route was
-created. Future updates should omit this option when retaining an existing mapping.
+created. The exact unmapped duration was not measured. Future temporary `cf push` swaps should omit
+this option when retaining an existing mapping.
 
 ## Live MCP matrix
 
 | Check | Result |
 |---|---|
-| Four targets, baseline plus both editor styles on pinned and aggregate routes | 20 source reads passed |
-| Missing preference, user-agent only, unknown/conflicting editor, wrong target map and conflicting map, each route | 12 source reads passed with no links |
-| Concurrent Eclipse / VS Code / no-preference requests, then a preference-free follow-up | 4 passed, no preference leakage |
+| Four aggregate baselines plus four targets × both editors × both routes | 20 source reads passed |
+| A4H/001: missing preference, user-agent only, unknown/conflicting editor, wrong target map and conflicting map, each route | 12 source reads passed with no links |
+| A4H/001: concurrent Eclipse / VS Code / no-preference requests, then a preference-free follow-up | 4 passed, no preference leakage |
 | Eclipse interface, program and CDS source | 3 passed with native main-object links |
 | Both routes × Eclipse / VS Code / no preference after CF restart, same token | 6 passed |
 | Same six checks after a real `refresh_token` exchange | 6 passed |
@@ -38,8 +39,9 @@ created. Future updates should omit this option when retaining an existing mappi
 
 The 36-case primary matrix covered `A4H/001`, `A4H-2025/001`, `NPL/001` and shared-Basic
 `A4H-BASIC/001`. Eclipse used `NPL` for NPL and `A4H` for the A4H targets, including the public alias
-`A4H-2025/001`. Each original source block matched its preference-free baseline. The A4H client-001
-class hash remained `631ff0819d097f18752a7cab744dc95b61fc6ce76282857012d5ec4b4eff58f0`.
+`A4H-2025/001`. Each original source block matched its preference-free baseline. The class hash for
+targets `A4H/001` and `A4H-BASIC/001` remained
+`631ff0819d097f18752a7cab744dc95b61fc6ce76282857012d5ec4b4eff58f0`.
 The native-resolver instruction was present and within 2,048 characters on every matrix connection.
 
 VS Code mappings in the SDK matrix are serialization fixtures, not qualification that one local
@@ -73,20 +75,23 @@ VS Code used its editor header and exact `A4H/001=A4H2023-2` mapping.
 | VS Code | Aggregate `CL_ABAP_TYPEDESCR`, after CF restart | One successful SAPRead and exact direct link rendered |
 
 CF audits independently record all six successful calls, with `GithubCopilot/1.527.0` or
-`Visual Studio Code/1.142.0`. These are actual clients; the separate matrix case with a deliberately
-supplied user-agent is not counted as Copilot evidence. Request anchors before restart: Eclipse
+`Visual Studio Code/1.142.0`. These are actual clients; the matrix's deliberately supplied user-agent
+cases are excluded. The extra captured audit entry `REQ-154` at 09:52:20 UTC, with user-agent
+`GithubCopilot/1.527.0 Eclipse`, belongs to that harness, not Copilot. Request anchors before restart: Eclipse
 `REQ-196` at 09:52:52 UTC and `REQ-211` at 09:53:31 UTC; VS Code `REQ-241` at 09:56:41 UTC and
 `REQ-243` at 09:57:25 UTC. After restart: VS Code `REQ-66` at 10:00:04 UTC and Eclipse `REQ-68`
 at 10:00:19 UTC. IDs are process-local and require their timestamps.
 
-Clicking the pinned VS Code answer first reached a file-not-found preview while its local destination
+An automated click on the pinned VS Code answer first reached a file-not-found preview while its local destination
 was disconnected. **Log On to Destination…**, normal browser SAP sign-in, closing the failed preview,
 and clicking the same link again opened `cl_abap_classdescr.clas.abap`; the expected class definition
-and Runtime Type Services source were visible. No file was created, edited, saved or activated.
+and Runtime Type Services source were visible in the screenshot. Only that pinned answer linked
+CL_ABAP_CLASSDESCR, and it contained one link kind. No file was created, edited, saved or activated.
 This is fresh flat-URI opening evidence, not canonical URI, dirty-buffer reuse or edit parity.
 
 The new Eclipse answer rendered its exact `adt://` link, but an automated click did not open a fresh
-editor. Its existing ADT handler preference was not changed in this round. The earlier user screenshots
+editor. Its existing ADT handler preference remained disabled in this round, so the click cannot
+isolate a Copilot limitation from OS handler state. The earlier user screenshots
 show the project chooser and opened source, but the accompanying reply concerned the HTTP handoff;
 they do not uniquely identify a direct-link click. The earlier research record and setup guide now
 state that evidence boundary explicitly. Native-dialog/browser opening remains verified separately.
@@ -102,8 +107,11 @@ state that evidence boundary explicitly. Native-dialog/browser opening remains v
 
 Counts were read from downloaded JSON artifacts. The CI merge ref includes newer main-branch tests;
 the local runtime suite had 9,444 passes. Skips are not live evidence. The actual Opus 5.5 Max review
-and addressed findings are recorded in the composition dossier; no runtime code changed in this
-acceptance follow-up, so it does not claim a new review run.
+and addressed runtime findings are recorded in the composition dossier; no runtime code changed in
+this acceptance follow-up. A further actual Claude Code 2.1.299 / Opus 5.5 / Max review read these
+docs and the sanitized evidence only. It confirmed counts, audit anchors and restoration claims,
+and found three stale direct-click/remaining-test passages; all were corrected. Its clarification
+suggestions were incorporated. It did not run live tests or inspect screenshots.
 
 ## Cleanup and remaining scope
 

@@ -179,14 +179,14 @@ listing A4H_2023 and A4H_2025 (both A4H/client 001), followed by CL_ABAP_CLASSDE
 The preceding user reply addressed “Local Eclipse handoff” and said a browser opens. The screenshots
 therefore establish project selection and source opening, but not which link initiated the sequence.
 The earlier version of this record overstated direct Copilot dispatch. At this point the core ARC-1
-Eclipse formatter was not implemented. The
-dialog is expected ambiguous-project selection, not an error or an additional authentication step.
-A subsequent probe returned both direct ADT and ordinary HTTP control links. Neither navigated
-under automated normal/modifier clicks. The user subsequently answered the manual HTTP control
-question with “A browser opens”. This qualifies Copilot-to-browser dispatch by user report and
+Eclipse formatter was not implemented. The dialog is expected ambiguous-project selection, not an
+error or an additional authentication step. Neither link navigated under automated normal/modifier
+clicks. The user's “A browser opens” reply qualifies Copilot-to-browser dispatch by user report and
 shows the automated negative result was insufficient evidence of a Copilot limitation. It does
 not establish that the temporary page loaded, the browser dispatched ADT, or source opened in
-that same attempt. The loopback server had been stopped during cleanup before the reply arrived.
+that same attempt. The loopback server had been stopped during cleanup before the reply arrived;
+the screenshots' timing relative to shutdown is unknown, so the initiating link cannot be inferred
+by eliminating the HTTP path.
 
 The installed plugin and the matching chat-link classes in newer upstream source route Markdown URL annotations through
 `FileAnnotationHyperlinkDetector.FileHyperlink`, JFace `URLHyperlink.open`, and SWT `Program.launch`.
@@ -253,9 +253,9 @@ Acceptance conditions for that implementation:
 - Test native dialog, browser and Copilot clicks separately on each supported OS. Test multiple
   installed Eclipse distributions and which application owns the protocol registration.
 
-No `eclipse` configuration mode is shipped by this PR. The direct-link click blocker is closed for
-the tested client. The formatter, real-SID provenance, per-client opt-in, mapping policy and
-end-to-end core integration still need their own implementation/tests before supported setup instructions.
+At this historical research point, no `eclipse` configuration mode had been implemented. Direct
+Copilot clicking remains unqualified. The formatter, real-SID provenance and per-client opt-in were
+subsequently implemented and tested; see the [BTP acceptance follow-up](2026-10-19-btp-editor-acceptance.md).
 
 ## VS Code simplification
 

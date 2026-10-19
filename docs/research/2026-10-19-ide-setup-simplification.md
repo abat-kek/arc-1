@@ -119,8 +119,8 @@ No user settings, installed plugin caches, or keychain records were edited by th
 
 ## Remaining qualification
 
-- New Eclipse output through a deployed BTP candidate and a fresh real Copilot session; existing
-  VS Code BTP evidence is in the [separate acceptance record](2026-10-18-btp-native-ide-links.md).
+- Direct Eclipse Copilot clicking remains unqualified. Deployed BTP OAuth, pinned/aggregate reads,
+  rendering and restart recovery now pass in the [fresh acceptance record](2026-10-19-btp-editor-acceptance.md).
 - Exact Eclipse project mapping, missing projects, encoded-name collisions, cloud projects, other OSes.
 - Actual installed ARC-1 plugin configuration UI and Desktop link behavior; a newer dropdown can be considered separately with an explicit minimum-client policy.
 - Canonical SAP VS Code URI/edit lifecycle and existing second-identity/PP deployment gaps remain

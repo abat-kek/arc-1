@@ -375,7 +375,7 @@ fixtures avoid the pre-delete, but do not fix this runtime gap; do not add a ski
 
 **Remaining gap.** [PR #1025](https://github.com/arc-mcp/arc-1/pull/1025) has live public-router,
 XSUAA OAuth, pinned/aggregate PP and shared-Basic reads, request-local workspace mapping,
-restart/token-refresh and Copilot-to-native-ADT evidence. A4H/100 now has successful discovery and
+restart/token-refresh and VS Code Copilot-to-native-ADT evidence. A4H/100 now has successful discovery and
 pinned/aggregate source samples, but also repeatable 120-second source-read timeouts, including with
 explicit active selection after restart. Two distinct SAP identities, a known-but-ungranted target
 under `xsuaa-attribute`, and PP-only multi-instance routing remain unqualified live. Automated coverage
@@ -445,7 +445,8 @@ Exact project selection remains open. A4H_2023 and A4H_2025 share SID A4H/client
 is not fail-closed and ARC-1 cannot force a chooser. Encoded H01.EN selected H01_EN, but its unavailable
 backend prevented source opening. Some project names fail Java URI host validation.
 
-**Resume with.** Qualify exact native project/destination matching, authority validation, collisions,
+**Resume with.** With the `adt` handler enabled, manually click a fresh Copilot answer containing only
+the generated `adt://` link to distinguish it from HTTP handoff. Qualify exact native project/destination matching, authority validation, collisions,
 missing-project fallbacks, cloud projects and other OSes before adding richer links or a companion.
 Retain explicit per-client opt-in and clear target/SID/client labels. Claude plugin preference substitution passed a real isolated plugin probe for defaults and a settings-file override; production plugin/MCPB fields now default off. Qualify the installed ARC-1 UI and Desktop opening separately. A dropdown remains deferred until a minimum-client policy accepts its v2.1.271+ requirement. A dedicated per-server entry remains available. No automatic SID/client-name inference or global local-alias sharing.
 

@@ -169,6 +169,8 @@ included in this PR.
 Ask Copilot to research an object using ARC-1 and include the returned **Open current source** link
 in its answer. Click the link and accept VS Code's normal prompt to open it with SAP ADT. A current
 SAP logon is required. If the destination is disconnected, reconnect it and click the link again.
+If it opened a file-not-found preview, use **Log On to Destination…**, complete the SAP browser login,
+close the failed preview, then click the same link again. That sequence opened source in the live BTP test.
 
 The tested path is Copilot Chat → `vscode://sapse.adt-vscode/open?abapUri=…` → SAP's source editor.
 Custom-protocol rendering depends on the client; an answer that displays a URI as plain text is
@@ -497,10 +499,11 @@ Both the dialog path and Chrome → Eclipse path opened live source in ADT 3.60.
 Check the opened project's backend and client even if no chooser appears: one locally matching SID
 does not establish that it is the system ARC-1 researched, and ARC-1 cannot force Eclipse to ask.
 
-Direct clicking from Eclipse Copilot is now verified by the user's screenshots: the link opened
-the native project chooser, then CL_ABAP_CLASSDESCR source. The chooser is expected when more than
-one local project matches `A4H`; it is not a link error or authentication prompt. This was a diagnostic
-probe link. The follow-up implemented ARC-1 Eclipse output and verified generated links for classes, interfaces, programs and CDS definitions through the native dialog.
+Direct clicking from Eclipse Copilot remains unqualified. The user's screenshots show the native
+project chooser and CL_ABAP_CLASSDESCR source, but do not identify whether the direct link or adjacent
+HTTP handoff initiated the sequence. The chooser is expected when multiple local projects match
+`A4H`; it is not a link error or authentication prompt. Generated links for classes, interfaces,
+programs and CDS definitions were verified separately through **Open ADT Link**.
 
 Exact automatic backend selection remains a separate limitation. Eclipse's
 generated Share Link contained SID `A4H`, while two local projects represented different A4H
@@ -512,10 +515,11 @@ prevented source opening. Java URI validation rejects underscores and the tested
 label in `A4H.2023`. A validated, unique local project mapping may avoid a companion extension;
 arbitrary project names and ambiguous encodings are not qualified.
 
-Earlier automated clicks failed even for the ordinary HTTP control, which the user then opened
-successfully. Those failures do not establish a Copilot defect. Direct ADT links work on the tested
-installation and do not require an HTTP helper. A browser page and HTTP redirect also opened source
-in separate tests, but their complete sequence starting in Copilot remains unqualified.
+Earlier automated clicks failed even for the ordinary HTTP control; the user reported that a browser
+opens. That reply does not establish page loading or ADT handoff, and the automated failures do not
+establish a Copilot defect. Native ADT URIs opened source through **Open ADT Link** and the registered
+Chrome handler. A browser page and HTTP redirect also opened source in separate tests, but their
+complete sequence starting in Copilot remains unqualified.
 
 The Eclipse mode labels the researched public target, configured SID and client, and asks you to check
 the local project matches. It does not promise or force a chooser, nor validate the local project's

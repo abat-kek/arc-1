@@ -240,8 +240,8 @@ single-target, pinned and aggregate connections. No new tool, link header or cus
 It applies only when you request VS Code navigation and the client has SAP's native URI resolver tools.
 Keep `ARC1_IDE_LINKS=off` for this approach and omit `Arc1-Ide-*` headers. The hint does not enable
 SAP's MCP server, discover your local aliases, or open an editor on its own. If ARC-1 already returns
-a qualified link, the hint prefers it. Otherwise it prefers source/includes from the native list
-resolver over `.json` metadata, requires returned URIs unchanged, and stops on failure without trying
+a qualified link, the hint prefers it. Otherwise it asks the native resolver for source/includes
+rather than `.json` metadata, requires returned URIs unchanged, and stops on failure without trying
 another destination. It does not construct `vscode://` wrappers.
 
 This is advisory client guidance, always included for authorized connections; there is no separate
@@ -293,7 +293,20 @@ an older ADT 1.1.2 process occupied the shared port 2237 on the test machine and
 tools despite 1.2 being installed. A temporary separate workspace port exposed the new resolver.
 Restart stale editor windows or assign a distinct local port when testing multiple versions.
 
-For example, pass an ARC-1 ADT URI to `abap_object_list_file_uris`:
+For a whole object, pass ARC-1's name/type directly to `abap_object_get_file_uri`:
+
+```json
+{
+  "destination": "DEV-001",
+  "objectIdentifiers": [{"objectName": "CL_ABAP_TYPEDESCR", "objectType": "CLAS"}]
+}
+```
+
+This returned canonical source for classes, interfaces, programs and CDS definitions, including a
+namespaced CDS definition, in the [fresh identifier tests](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-native-mcp-identifiers.md).
+The schema's `oneOf` means one identifier form per object: URI, name/type, or AFF filename. It is
+not a field to send. For includes or file selection, use `abap_object_list_file_uris`, for example
+with an existing ARC-1 ADT URI:
 
 ```json
 {
@@ -307,6 +320,12 @@ accepted the explicit source URI `/sap/bc/adt/oo/classes/cl_abap_typedescr/sourc
 `cl_abap_typedescr.clas.abap`. Passing only the class object URI to that tool returned **`.clas.json`
 metadata**, not source. Definitions and a namespaced CDS object also resolved successfully.
 Follow the exposed schema rather than guessing localized tree paths or choosing the first file.
+
+The tested resolver also accepted a wrong `objectType`: `CL_ABAP_TYPEDESCR` with `INTF` returned
+class source, and `SAPMSSY0` with `CLAS` returned program source. Supply the known type, but check
+the returned object identity and stop on a mismatch; resolution success does not validate the type.
+Same-name collisions remain unqualified. For a native read alone, `abap_object_read_file` accepts
+name/type directly and does not need a preceding URI-resolution call.
 
 These calls return canonical `abap:/repotree-v1/…` URIs. Present a returned source URI unchanged as
 a Markdown link; do not invent a flat URI, tree path or `vscode://` wrapper. That is a presentation

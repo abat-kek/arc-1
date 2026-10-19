@@ -419,6 +419,11 @@ reported failure accurately, but still retried after a resolver error. Native co
 experimental; instructions do not enforce cross-server behavior.
 [Current acceptance record](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-native-mcp-composition.md).
 
+Fresh [name/type tests](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-native-mcp-identifiers.md)
+resolve CLAS, INTF, PROG and namespaced DDLS directly to source without a file-list call. The resolver
+also accepted mismatched/unknown supplied types; exact type matching and same-name collisions need
+qualification. This does not establish fresh Copilot opening or resolve the earlier disconnect cause.
+
 **Resume with.** Resolve that connection/opening failure and verify actual canonical source opening.
 Then test canonical editor identity and dirty-buffer reuse on disposable objects with unsaved edits.
 Qualify each edit/save operation separately before replacing

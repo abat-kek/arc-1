@@ -104,3 +104,12 @@ The instruction-only approach removes extra ARC-1 headers when SAP's resolver is
 but still needs a verified mapping, a healthy native session, and reliable client behavior. It is
 not yet an out-of-the-box replacement for direct links. Do not add a proxy, bridge replacement, or
 new global configuration based only on successful URI resolution.
+
+## Name/type follow-up
+
+The [fresh identifier investigation](2026-10-19-native-mcp-identifiers.md) confirms direct name/type
+resolution to main source for CLAS, INTF, PROG and DDLS, including a namespaced object. Use the list
+tool for includes rather than requiring it for every whole-object resolution. It also found that
+supplied wrong types can resolve a different type, so a successful call does not establish type
+identity. Native reads accept name/type directly. These SDK checks do not replace the outstanding
+Copilot/canonical-opening acceptance, and no runtime instruction changed in this follow-up.

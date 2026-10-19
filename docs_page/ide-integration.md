@@ -329,8 +329,9 @@ The implementation and read-only live verification record are in the
 
 ## BTP and other HTTP deployments
 
-The administrator enables `ARC1_IDE_LINKS: "vscode"` in the deployment's `.mtaext` properties
-(or the HTTP server environment). Leave `ARC1_IDE_DESTINATION` unset: startup rejects a global
+The administrator sets `ARC1_IDE_LINKS: "on"` in the deployment's `.mtaext` properties
+(or the HTTP server environment) to allow both editors. Use `"vscode"` or `"eclipse"` to allow only
+that editor. Leave `ARC1_IDE_DESTINATION` unset: startup rejects a global
 HTTP alias, even when links are disabled. Existing authentication and SAP permissions still apply.
 
 Add these **non-secret** headers only to the remote server entry in desktop VS Code's user-profile
@@ -441,7 +442,9 @@ For local stdio, add to the existing server entry:
 These environment values were tested both through packed `npx` and an actual Eclipse Copilot
 local-stdio entry. The Eclipse process received both values, its live ARC-1 class read succeeded,
 and Copilot rendered the returned link. The temporary entry was restored after testing. This
-qualifies forwarding/read/render; direct clicking is backed by the earlier user-verified test.
+qualifies forwarding/read/render. Native dialog/browser opening is verified separately; the earlier
+user screenshots do not distinguish direct Copilot clicking from HTTP handoff, and automated clicks
+have not established direct dispatch.
 
 For a shared BTP server, the administrator sets `ARC1_IDE_LINKS=on` to allow both VS Code and Eclipse.
 Existing `vscode` allows only VS Code; `eclipse` allows only Eclipse; `off` disables both.
@@ -460,6 +463,24 @@ supplies the SID, even when its public route uses an alias such as `A4H-2025/001
 global `ARC1_IDE_SYSTEM_ID` in multi-target mode. For traditional single-target HTTP, the administrator
 sets `ARC1_IDE_SYSTEM_ID=A4H` alongside the editor switch. The setting is presentation-only and does
 not select the SAP backend. Keep it paired with that server's connection settings.
+
+Actual Eclipse Copilot 0.21.0 completed its normal browser OAuth flow directly against both BTP
+endpoints and rendered their returned links. No bearer token or local relay was needed in the
+configuration. For example, a complete pinned entry is:
+
+```json
+"arc-1-btp": {
+  "type": "http",
+  "url": "https://YOUR-ARC1-HOST/A4H/001/mcp",
+  "requestInit": {
+    "headers": { "Arc1-Ide-Client": "eclipse" }
+  }
+}
+```
+
+Use `/multi/mcp` for aggregate access; tool calls then need the selected `target`. Keep separate,
+stable server names if using both routes. The [BTP acceptance record](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-btp-editor-acceptance.md)
+distinguishes successful connection/read/render from the remaining direct-click qualification.
 
 Main objects of types CLAS, INTF, PROG and DDLS are supported. Eclipse class includes, version queries
 and line fragments are deliberately omitted pending qualification. A generated class link is:

@@ -47,7 +47,7 @@ No SAP object was changed, activated, or tested with ATC/ABAP Unit.
 | Copilot revised hint, fresh Local chat / same model | One ARC-1 read passed; all three native calls kept `A4H2023-2`; final answer correctly said neither resolved nor opened, with no fabricated link |
 | Revised stop behavior | **Failed**: the model retried same-destination resolver/search calls after failure; the instruction did not enforce a one-call stop |
 | Eclipse Copilot local stdio | Per-server mode/SID arrived unchanged; one live ARC-1 class read passed and Copilot rendered the generated `adt://` link |
-| BTP redeploy | Blocked by expired/revoked Cloud Foundry session; user asked to reauthenticate. No new candidate deployed in this round |
+| BTP redeploy | Initially blocked by expired CF authentication; the [later BTP acceptance](2026-10-19-btp-editor-acceptance.md) deployed and tested this runtime after reauthentication |
 
 Both Copilot ARC-1 reads returned the same class source SHA-256:
 `631ff0819d097f18752a7cab744dc95b61fc6ce76282857012d5ec4b4eff58f0`.
@@ -83,9 +83,10 @@ A subsequent actual Eclipse 2026-06 / Copilot 0.21.0 stdio run closed the `env` 
 `ARC1_IDE_LINKS=eclipse` and `ARC1_IDE_SYSTEM_ID=A4H` reached the test launcher unchanged, and
 `SAPRead` returned the same class source hash plus its Eclipse link. Copilot rendered it as a clickable
 link. Automated clicking did not produce a fresh opening, so this run qualifies forwarding/read/render
-only; earlier user-verified direct clicking and native dialog opening remain separate evidence. The
+only; earlier user screenshots confirm project selection/source opening without identifying whether
+the direct or HTTP handoff link initiated it. Native dialog opening remains separate evidence. The
 original MCP configuration and editor layout were restored; no existing server credentials changed.
-New Eclipse BTP output, exact Eclipse project matching,
+Eclipse BTP output is covered by the subsequent acceptance. Exact Eclipse project matching,
 second-user PP coverage, and native editor save/identity behavior remain open.
 
 ## Sources and interpretation

@@ -70,8 +70,9 @@ adt://A4H/sap/bc/adt/ddic/ddl/sources/i_currency
 
 Every native opening presented the duplicate-SID chooser; selecting A4H_2023 opened the expected
 object. No project was renamed or created, source changed, or handler preference changed. Test-only
-editor tabs were closed afterwards. Earlier user screenshots independently qualify direct Eclipse
-Copilot dispatch; these new native-dialog checks do not constitute a new end-to-end Copilot session.
+editor tabs were closed afterwards. Earlier user screenshots confirm project selection and source
+opening, but do not distinguish the direct link from the adjacent HTTP handoff. These native-dialog
+checks do not constitute an end-to-end Copilot click test.
 Namespaced URI encoding is covered by unit tests, not a new namespaced native opening.
 
 The unchanged class source hash across local stdio and HTTP styles was

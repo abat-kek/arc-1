@@ -380,6 +380,9 @@ pinned/aggregate source samples, but also repeatable 120-second source-read time
 explicit active selection after restart. Two distinct SAP identities, a known-but-ungranted target
 under `xsuaa-attribute`, and PP-only multi-instance routing remain unqualified live. Automated coverage
 exists for both authorization modes and distinct clients/users; it does not replace these live checks.
+The [19 October follow-up](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-btp-editor-acceptance.md)
+adds both editor styles on four live targets, six actual Copilot reads across Eclipse/VS Code,
+and restart/refresh recovery. Client 100 still timed out; CF authentication is no longer a blocker.
 
 **Resume with.** Trace the A4H/100 SAP/Connectivity source-read timeout using the request IDs and UTC
 windows in the acceptance record; successful PP setup and discovery narrow the problem but do not
@@ -431,12 +434,12 @@ and closed [PR #676](https://github.com/arc-mcp/arc-1/pull/676).
 
 **Remaining gap.** PR #1025 now implements explicit Eclipse SID navigation and an offline
 `arc1 config ide` fragment generator. Local packed npx and single-HTTP reads passed, and generated
-CLAS/INTF/PROG/DDLS links opened in native Eclipse ADT. Earlier user screenshots qualify direct
-Eclipse Copilot clicking. New Eclipse output still needs a deployed BTP candidate and a fresh
-real Copilot session. Pinned/aggregate routing is covered by real HTTP middleware tests with
-synthetic SAP/Destination responses, not new live BTP acceptance. HTTP `off` generation, the global
+CLAS/INTF/PROG/DDLS links opened in native Eclipse ADT. Fresh BTP acceptance now covers direct Eclipse
+OAuth, pinned/aggregate reads and link rendering, including after CF restart. Automated direct clicks
+remain inconclusive. Earlier user screenshots show project selection and source opening but do not
+distinguish the direct link from the HTTP handoff. HTTP `off` generation, the global
 `--client` ambiguity and missing single-target SID guidance are fixed. Actual Eclipse Copilot local-stdio
-`env` forwarding, live read and link rendering now pass; a fresh deployment is blocked by expired CF authentication.
+`env` forwarding, live read and link rendering now pass. The CF authentication blocker was resolved.
 
 Exact project selection remains open. A4H_2023 and A4H_2025 share SID A4H/client 001; native selection
 is not fail-closed and ARC-1 cannot force a chooser. Encoded H01.EN selected H01_EN, but its unavailable
@@ -447,7 +450,8 @@ missing-project fallbacks, cloud projects and other OSes before adding richer li
 Retain explicit per-client opt-in and clear target/SID/client labels. Claude plugin preference substitution passed a real isolated plugin probe for defaults and a settings-file override; production plugin/MCPB fields now default off. Qualify the installed ARC-1 UI and Desktop opening separately. A dropdown remains deferred until a minimum-client policy accepts its v2.1.271+ requirement. A dedicated per-server entry remains available. No automatic SID/client-name inference or global local-alias sharing.
 
 Evidence: [original editor research](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-editor-links-and-setup.md)
-and [implementation/setup follow-up](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-ide-setup-simplification.md).
+and [implementation/setup follow-up](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-ide-setup-simplification.md),
+plus [live BTP/Copilot acceptance](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-btp-editor-acceptance.md).
 
 <a id="sec-14"></a>
 ### SEC-14 — DNS rebinding and Host-header hardening

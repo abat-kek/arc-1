@@ -428,6 +428,9 @@ now verifies actual Copilot pinned/aggregate reads, native name/type resolution,
 and canonical editor opening for an interface and namespaced CDS source. The disconnect cause remains
 unconfirmed; local sign-in/reload recovered the test. A bare `abap:` Markdown target was rendered as
 text, so the hint now uses SAP's verified `/open?abapUri=` handler.
+The final simplified runtime `7b00407a` repeated both openings with actual Copilot and passed the
+missing-object/no-fallback check; removal of the flat-link builder is now covered live. This short
+run does not establish persistent-session recovery or other models' stop behavior.
 
 **Resume with.** Diagnose the local ADT session logoff and test reliable recovery. Canonical opening
 now has the narrow live evidence above; test editor identity and dirty-buffer reuse on disposable

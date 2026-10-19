@@ -161,11 +161,50 @@ and old VS Code headers. Only Eclipse received links; all source blocks stayed u
 aggregate, PP/shared-Basic, authentication/target denials, caching and repeated-header tests remain.
 The tool-definition snapshots did not change. Removed tests covered the deleted alias parser/formatter.
 
-This simplification was not redeployed for another live editor run. The successful native-only
+At this checkpoint, the simplification had not been redeployed for another live editor run. The successful native-only
 BTP/Copilot opening above used `0447d506`, with ARC-1 direct links already off. The test deployment
-remains restored to its original droplet; the local checks do not replace that distinction.
+was restored to its original droplet. The following acceptance rerun closes that specific gap.
 
 A fresh read-only Claude Code Opus 5.5 review at max effort found no P1/P2 regressions in the
 native-only simplification. Its minor corrections were applied: remove stale fallback wording,
 retain malformed/oversized Eclipse name tests, and re-enable presentation in the final cached-read
 case. Static review is not new live acceptance.
+
+## Final simplified-runtime acceptance: `7b00407a`
+
+On 19 October, 21:23–21:29 UTC, the existing BTP test app temporarily ran the exact runtime from
+`7b00407a10c06c79eba93c127ca935f39235ef36`. The package contained the freshly built `dist`, `bin`
+and locked package manifests. Candidate droplet: `c9c57ec0-d39f-44bb-b60c-10ce50a61780`.
+Environment, route destinations and service bindings were unchanged; `ARC1_IDE_LINKS` stayed off.
+
+Actual Copilot **Local / Gemini 3.8 Flash**, VS Code **1.142.0**, SAP ADT **1.2.0** and its
+**33-tool** MCP provider repeated the complete flow. Cached BTP OAuth worked for both routes.
+After resetting cached MCP tools and reloading the window, the local ADT destination was signed
+in through the browser. The serialized source for every BTP call contains the simplified
+“VS Code on request: if available, use SAP ADT MCP” hint. Prompts supplied no URI format or path.
+
+| Case | Observed calls and result |
+|---|---|
+| Aggregate `A4H/001`, INTF `IF_SERIALIZABLE_OBJECT` | `SAPTargets` → `SAPRead` active → native `abap_object_get_file_uri`, confirmed alias plus name/type. Clicked Copilot link opened `if_serializable_object.intf.abap`; interface declaration visible. **Pass** |
+| Pinned `A4H/001`, DDLS `/DMO/I_FLIGHT` | `SAPRead` active → native `abap_object_get_file_uri`, confirmed alias plus name/type. Clicked Copilot link opened `(dmo)i_flight.ddls.acds`; the expected CDS entity declaration was visible. **Pass** |
+| Missing CLAS `ZARC1_NONEXISTENT_1025_TEST` | Exactly one pinned `SAPRead` → 404. No native call, alternate server or link. **Pass for this explicit negative case** |
+
+Evaluation of the serialized calls and final Markdown found **2/2 exact URI matches** after one
+outer-query decode, including spaces and namespace escaping. The three requests made **3, 2 and 1
+tool calls**, respectively. No Bridge, native edits or activation calls occurred. Both positive
+cases opened source without another logon prompt after the initial local sign-in. This short run
+does not qualify long-lived sessions, other harnesses/models, or stopping after native resolver errors.
+
+[CI for the tested runtime](https://github.com/arc-mcp/arc-1/actions/runs/39317167241) passed every
+check: Node 22/24, policy/build/budgets, MTA, SAP integration, E2E and reliability. Documentation,
+CodeQL, dependency review and Socket checks were also green. No CI repair was necessary.
+The later evidence-only commit changes no runtime or test code; its CI status is recorded in the PR.
+The existing Claude Code Opus 5.5/max review still applies to the unchanged implementation.
+
+The original **0.9.27** droplet was restored and healthy at 21:28:45 UTC. Verification matched the
+original environment, process settings, route destinations and binding IDs. The workspace file
+was restored byte for byte, its native MCP provider disabled again, and all **81 previously selected
+tool IDs** matched the pre-test selection. The isolated window and its two completed login tabs
+were closed. Private CF snapshots/logs were deleted after restoration. The other VS Code window
+was preserved. Sanitized local evidence is in `/tmp/arc1-pr1025-final-live`; no credentials or SAP
+source bodies were committed.

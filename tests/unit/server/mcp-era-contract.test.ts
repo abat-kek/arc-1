@@ -21,6 +21,7 @@
  *    must satisfy; a silent relaxation/tightening would change client behavior).
  *  - T7: stateless GET → SSE stream, DELETE → 200 (VS Code SSE-fallback probe / Copilot Studio
  *    session teardown).
+ *  - T8: initialize client identity is present on that Server, not subsequent request-local Servers.
  *
  * Wiring mirrors production: express.json() then createMcpHandler with a fresh Server per
  * request (src/server/http.ts). bearerAuth is intentionally out of scope — auth is orthogonal
@@ -118,14 +119,16 @@ describe('MCP era contract (ADR-0006) — legacy-server discriminator', () => {
     expect(res.status).toBe(202);
   });
 
-  it('keeps initialize clientInfo separate from subsequent stateless tool requests', async () => {
+  it('T8: keeps initialize clientInfo separate from subsequent stateless tool requests', async () => {
     const app = express();
     app.use(express.json());
     const observed: unknown[] = [];
+    const created: Server[] = [];
     app.all(
       '/mcp',
       createMcpHandler(() => {
         const server = serverFactory();
+        created.push(server);
         server.setRequestHandler(CallToolRequestSchema, async (_request, extra) => {
           observed.push({ clientInfo: server.getClientVersion(), userAgent: extra.requestInfo?.headers['user-agent'] });
           return { content: [{ type: 'text', text: 'ok' }] };
@@ -136,6 +139,7 @@ describe('MCP era contract (ADR-0006) — legacy-server discriminator', () => {
     const init = await request(app).post('/mcp').set('Accept', ACCEPT).send(initializeBody('2025-11-25'));
     expect(init.status).toBe(200);
     expect(init.headers['mcp-session-id']).toBeUndefined();
+    expect(created[0].getClientVersion()).toEqual({ name: 'era-probe', version: '0.0.0' });
     for (const userAgent of ['Visual Studio Code/1.142.0', 'GithubCopilot/1.527.0']) {
       const response = await request(app)
         .post('/mcp')

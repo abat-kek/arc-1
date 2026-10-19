@@ -10,6 +10,8 @@ import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AdtClient } from '../../../src/adt/client.js';
 import { AdtHttpClient } from '../../../src/adt/http.js';
+import { CachingLayer } from '../../../src/cache/caching-layer.js';
+import { MemoryCache } from '../../../src/cache/memory.js';
 import { resetCachedFeatures, setCachedFeatures } from '../../../src/handlers/feature-cache.js';
 import { canonicalDestinationUrl, opaqueDestinationValue } from '../../../src/server/destination-discovery.js';
 import { DestinationRegistry } from '../../../src/server/destination-registry.js';
@@ -299,9 +301,9 @@ describe('request-scoped VS Code links over real pinned/aggregate HTTP routing',
       ),
     );
   }
-  function expectDestination(response: Result, destination?: string, target?: string) {
+  function expectDestination(response: Result, destination?: string, target?: string, source = SOURCE) {
     expect(response.isError, JSON.stringify(response)).not.toBe(true);
-    expect(response.content?.[0]).toEqual({ type: 'text', text: SOURCE });
+    expect(response.content?.[0]).toEqual({ type: 'text', text: source });
     expect(response.content).toHaveLength(destination ? 2 : 1);
     if (destination) {
       const text = response.content![1].text;
@@ -381,6 +383,56 @@ describe('request-scoped VS Code links over real pinned/aggregate HTTP routing',
       expect(resolveDestination).not.toHaveBeenCalled();
     },
   );
+
+  it('keeps per-user aliases out of a shared single-target source cache', async () => {
+    const cachingLayer = new CachingLayer(new MemoryCache());
+    const config: ServerConfig = {
+      ...CONFIG,
+      url: 'https://sap.example.test',
+      username: 'shared-test-sap-user',
+      password: 'test-only-password',
+      xsuaaAuth: false,
+      multiTargetEndpoints: false,
+      multiTargetAuthorization: 'standard',
+      cacheMode: 'memory',
+      apiKeys: [
+        { key: 'alice-viewer-key-for-test', profile: 'viewer' },
+        { key: 'bob-viewer-key-for-test', profile: 'viewer' },
+      ],
+    };
+    setCachedFeatures(featuresOff());
+    vi.mocked(AdtHttpClient.prototype.get)
+      .mockResolvedValueOnce({ statusCode: 200, headers: { etag: 'source-v1' }, body: SOURCE })
+      .mockResolvedValue({ statusCode: 304, headers: { etag: 'source-v1' }, body: '' });
+    await startHttpServer(() => {
+      const server = createServer(config, { cachingLayer });
+      servers.push(server);
+      return server;
+    }, config);
+    await listen();
+    const params = { name: 'SAPRead', arguments: { type: 'CLAS', name: 'CL_ABAP_TYPEDESCR', version: 'active' } };
+    const revalidated = `[cached:revalidated]\n${SOURCE}`;
+    for (const [user, alias, source] of [
+      ['alice', 'ALICE_LOCAL', SOURCE],
+      ['bob', 'BOB_LOCAL', revalidated],
+      ['alice', undefined, revalidated],
+      ['bob', 'BOB_LOCAL', revalidated],
+    ] as const) {
+      const headers = alias ? preference(`@single=${alias}`) : {};
+      expectDestination(
+        result(await rpc(`${user}-viewer-key-for-test`, 'tools/call', params, '/mcp', headers)),
+        alias,
+        undefined,
+        source,
+      );
+    }
+    expect(cachingLayer.cache.getSource('CLAS', 'CL_ABAP_TYPEDESCR', 'active')?.source).toBe(SOURCE);
+    expect(cachingLayer.listActivity().counts).toMatchObject({ source_store: 1, source_hit: 3 });
+    const reads = vi.mocked(AdtHttpClient.prototype.get).mock.calls;
+    expect(reads).toHaveLength(4);
+    for (const read of reads.slice(1)) expect(read[1]).toMatchObject({ 'If-None-Match': 'source-v1' });
+    expect(JSON.stringify(reads)).not.toMatch(/ALICE_LOCAL|BOB_LOCAL|Arc1-Ide/i);
+  });
 
   it('handles duplicate raw header lines without ambiguity or a sticky preference', async () => {
     await start();
@@ -462,20 +514,26 @@ describe('request-scoped VS Code links over real pinned/aggregate HTTP routing',
       );
       expect(init.status).toBe(200);
       expect(init.headers['mcp-session-id']).toBeUndefined();
-      expectDestination(await read(token, 'A4H/000', pinned, { 'User-Agent': 'Visual Studio Code/1.142.0' }));
+      expectDestination(
+        await read(token, 'A4H/000', pinned, {
+          'User-Agent': 'Visual Studio Code/1.142.0',
+          'Arc1-Ide-Destinations-V1': 'A4H/000=USER_AGENT_ONLY',
+        }),
+      );
       const claimedMetadata = await rpc(
         token,
         'tools/call',
         {
           name: 'SAPRead',
           arguments: { type: 'CLAS', name: 'CL_ABAP_TYPEDESCR', ...(pinned ? {} : { target: 'A4H/000' }) },
+          // Synthetic tool metadata: real captures did not send clientInfo on legacy tools/call.
           _meta: {
             'io.modelcontextprotocol/clientInfo': { name: 'Visual Studio Code', version: '1.142.0' },
             'vscode.conversationId': 'untrusted-hint',
           },
         },
         path,
-        { 'User-Agent': 'Visual Studio Code/1.142.0', 'Arc1-Ide-Destinations-V1': 'A4H/000=HINT_ONLY' },
+        { 'Arc1-Ide-Destinations-V1': 'A4H/000=METADATA_ONLY' },
       );
       expectDestination(result(claimedMetadata));
       // Presentation is an explicit preference, not proof of a particular client binary.

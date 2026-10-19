@@ -150,8 +150,9 @@ With only one matching local project, a chooser might not appear; that does not 
 matches the researched target. ARC-1 cannot see the local project registry or force a chooser.
 The review prompted a further test of literal `A4H_2023`, which the native dialog also rejected as
 an invalid system ID before navigation. Further inspection of installed `AdtFileStore` found a
-case-insensitive exact project-name comparison after replacing underscores with dots, followed by
-SID/destination/HTTP-host matching. Java 21 `URI.getHost()` returned null for `A4H_2023` and
+case-insensitive exact project-name comparison after replacing underscores with dots. That match
+returns immediately; otherwise each project's SID, destination ID, then HTTP host are considered
+and matches collected. No match opens a chooser. Java 21 `URI.getHost()` returned null for `A4H_2023` and
 `A4H.2023`, but accepted `A4H.DEV2023`, `A4H-2023` and `H01.EN`. Thus the numeric final label explains
 the tested dotted failure; dots in general are not forbidden.
 
@@ -176,7 +177,7 @@ A subsequent probe returned both direct ADT and ordinary HTTP control links. Nei
 under automated normal/modifier clicks; this prevents a scheme-specific diagnosis. An optional
 manual control click was requested but was not available as acceptance evidence.
 
-The installed plugin and matching upstream source route Markdown URL annotations through
+The installed plugin and the matching chat-link classes in newer upstream source route Markdown URL annotations through
 `FileAnnotationHyperlinkDetector.FileHyperlink`, JFace `URLHyperlink.open`, and SWT `Program.launch`.
 No scheme allowlist was found on that path. The separate `UiUtils.openLink` implementation is not
 evidence of this path's cause. See the [inspected upstream detector](https://github.com/microsoft/copilot-for-eclipse/blob/b314db437af736364f851334391bc06aa49a6105/com.microsoft.copilot.eclipse.ui/src/com/microsoft/copilot/eclipse/ui/chat/FileAnnotationHyperlinkDetector.java).
@@ -222,6 +223,9 @@ Then add an explicit Eclipse presentation mode, with these acceptance conditions
   emitting both link kinds to every client. Do not reinterpret the existing `vscode` map as Eclipse data.
 - Verify that each intended client can send its own per-server environment or HTTP headers.
 - Use verified ADT object URIs, not arbitrary URI templates, command URLs, or project-creation data.
+- Omit version queries and fragments from an initial navigation contract. Installed navigation code
+  calls `UnlockHandler.doUnlock` for a parsed target version; it is not a passive source selector.
+  Fragment behavior is unqualified. The successful native test URIs omitted both.
 - Treat any SID-only mode as a manual navigation aid: label the researched target, explain project
   selection, and do not promise or attempt to enforce a chooser remotely. For exact selection,
   qualify the native encoded-project/destination matching or use a
@@ -346,6 +350,16 @@ Full typecheck, size/schema budgets and strict docs passed. The first full unit 
 subprocess startup/time-limit failures in the unrelated CLI/shutdown suites (9,408 passed).
 Those two files passed in isolation (56 tests); a complete rerun with two workers passed
 **337 files / 9,411 tests**, with no skipped or failed tests. No timeout or assertion was relaxed.
+
+A fresh Claude Code 2.1.302 / `claude-opus-5-5` Max review found test-strength gaps, not a runtime
+defect. Its corrections add a positive initialization-identity control, separate synthetic metadata
+and user-agent-only checks, and a real HTTP/shared-memory-cache test. Two API-key users alternate
+different aliases and opt-out while SAP returns ETag/304 revalidation; the cache retains only source
+and each response uses its own preference. The initial new cache assertion exposed the existing
+`[cached:revalidated]` response marker; the final assertion explicitly preserves that marker too.
+The revised focused run passed 25 tests, with full typecheck and size/schema budgets passing too.
+The reviewer read source/artifacts, not the live systems. Matching order, newer upstream-code scope,
+and version-query limits were checked against installed bytecode before documenting them.
 
 Claude Code 2.1.302 / Opus 5.5 at max effort independently reviewed the documentation and relevant
 implementation. It found a blocking configuration risk in the process-wide Claude launch recipe:

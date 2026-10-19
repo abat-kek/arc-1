@@ -3,6 +3,9 @@
 Use **ARC-1 for research and SAP ADT for opening the object**. In VS Code, the recommended workflow
 uses SAP's native MCP resolver. The ABAP Bridge is not required for navigation.
 
+**Both VS Code paths require SAP's ABAP Development Tools extension.** Open its ABAP workspace
+and log on to the matching system. Links open SAP source in that extension's ABAP editor.
+
 > **Before you start:** These settings need a build containing [draft PR #1025](https://github.com/arc-mcp/arc-1/pull/1025).
 > An older published `arc-1@latest` will not support them. ARC-1 must already connect to SAP.
 
@@ -12,7 +15,7 @@ uses SAP's native MCP resolver. The ABAP Bridge is not required for navigation.
 |---|---|
 | VS Code with local `npx` or BTP ARC-1 | [SAP's native resolver](#compose-arc-1-with-saps-native-resolver) — recommended |
 | Eclipse with local or BTP ARC-1 | [Eclipse](#eclipse-configuration-and-project-selection) — SID links |
-| VS Code without SAP's local MCP server | [Direct links](#fallback-direct-arc-1-links) — fallback |
+| VS Code with the ADT extension, without using its MCP tools | [Direct links](#fallback-direct-arc-1-links) — fallback |
 
 ## Compose ARC-1 with SAP's native resolver
 
@@ -136,8 +139,8 @@ Eclipse Copilot remains unconfirmed.
 
 ## Fallback: direct ARC-1 links
 
-Use this when you do not want to run SAP's local MCP server. ARC-1 generates links for supported
-objects using your exact local alias. These settings are **only for this fallback**, not the native
+This still requires the **same SAP ADT extension and ABAP editor**; only its MCP server is optional.
+ARC-1 generates links for supported objects using your exact local alias. These settings are **only for this fallback**, not the native
 workflow above. Direct links are off by default.
 
 ### Local VS Code

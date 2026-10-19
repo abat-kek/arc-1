@@ -431,6 +431,9 @@ text, so the hint now uses SAP's verified `/open?abapUri=` handler.
 **Resume with.** Diagnose the local ADT session logoff and test reliable recovery. Canonical opening
 now has the narrow live evidence above; test editor identity and dirty-buffer reuse on disposable
 objects with unsaved edits next.
+For setup, investigate a local destination picker that saves each developer's confirmed mapping.
+SAP's SID fallback selects the first logged-on match without checking backend/client; it cannot
+replace that mapping generally. [Destination-selection research](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-destination-selection.md).
 Qualify each edit/save operation separately before replacing
 the bridge workflow; keep navigation available independently. Evidence: the
 [ADT 1.2 research record](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-17-adt12-native-ide-links.md)

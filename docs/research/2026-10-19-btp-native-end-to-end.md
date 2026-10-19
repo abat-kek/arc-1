@@ -110,7 +110,7 @@ Still unqualified: automatic recovery from the local logout, all-model stop adhe
 object/type collisions, other OS/harness combinations, canonical include opening, dirty-buffer
 reuse, Keep/Undo, save/transport/activation semantics, second-user PP and PP-only multi-instance
 routing. Existing client-100 timeouts remain separate BTP acceptance gaps. Native composition stays
-experimental; direct ARC-1 links remain the simpler option when SAP's local MCP server is not otherwise used.
+experimental and requires SAP's local MCP server; the later simplification below removes direct VS Code links.
 
 ## Review follow-up
 
@@ -164,3 +164,8 @@ The tool-definition snapshots did not change. Removed tests covered the deleted 
 This simplification was not redeployed for another live editor run. The successful native-only
 BTP/Copilot opening above used `0447d506`, with ARC-1 direct links already off. The test deployment
 remains restored to its original droplet; the local checks do not replace that distinction.
+
+A fresh read-only Claude Code Opus 5.5 review at max effort found no P1/P2 regressions in the
+native-only simplification. Its minor corrections were applied: remove stale fallback wording,
+retain malformed/oversized Eclipse name tests, and re-enable presentation in the final cached-read
+case. Static review is not new live acceptance.

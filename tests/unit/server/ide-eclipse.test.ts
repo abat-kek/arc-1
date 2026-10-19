@@ -23,13 +23,25 @@ describe('native Eclipse navigation', () => {
     for (const sid of ['A4H_2023', 'A4H.2023', 'A4H-2025', 'a4h', 'A4H?x', '', '123']) {
       expect(buildEclipseLink(sid, args)).toBeUndefined();
     }
-    for (const name of ['../X', 'X?version=inactive', 'X#start=1', 'X%2F..', 'Z(abc)', 'X\nY']) {
+    for (const name of [
+      '../X',
+      'X?version=inactive',
+      'X#start=1',
+      'X%2F..',
+      'Z(abc)',
+      'X\nY',
+      'Z[A](command:x)',
+      'A'.repeat(81),
+    ]) {
       expect(buildEclipseLink('A4H', { ...args, name })).toBeUndefined();
     }
     for (const include of ['definitions', 'implementations', 'testclasses', 'macros', '../main']) {
       expect(buildEclipseLink('A4H', { ...args, include })).toBeUndefined();
     }
-    expect(buildEclipseLink('A4H', { type: 'FUNC', name: 'X' })).toBeUndefined();
+    for (const type of ['FUNC', 'TABL', 'DTEL', 'DOMA', 'DEVC', 'VERSIONS', 'DUMPS', 'BDEF', 'UNKNOWN']) {
+      expect(buildEclipseLink('A4H', { type, name: 'X' })).toBeUndefined();
+    }
+    expect(buildEclipseLink('A4H', { ...args, name: 'A'.repeat(80) })).toBeDefined();
     expect(buildEclipseLink('A4H', { ...args, include: 'MAIN' })).toBe(buildEclipseLink('A4H', args));
   });
 

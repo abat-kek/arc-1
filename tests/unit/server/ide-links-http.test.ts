@@ -414,7 +414,7 @@ describe('request-scoped Eclipse links over real pinned/aggregate HTTP routing',
       ['alice', true, SOURCE],
       ['bob', false, revalidated],
       ['alice', false, revalidated],
-      ['bob', false, revalidated],
+      ['bob', true, revalidated],
     ] as const) {
       const headers = enabled ? preference : {};
       expectLinks(

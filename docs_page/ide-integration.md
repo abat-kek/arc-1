@@ -134,6 +134,8 @@ If clicking does nothing, paste the link into **Open ADT Link**. For browser han
 under **Preferences → General → Link Handlers**. Native opening was verified; direct dispatch from
 Eclipse Copilot remains unconfirmed.
 
+## Upgrading an earlier draft setup
+
 If you tested an earlier draft: remove `ARC1_IDE_DESTINATION` and
 `Arc1-Ide-Destinations-V1`. Replace `ARC1_IDE_LINKS=vscode` with `off`; replace `on` with
 `eclipse` only where Eclipse links are wanted. VS Code now uses SAP's resolver exclusively.

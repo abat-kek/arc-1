@@ -666,7 +666,7 @@ export function getToolRegistry(): ToolRegistry {
     if ('error' in expanded) return errorResult(expanded.error);
     return handleToolCall(
       ctx.client,
-      // Decorate only after the outer audit too; local IDE aliases are not audit evidence.
+      // Decorate only after the outer audit too; IDE links are presentation, not audit evidence.
       { ...ctx.config, ideLinks: 'off' },
       expanded.toolName,
       expanded.expandedArgs,

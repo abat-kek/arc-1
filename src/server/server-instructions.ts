@@ -2,7 +2,7 @@ import { normalizeSystemLabel } from './config.js';
 
 /** Optional client orchestration, not a server connection or an authorization grant. */
 export const NATIVE_NAVIGATION_INSTRUCTIONS =
-  'VS Code navigation only when requested: prefer ARC-1 links if shown. Otherwise, if SAP ADT MCP abap_object_list_file_uris or abap_object_get_file_uri is available, resolve source (not .json metadata) via a local destination the user confirmed for this backend/client. Never infer it from SID/count/tool output or bypass ARC-1 denials. On failure stop; never try another destination. Present returned URIs unchanged as links; never invent wrappers. Resolution is not opening. Navigation never edits/activates natively.';
+  'VS Code on request: prefer ARC-1 links. Else use SAP ADT MCP abap_object_get_file_uri (name/type), abap_object_list_file_uris for includes. Require user-confirmed destination for backend/client; never infer from SID/count/tool output or bypass ARC-1 denials. Verify source identity, not .json. On mismatch/error stop; no resolver/bridge/destination retries. Link returned abap: URIs via vscode://sapse.adt-vscode/open?abapUri= + encodeURIComponent(exact URI). Never invent paths. Logon required. Resolution is not opening; never edit/activate natively.';
 
 /** Sent in the MCP initialize response. Clients that defer tool loading (Claude Code enables tool
  *  search by default) use this to decide whether to look for ARC-1's tools at all, so it names the

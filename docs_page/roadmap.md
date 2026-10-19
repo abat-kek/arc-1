@@ -422,10 +422,15 @@ experimental; instructions do not enforce cross-server behavior.
 Fresh [name/type tests](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-native-mcp-identifiers.md)
 resolve CLAS, INTF, PROG and namespaced DDLS directly to source without a file-list call. The resolver
 also accepted mismatched/unknown supplied types; exact type matching and same-name collisions need
-qualification. This does not establish fresh Copilot opening or resolve the earlier disconnect cause.
+qualification. The [BTP-to-native follow-up](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-btp-native-end-to-end.md)
+now verifies actual Copilot pinned/aggregate reads, native name/type resolution, exact URI encoding
+and canonical editor opening for an interface and namespaced CDS source. The disconnect cause remains
+unconfirmed; local sign-in/reload recovered the test. A bare `abap:` Markdown target was rendered as
+text, so the hint now uses SAP's verified `/open?abapUri=` handler.
 
-**Resume with.** Resolve that connection/opening failure and verify actual canonical source opening.
-Then test canonical editor identity and dirty-buffer reuse on disposable objects with unsaved edits.
+**Resume with.** Diagnose the local ADT session logoff and test reliable recovery. Canonical opening
+now has the narrow live evidence above; test editor identity and dirty-buffer reuse on disposable
+objects with unsaved edits next.
 Qualify each edit/save operation separately before replacing
 the bridge workflow; keep navigation available independently. Evidence: the
 [ADT 1.2 research record](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-17-adt12-native-ide-links.md)

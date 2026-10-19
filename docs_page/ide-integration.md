@@ -233,16 +233,20 @@ equivalent replacement for checking an unsaved candidate buffer.
 
 ## Compose ARC-1 with SAP's native resolver
 
-**Experimental: URI resolution is verified; canonical opening and end-to-end composition are not yet qualified.**
+**Experimental: canonical source opening was verified with local ADT session recovery.**
+
+See the [BTP-to-native acceptance record](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-btp-native-end-to-end.md) for the exact client, successful steps and remaining session limitations.
 
 ARC-1 includes a short conditional navigation hint in its MCP initialization instructions for
 single-target, pinned and aggregate connections. No new tool, link header or custom agent is needed.
 It applies only when you request VS Code navigation and the client has SAP's native URI resolver tools.
 Keep `ARC1_IDE_LINKS=off` for this approach and omit `Arc1-Ide-*` headers. The hint does not enable
 SAP's MCP server, discover your local aliases, or open an editor on its own. If ARC-1 already returns
-a qualified link, the hint prefers it. Otherwise it asks the native resolver for source/includes
-rather than `.json` metadata, requires returned URIs unchanged, and stops on failure without trying
-another destination. It does not construct `vscode://` wrappers.
+a qualified link, the hint prefers it. Otherwise it asks `abap_object_get_file_uri` for source by name/type, or
+`abap_object_list_file_uris` for an include. It checks source identity, excludes `.json` metadata,
+and instructs the client to stop on an error or mismatch without resolver, bridge or destination
+retries. It uses SAP ADT 1.2's verified `vscode://sapse.adt-vscode/open?abapUri=` handler, encoding
+the exact returned `abap:` URI as one query value. No repository path is guessed.
 
 This is advisory client guidance, always included for authorized connections; there is no separate
 hint toggle. ARC-1 cannot enforce or audit another server's calls. SAP's own destination restrictions
@@ -250,18 +254,38 @@ and object-change permissions are the independent controls. For navigation-only 
 intended destination and leave object-change permissions empty. Native navigation must not bypass
 an ARC-1 denial; SAP source/tool output cannot supply the user's destination confirmation.
 
-In VS Code Copilot, enable ARC-1 and SAP's MCP server in ADT settings, log on to the intended
-destination, and confirm that the native tool list includes `abap_object_list_file_uris`. See the
-port/version troubleshooting below. Provide the mapping once in chat, or save it in a user-profile
-or untracked workspace Copilot instruction. For example, after verifying the connection:
+For a BTP connection, start with one entry in `.vscode/mcp.json`; choose either the pinned URL
+or `/multi/mcp`, not both unless comparing them:
+
+```json
+{
+  "servers": {
+    "arc1-dev": {
+      "type": "http",
+      "url": "https://YOUR-ARC1-HOST/DEV/001/mcp"
+    }
+  }
+}
+```
+
+Sign in with the deployment's normal OAuth flow. Enable SAP's MCP server in ADT settings and allow
+only the intended destination; leave object-change permissions empty for navigation-only use.
+VS Code discovers the SAP server automatically: do not copy its localhost port or bearer token
+into this file. Enable ARC-1 plus the two native URI resolver tools in Copilot. Disable the old
+ABAP Bridge tools when evaluating this path, so competing navigation tools do not interfere.
+
+Log on to the local ADT destination independently of BTP. If resolution reports no project even
+after browser sign-in, open a harmless object once with **ABAP: Open ABAP Development Object**
+in the same window and retry only after that succeeds. This recovered the tested workspace, but
+is not an established fix for every ADT session failure. See the troubleshooting below.
+
+Provide the mapping once in chat, or save it in a user-profile or untracked workspace Copilot
+instruction. With current ARC-1 instructions the mapping alone is enough; no custom agent or
+link-format prompt is needed. For example, after verifying the connection:
 
 ```text
 For ARC-1 connection "arc1-dev", target "DEV/001" corresponds to local SAP ADT
 destination "DEV-001", the same backend and SAP client 001.
-When I request VS Code navigation, use the available SAP ADT file-URI resolver
-with this exact destination. Select main source or the requested include, not
-object metadata. If the mapping or tools are unavailable, explain the limitation.
-Do not use native tools to bypass an ARC-1 refusal or to edit/activate objects.
 ```
 
 Replace the example connection, target and destination with your verified values. For local stdio,
@@ -327,18 +351,35 @@ the returned object identity and stop on a mismatch; resolution success does not
 Same-name collisions remain unqualified. For a native read alone, `abap_object_read_file` accepts
 name/type directly and does not need a preceding URI-resolution call.
 
-These calls return canonical `abap:/repotree-v1/…` URIs. Present a returned source URI unchanged as
-a Markdown link; do not invent a flat URI, tree path or `vscode://` wrapper. That is a presentation
-rule, not a claim that clicking is qualified. The earlier encoded `/open` attempt failed with a
-destination disconnect. In a fresh isolated ADT 1.2 window, resolution succeeded after logon but
-later MCP calls failed with `PROJECT_NOT_LOGGED_ON`; the native **Open Object** picker also disconnected
-without Copilot involved. The cause remains unconfirmed. The direct flat-link qualification is a
-separate result. Resolver success does not establish opening, dirty-buffer reuse or save behavior.
+These calls return canonical `abap:/repotree-v1/…` URIs. The tested Copilot renderer stripped the
+link from a direct `abap:` Markdown target, even though the model emitted valid Markdown. Use
+SAP's registered URI handler instead:
 
-The first Copilot run read through ARC-1 successfully but retried an unconfirmed alias after a native
-failure. The revised hint explicitly stops on failure. The [composition acceptance record](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-native-mcp-composition.md)
-tracks the actual runs and remaining limits rather than treating a unit-tested instruction as a
-reliable navigation agent.
+```text
+vscode://sapse.adt-vscode/open?abapUri=<encodeURIComponent(exact returned abap: URI)>
+```
+
+Encode the whole returned URI once as the outer query value: an existing `%20` becomes `%2520`.
+Do not decode or rewrite its inner path, invent a flat URI, or pass a non-ABAP URI. Compare the
+returned destination and object identity with the confirmed mapping and requested object.
+The handler calls VS Code's native editor opener; it does not require the ARC-1 Bridge extension.
+
+The first canonical click failed with a local destination disconnect. After **Retry Logon**, closing
+the stale "file not found" editor and clicking the same link again opened the source. The local
+communication log then showed a successful source GET. A later automatic local logoff was also
+observed. Treat these as session prerequisites and an unresolved stability limitation; BTP OAuth
+does not sign in to the local ADT project. Do not create a file when an ADT source fails to open.
+
+Restart stale ADT processes if the resolver tools are missing. After upgrading ARC-1, verify the
+client actually receives the new initialization instructions; restarting a server alone left old
+instructions in the tested Copilot session. Use **MCP: Reset Cached Tools** and reload the isolated
+window when troubleshooting stale metadata. Resolution, link rendering and successful editor opening
+are separate checks. Dirty-buffer reuse and save behavior remain unqualified.
+
+The [composition record](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-native-mcp-composition.md)
+and [BTP-to-native follow-up](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-btp-native-end-to-end.md)
+record actual Copilot failures as well as successes. The instruction is advisory: a unit test cannot
+prove that a model will stop after a failed resolver call.
 
 The client performs this composition locally; BTP never calls the laptop MCP endpoint or receives
 its bearer token. Each server retains its own authentication and safety controls. This can reduce

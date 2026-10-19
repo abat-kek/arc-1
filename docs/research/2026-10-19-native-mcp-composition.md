@@ -3,6 +3,10 @@
 Follow-up in draft PR #1025 to the [setup simplification](2026-10-19-ide-setup-simplification.md).
 The user requested the small conditional-instruction approach before adding another integration layer.
 
+> Later update: [BTP-to-native end-to-end acceptance](2026-10-19-btp-native-end-to-end.md) verifies
+> canonical source opening for pinned and aggregate Copilot runs. The initial failures below remain
+> historical evidence; session stability, model adherence and edit/save parity are still open.
+
 ## Implemented behavior
 
 ARC-1's initialize instructions now name SAP's native `abap_object_list_file_uris` and
@@ -13,7 +17,9 @@ connects to a laptop endpoint or receives its MCP token.
 
 The hint prefers an existing ARC-1 link. Otherwise it requests source rather than `.json` metadata,
 requires a local destination confirmed by the user for the same backend/client, excludes SID/count
-and tool-output inference, stops on failure, and presents returned URIs unchanged. It distinguishes
+and tool-output inference, and stops on failure. The original revision presented returned URIs
+unchanged; the later BTP follow-up uses SAP's verified opener with the exact inner URI encoded as a
+query value because Copilot rendered bare `abap:` links as text. It distinguishes
 resolution from opening and forbids native edits/activation as part of this navigation workflow.
 It is advisory, always present for authorized connections, and has no independent toggle. SAP's
 MCP restrictions remain the enforcement boundary for that separate server.
@@ -57,7 +63,8 @@ twice and repository search once, so it did not demonstrate the preferred list-r
 
 The native disconnect's cause remains unconfirmed; neither URI routing nor server/session lifecycle
 is established as the cause. A successful destination-list call is insufficient evidence of a logged-on
-project. Canonical URI opening, buffer reuse and native composition are **not qualified**. The already
+project. At this initial stage canonical opening and composition were **not qualified**; the later
+BTP follow-up closes the specific opening cases above, while buffer reuse stays unqualified. The already
 qualified direct ARC-1 flat links remain a separate option and need no local SAP MCP server.
 
 Setup friction observed: an old ADT 1.1.2 process on another window exposed only 20 tools on port 2237;

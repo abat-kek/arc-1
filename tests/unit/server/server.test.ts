@@ -149,6 +149,19 @@ describe('MCP Server', () => {
     expect(instructions?.length).toBeLessThan(2_048);
   });
 
+  it('advertises the SAP URI handler while retaining native-navigation identity and failure boundaries', async () => {
+    const { instructions } = await initializeServer(DEFAULT_CONFIG);
+    // A bare abap: Markdown link is stripped by the tested Copilot renderer. The inner URI
+    // must stay intact (including existing % escapes), rather than guessing a flat/tree path.
+    expect(instructions).toContain(
+      'Link returned abap: URIs via vscode://sapse.adt-vscode/open?abapUri= + encodeURIComponent(exact URI)',
+    );
+    expect(instructions).toContain('Require user-confirmed destination for backend/client');
+    expect(instructions).toContain('Verify source identity, not .json');
+    expect(instructions).toContain('On mismatch/error stop; no resolver/bridge/destination retries');
+    expect(instructions).toContain('never edit/activate natively');
+  });
+
   it('rejects an overlong system label even when ServerConfig is constructed directly', () => {
     expect(() => createServer({ ...DEFAULT_CONFIG, systemLabel: 'x'.repeat(SYSTEM_LABEL_MAX_LENGTH + 1) })).toThrow(
       `ARC1_SYSTEM_LABEL must be at most ${SYSTEM_LABEL_MAX_LENGTH} characters`,

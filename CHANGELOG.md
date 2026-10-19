@@ -5,6 +5,30 @@ For what each release *means* (impact, upgrade actions, config and tool-surface 
 annotated [release notes](https://docs.arc-1-mcp.com/release-notes/)
 ([source](docs_page/release-notes.md)).
 
+## [1.7.0](https://github.com/arc-mcp/arc-1/compare/v1.6.0...v1.7.0) (2026-10-19)
+
+
+### Features
+
+* add bounded dump filtering with optional schema discovery ([#1020](https://github.com/arc-mcp/arc-1/issues/1020)) ([b57006f](https://github.com/arc-mcp/arc-1/commit/b57006ff5c0d95e6ad724a843aa406ed95ec848c))
+* add package filters and native where-used details ([#1026](https://github.com/arc-mcp/arc-1/issues/1026)) ([a92ffa6](https://github.com/arc-mcp/arc-1/commit/a92ffa6e73b211142bdf1614f36c0e0ef56adcd0))
+* check bounded syntax object lists through SAPDiagnose ([#1029](https://github.com/arc-mcp/arc-1/issues/1029)) ([ddc441d](https://github.com/arc-mcp/arc-1/commit/ddc441dd6c22f1cbe6505aeaf94671bfc6096a4a))
+* read saved SLG1 application logs via native SAP service ([#1024](https://github.com/arc-mcp/arc-1/issues/1024)) ([2827948](https://github.com/arc-mcp/arc-1/commit/2827948ece8ab326588b0f7605b99f196d98afe2))
+* read stored SAPscript long texts without RFC ([#1012](https://github.com/arc-mcp/arc-1/issues/1012)) ([37fece9](https://github.com/arc-mcp/arc-1/commit/37fece94359c8a48523af56b0ff71f52359a7c21))
+
+
+### Bug Fixes
+
+* keep empty native syntax reports unchecked ([#1019](https://github.com/arc-mcp/arc-1/issues/1019)) ([498c12b](https://github.com/arc-mcp/arc-1/commit/498c12bbab1b4c6337e01e3451c5811ba8b8aa97))
+* make transport source reviews reliable and bounded over MCP ([#1008](https://github.com/arc-mcp/arc-1/issues/1008)) ([15db422](https://github.com/arc-mcp/arc-1/commit/15db42217a28634b3a64bed3dfd5fa90e432d942))
+* resolve appends without the invalid where-used scope preflight ([#1022](https://github.com/arc-mcp/arc-1/issues/1022)) ([a778d05](https://github.com/arc-mcp/arc-1/commit/a778d057014e115772c53d9e55f4b451b1566f8e))
+
+
+### Tests
+
+* correct release-dependent 7.50 test prerequisites ([#1013](https://github.com/arc-mcp/arc-1/issues/1013)) ([79088b1](https://github.com/arc-mcp/arc-1/commit/79088b16c6fe64f2b07802646a769607335f4d5d))
+* preserve BOR gate regression and clarify deny rules ([#1016](https://github.com/arc-mcp/arc-1/issues/1016)) ([260c2b7](https://github.com/arc-mcp/arc-1/commit/260c2b71dec9608974e68d7383419d084a1e58b8))
+
 ## [1.6.0](https://github.com/arc-mcp/arc-1/compare/v1.5.2...v1.6.0) (2026-10-17)
 
 

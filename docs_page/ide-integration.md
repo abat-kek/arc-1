@@ -78,8 +78,10 @@ the PR checkout with `npm run build` and `npm pack`, then use the resulting loca
 ```
 
 Replace the package path with your actual packed PR artifact; its filename/version alone does not
-prove its contents. The `npx` package launch was tested by an MCP SDK harness; the complete VS Code
-`envFile` configuration above was not itself UI-tested. The private file
+prove its contents. This `envFile` plus per-server `env` setup was tested in desktop VS Code
+1.142.0: Copilot called the packed ARC-1 process and rendered the returned link. The test used an
+absolute path to the installed `npx`; use one if the editor cannot resolve your shell's command.
+The private file
 holds your existing `SAP_URL`, `SAP_CLIENT`, and authentication settings; keep write gates disabled
 unless separately needed. No port, HTTP headers, or BTP destination map is needed for this stdio case.
 For a local source checkout, use `command: "node"` and `args: ["/ABSOLUTE/PATH/arc-1/bin/arc1.js"]`
@@ -106,11 +108,12 @@ in that session, including ones connected to another backend or ones that should
 Keep a shared plugin environment or `${PLUGIN_DATA}/.env` free of IDE preferences when other clients
 use it. This does not automatically detect whether Claude is running inside VS Code.
 
-Claude Code 2.1.302 was tested with a read-only MCP probe, both directly and through a temporary
-plugin, that reports only these two non-secret variables. This verifies subprocess preference
-inheritance; it does not qualify clickable links in
-Claude Desktop, terminal chat, or the Claude VS Code webview. The packed ARC-1 stdio process was
-tested separately against live SAP. A future plugin settings picker could remove manual environment
+Claude Code 2.1.302 also called two packed ARC-1 servers against live SAP in one session: one had
+links enabled and one had them off. Both returned identical source; only the explicitly enabled
+server added a link. Separate synthetic probes verified preference inheritance directly and through
+a minimal temporary plugin. The real plugin's saved configuration/substitution path and clickable
+links in Claude Desktop, terminal chat, or the Claude VS Code webview remain unqualified.
+A future plugin settings picker could remove manual environment
 editing, but would still need an explicit editor preference and exact local alias attached to that
 one server. The research record describes an isolated manifest-validation prototype; it is not
 included in this PR.
@@ -281,6 +284,30 @@ a result. Keep this entry in VS Code's own configuration rather than a portable 
 with other agents. VS Code supports custom HTTP headers; its configuration formats and forwarding
 behavior are documented in the [MCP configuration reference](https://code.visualstudio.com/docs/agents/reference/mcp-configuration).
 
+### Can BTP detect the client?
+
+It receives useful hints. Live captures on 2026-10-19 found:
+
+| Client | Initialization name | Later HTTP user agent |
+|---|---|---|
+| VS Code 1.142.0 | `Visual Studio Code` | `Visual Studio Code/1.142.0` |
+| Eclipse Copilot 0.21.0 | `Eclipse/copilot-eclipse` | `GithubCopilot/1.527.0` |
+| Claude Code 2.1.302 | `claude-code` | `claude-code/2.1.302 (sdk-cli)` |
+
+Actual VS Code and Eclipse reads through the existing BTP deployment succeeded, and its logs
+confirmed the user agents arrived. Eclipse's later user agent identifies Copilot without identifying
+the editor. With ARC-1's current SDK/HTTP transport, initialization information is not retained on
+later tool requests; a regression test verifies this. Newer MCP revisions provide per-request
+client metadata, but this branch still uses the legacy protocol era described in ADR-0006.
+
+These hints could help a future setup UI suggest an editor. They cannot establish whether its ADT
+extension is installed, whether the user wants links, or which local alias matches the backend.
+Therefore this PR uses explicit preferences. A client copying the VS Code preference gets VS Code
+links even when its name says Eclipse; a client calling itself VS Code without the preference gets
+none. In stdio the per-server environment has the same role, independently of the client's name.
+Do not share or remember a preference by SAP user, IP address, or the last initialization request:
+the same person can use multiple clients and workspaces.
+
 ARC-1 applies the selected alias only to successful authorized results for the resolved SAP target.
 Preferences never change SAP routing, credentials, target grants, scopes or safety limits, and are not forwarded to SAP or
 stored in source caches. Pinned/aggregate results label the server-selected target and local
@@ -325,15 +352,24 @@ There are two unresolved problems before adding automatic Eclipse links to ARC-1
   represented different A4H installations with client 001. Eclipse displayed both projects. A SID
   is insufficient to select the backend researched through a BTP target. The tested `A4H.2023`
   authority variant and the literal project-name authority `A4H_2023` were both rejected as invalid
-  system IDs. Other exact-project formats remain unqualified.
+  system IDs. Inspection found a native project-name match with underscores replaced by dots.
+  `adt://H01.EN/...` selected the existing `H01_EN` project without a chooser in a live test, but its
+  unavailable backend prevented source opening. Java URI validation rejects underscores and the
+  tested numeric final label in `A4H.2023`. A validated, unique local project mapping may therefore
+  avoid a companion extension; arbitrary project names and ambiguous encodings are not qualified.
 - **Copilot click handling:** Eclipse Copilot 0.21.0 rendered an `adt://` Markdown link, but clicking
   it did not open a project chooser or source. External handler registration was enabled during the
-  test. Copying the URI into Open ADT Link is the verified fallback; direct Copilot opening is not.
+  test. A later plain HTTP control link also failed under automation, so this does not establish an
+  `adt://`-specific Copilot defect. Copying the URI into Open ADT Link is the verified fallback.
+  A browser page with an explicit ADT link and an HTTP redirect to ADT both opened source, but the
+  complete Copilot-to-browser-to-Eclipse path remains unqualified.
 
 The current PR accepts only `off` and `vscode`; `Arc1-Ide-Client: eclipse` deliberately receives no
 VS Code links. Eclipse support needs a separate, explicit client preference plus a qualified click
-handler and a policy for ambiguous projects. Exact project selection may require a local Eclipse
-companion mapping each public ARC-1 target to an existing project. Do not put credentials or
+handler and a policy for ambiguous projects. Eclipse's per-server HTTP `requestInit.headers` was
+verified to transmit presentation preferences, so configuration transport is available. A local
+companion remains an option for mappings that native project selection cannot safely represent.
+Do not put credentials or
 project-creation connection parameters into shared links. BTP deployment alone cannot provide the
 local Eclipse project, SAP logon, or laptop network route.
 

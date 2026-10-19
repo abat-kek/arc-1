@@ -443,6 +443,54 @@ describe('request-scoped VS Code links over real pinned/aggregate HTTP routing',
     expectDestination(await read(token, 'A4H/000', true));
   });
 
+  it.each([true, false])(
+    'does not infer link preferences from client identity or a previous initialize (pinned=%s)',
+    async (pinned) => {
+      await start();
+      const token = addUser(['A4H/000']);
+      const path = pinned ? '/A4H/000/mcp' : '/multi/mcp';
+      const init = await rpc(
+        token,
+        'initialize',
+        {
+          protocolVersion: '2025-11-25',
+          capabilities: {},
+          clientInfo: { name: 'Visual Studio Code', version: '1.142.0' },
+        },
+        path,
+        preference('A4H/000=INIT_ONLY'),
+      );
+      expect(init.status).toBe(200);
+      expect(init.headers['mcp-session-id']).toBeUndefined();
+      expectDestination(await read(token, 'A4H/000', pinned, { 'User-Agent': 'Visual Studio Code/1.142.0' }));
+      const claimedMetadata = await rpc(
+        token,
+        'tools/call',
+        {
+          name: 'SAPRead',
+          arguments: { type: 'CLAS', name: 'CL_ABAP_TYPEDESCR', ...(pinned ? {} : { target: 'A4H/000' }) },
+          _meta: {
+            'io.modelcontextprotocol/clientInfo': { name: 'Visual Studio Code', version: '1.142.0' },
+            'vscode.conversationId': 'untrusted-hint',
+          },
+        },
+        path,
+        { 'User-Agent': 'Visual Studio Code/1.142.0', 'Arc1-Ide-Destinations-V1': 'A4H/000=HINT_ONLY' },
+      );
+      expectDestination(result(claimedMetadata));
+      // Presentation is an explicit preference, not proof of a particular client binary.
+      expectDestination(
+        await read(token, 'A4H/000', pinned, {
+          ...preference('A4H/000=EXPLICIT'),
+          'User-Agent': 'GithubCopilot/1.527.0',
+        }),
+        'EXPLICIT',
+        'A4H/000',
+      );
+      expectDestination(await read(token, 'A4H/000', pinned));
+    },
+  );
+
   it.each([true, false])('leaves ordinary clients and missing/invalid maps unchanged (pinned=%s)', async (pinned) => {
     await start();
     const token = addUser(['A4H/000']);

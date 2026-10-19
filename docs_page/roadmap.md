@@ -426,11 +426,16 @@ and closed [PR #676](https://github.com/arc-mcp/arc-1/pull/676).
 
 **Remaining gap.** Eclipse ADT 3.60.2 opened live source through Open ADT Link and a registered
 Chrome `adt://` link. Eclipse Copilot 0.21.0 rendered the same scheme but did not navigate on click.
+An ordinary HTTP control also failed under automation, so a scheme-specific defect is not established.
 SID-only links showed both A4H projects, even though they represent different backends with the same
-client. PR #1025 still supports only `off` and `vscode`; it does not ship Eclipse decoration.
+client. Native encoded authority `H01.EN` selected `H01_EN`, but its unavailable backend prevented
+source opening; some project names fail Java URI host validation. Browser landing-page and HTTP
+redirect prototypes opened source. PR #1025 still supports only `off` and `vscode`; it does not ship
+Eclipse decoration. Real Eclipse per-server `requestInit.headers` transmission was verified.
 
-**Resume with.** Qualify direct Copilot scheme dispatch before adding server output. Test SAP's richer
-project-matching format without credentials/project creation, or a local companion mapping service
+**Resume with.** Obtain a successful Copilot HTTP control click, then qualify direct ADT and browser
+handoff independently. Test native encoded-project/destination matching, authority validation,
+collisions and fallbacks before requiring richer links or a local companion mapping service
 identity plus public target to an existing project. Preserve per-request client opt-in and fail closed
 on unknown mappings; never pick the first matching SID. Cover single-system local stdio, single HTTP,
 pinned and aggregate BTP independently. A one-time configuration picker can simplify VS Code/Claude

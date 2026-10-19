@@ -3,16 +3,18 @@
 Research and read-only experiments: 2026-10-18/19, continuing
 [draft PR #1025](https://github.com/arc-mcp/arc-1/pull/1025).
 Runtime tested: `28406c16d5ea0e54516eb52b569d92308010e2e2`.
-This follow-up changes documentation, not the runtime link contract or plugin manifest.
+This follow-up changes documentation and adds client-identity regression tests; the runtime link
+contract and plugin manifest are unchanged.
 
 ## Findings
 
 1. Eclipse ADT supports `adt://` navigation. Its own Open ADT Link dialog and an external Chrome
    link both opened live ABAP source. Eclipse Copilot rendered the URI as a link, but clicking it
    did not open source. Treat the Copilot path as an unresolved integration gap.
-2. The ordinary Eclipse link identifies a SID, not a unique BTP target, SAP client, or local project.
+2. The ordinary Eclipse Share Link identifies a SID, not a unique BTP target, SAP client, or local project.
    Two projects using the same SID and client produced a project chooser. Automatic backend-correct
-   navigation needs more than inserting the target SID into the URL.
+   navigation needs more than inserting the target SID into the URL. A valid encoded project name
+   selected one existing cloud project; arbitrary names and full source opening remain unqualified.
 3. The existing VS Code implementation already has a small local setup: two environment variables
    per stdio server. Traditional HTTP with `ARC1_MULTI_TARGET_ENDPOINTS` off needs one `@single`
    mapping; a single pinned target needs
@@ -50,6 +52,14 @@ This follow-up changes documentation, not the runtime link contract or plugin ma
 | Eclipse Copilot Markdown `adt://` link | Render only | No chooser/editor on click; not an ARC-1 MCP end-to-end test |
 | Claude Code ordinary MCP preference probe | Pass | `vscode` / `TEST-001` inherited |
 | Claude Code temporary plugin MCP preference probe | Pass | Same values inherited; no SAP access by the probe |
+| Real VS Code `npx` + `envFile` + per-server `env` | Pass, read/render | Copilot called the packed branch and rendered its exact native link |
+| Real Claude Code, two `npx` servers in one session | Pass | Same source hash; only the explicitly enabled server had links |
+| Four SDK client names × off/vscode, `npx` | 8 passes | Client name does not override the process preference |
+| Real VS Code and Eclipse → existing BTP deployment | Pass, identity/read | Server logs confirmed client user agents; deployed 0.9.27, not candidate decoration |
+| Eclipse per-server `requestInit.headers` | Pass | Presentation headers arrived at the local HTTP probe |
+| `adt://H01.EN/...` → existing `H01_EN` | Partial | Correct project selected; backend unavailable, source opening not qualified |
+| Browser landing page and HTTP 302 → `adt://` | Pass | Both opened CL_ABAP_CLASSDESCR in A4H_2023 |
+| Eclipse Copilot plain HTTP control link | Unresolved | Automated click did not open browser; cannot attribute failure to ADT scheme |
 
 All six ARC-1 source-read cases used `SAPRead(type=CLAS,name=CL_ABAP_TYPEDESCR,version=active)`
 against `https://a4h.marianzeis.de`, client 001, with writes, SQL, data preview, transport writes,
@@ -64,8 +74,58 @@ The package was produced with `npm run build` and `npm pack`, then launched by
 `npx --yes --package=<absolute-packed-tgz> arc1`. This verifies npm packaging and stdio startup for
 the feature branch, not publication of the feature to `arc-1@latest`. The pack inventory contained
 982 files and none of `.env`, `cookies.txt`, or `.arc1.json`.
-An SDK harness launched these processes; the separate VS Code `envFile` plus `env` configuration
-example was not UI-tested as a whole.
+The subsequent real VS Code test qualified the `envFile` plus per-server `env` configuration:
+Copilot 0.70.0 / Gemini 3.8 Flash called exactly the intended `arc1-npx-verified` SAPRead and rendered
+the returned link. An initial test used a nonexistent absolute `npx` path and could not start;
+correcting it to the installed executable and using a fresh server entry resolved startup. A run
+that used the wrong BTP server while local startup was broken was excluded from acceptance.
+This new check qualifies local read/render; earlier native opening evidence remains separate.
+
+Real Claude Code 2.1.302 / Opus 5.5 Max called two separately configured packed servers, one `vscode`
+and one `off`. An observer compared their actual tool responses: identical source SHA-256 above,
+with a link only from the opted-in server. Eight further SDK calls crossed four claimed identities
+(`Visual Studio Code`, `Eclipse/copilot-eclipse`, `claude-code`, arbitrary client) with both modes.
+All passed and preserved that hash. A stdio process honors its own configuration, not its client's
+name; it must not be shared across connections needing different presentation preferences.
+
+## What BTP can learn about the client
+
+A loopback HTTP probe captured only allowlisted headers, initialization/capability metadata and
+response summaries. Real clients produced these observations:
+
+| Client | Initialization identity | Later request hints |
+|---|---|---|
+| VS Code 1.142.0 | `Visual Studio Code`, `1.142.0` | User-Agent `Visual Studio Code/1.142.0`; VS Code conversation/request metadata; no clientInfo |
+| Eclipse 2026-06 / Copilot 0.21.0 | `Eclipse/copilot-eclipse`, `4.40.0.v20260601-0713/0.21.0.202608060743` | User-Agent `GithubCopilot/1.527.0`; progress metadata only |
+| Claude Code 2.1.302 | `claude-code`, `2.1.302` | User-Agent `claude-code/2.1.302 (sdk-cli)`; tool-use metadata; no clientInfo after legacy fallback |
+
+The installed SDK 1.32.1 creates a fresh server per HTTP request in ARC-1. `getClientVersion()` was
+undefined inside later tool handlers for all three clients. VS Code omitted the protocol header
+on these requests and the SDK accepted them; Eclipse supplied `2025-11-25`. Claude first attempted
+modern `server/discover` with per-request client metadata, then fell back to legacy initialization.
+The [2026-07-28 MCP specification](https://modelcontextprotocol.io/specification/2026-07-28/basic)
+defines per-request metadata. ARC-1's deliberate legacy-era contract remains in ADR-0006; changing
+SDK/protocol era is separate work, not a prerequisite for explicit presentation headers.
+
+The probe also relayed real VS Code and Eclipse MCP requests, with their observed user agents,
+to the existing BTP pinned `/A4H/001/mcp` endpoint using fresh authorized OAuth. Both clients read
+CL_ABAP_TYPEDESCR successfully. CF application logs confirmed both user agents arrived at the app.
+The relay passed JSON-RPC unchanged and used its own existing test token; this is evidence about
+request identity and BTP transport, not a new qualification of each client's direct OAuth UI.
+The app remained on restored version 0.9.27, which emitted no candidate IDE decoration. No deployment
+or environment changes were made. Three synthetic initialization claims, including a made-up
+client, were accepted without a session ID: client names are declarations, not attestation.
+
+Therefore “BTP never knows the client” is too broad. It has useful hints, but not a reliable
+presentation preference or backend-to-local-destination mapping. Even a verified application
+identity would not supply these. A future setup UI could suggest a style from the hints while
+requiring explicit confirmation of the destination. Runtime defaults remain off. Never remember
+the last initialization preference by user/token/IP: one user can operate several clients at once.
+
+New regression tests cover pinned and aggregate calls: initialization preferences, a VS Code user
+agent, and modern-looking client metadata do not independently enable links; explicit preferences
+work even with an Eclipse user agent; a following request without preferences remains undecorated.
+A transport test verifies fresh handler state while preserving each request's user-agent hint.
 
 ## Eclipse details
 
@@ -89,8 +149,18 @@ independent identifier and is not automatically an Eclipse project name.
 With only one matching local project, a chooser might not appear; that does not prove its backend
 matches the researched target. ARC-1 cannot see the local project registry or force a chooser.
 The review prompted a further test of literal `A4H_2023`, which the native dialog also rejected as
-an invalid system ID before navigation. These two failed authority forms do not disqualify every
-possible exact-project encoding; alternative forms remain unqualified live.
+an invalid system ID before navigation. Further inspection of installed `AdtFileStore` found a
+case-insensitive exact project-name comparison after replacing underscores with dots, followed by
+SID/destination/HTTP-host matching. Java 21 `URI.getHost()` returned null for `A4H_2023` and
+`A4H.2023`, but accepted `A4H.DEV2023`, `A4H-2023` and `H01.EN`. Thus the numeric final label explains
+the tested dotted failure; dots in general are not forbidden.
+
+The native dialog accepted `adt://H01.EN/sap/bc/adt/oo/classes/cl_abap_typedescr` and selected the
+existing `H01_EN` project without a chooser. Its login then failed because that cloud backend was
+unavailable. This qualifies project selection only. No project was renamed or created. Native
+project encoding is a promising smaller option, but collisions such as `A_B` versus `A.B`, missing
+projects, fallback SID/destination matches and invalid authorities need explicit policy and tests.
+Do not describe arbitrary project names as supported or native selection as fail-closed.
 
 External registration was initially disabled. Enabling `adt` in General → Link Handlers made the
 Chrome anchor work, following Chrome's normal Open Eclipse confirmation. The fresh preference page
@@ -102,6 +172,14 @@ calls or edits. It produced a blue underlined link, but the tested clicks did no
 a renderer/handler smoke test, not proof of the BTP MCP flow or a diagnosis of the plugin's internals.
 Command-click and Control-click were also tried without establishing navigation.
 Use the copy/paste Open ADT Link fallback until a direct click is independently qualified.
+A subsequent probe returned both direct ADT and ordinary HTTP control links. Neither navigated
+under automated normal/modifier clicks; this prevents a scheme-specific diagnosis. An optional
+manual control click was requested but was not available as acceptance evidence.
+
+The installed plugin and matching upstream source route Markdown URL annotations through
+`FileAnnotationHyperlinkDetector.FileHyperlink`, JFace `URLHyperlink.open`, and SWT `Program.launch`.
+No scheme allowlist was found on that path. The separate `UiUtils.openLink` implementation is not
+evidence of this path's cause. See the [inspected upstream detector](https://github.com/microsoft/copilot-for-eclipse/blob/b314db437af736364f851334391bc06aa49a6105/com.microsoft.copilot.eclipse.ui/src/com/microsoft/copilot/eclipse/ui/chat/FileAnnotationHyperlinkDetector.java).
 
 Installed SAP bundle inspection found additional project-link handling under `sap-adt-project-*`.
 The RFC matching path compares client and connection attributes and can open a project-creation
@@ -114,8 +192,28 @@ same-SID landscapes and clients remains to be tested before adopting a richer SA
 
 First qualify Copilot's click handler independently of ARC-1. A server-generated link cannot repair a
 client that does not dispatch the scheme. An HTTPS landing page with an explicit ADT link is a possible
-fallback, but it adds another service and can expose researched object names in URLs/logs; it was not
-implemented or recommended as the default here.
+fallback. A fixed loopback prototype with an explicit anchor and a separate HTTP 302 redirect both
+opened CL_ABAP_CLASSDESCR through Chrome's normal Open Eclipse confirmation and project selection.
+This qualifies browser-to-Eclipse only; Copilot-to-browser remains unresolved. A deployed HTTPS
+helper adds a service and exposes object identifiers to its URL/logging path. The prototype was not
+an arbitrary redirect service and is not a shipped/default component.
+
+Other inspected options do not remove the remaining qualification work:
+
+| Option | Evidence / remaining limit |
+|---|---|
+| Native SID ADT link | Source opened; duplicate SID/client needs manual project choice |
+| Encoded native project name | H01_EN selected; valid authority and collision checks required |
+| Local destination ID / HTTP host authority | Matching exists in installed code; not live-qualified as a portable mapping |
+| Rich `sap-adt-project-*` link | Connection matching/project creation; too much connection data for the simple navigation contract |
+| `eclipse+command://com.sap.adt.launch` | General command dispatcher, not a narrowly scoped object-opening contract |
+| Workspace/file links | Local semanticfs resources exist, but no portable BTP-to-local-path or Copilot opening qualification |
+| Local Eclipse companion | Can validate service/target/project mappings; adds installation and maintenance |
+| HTTPS landing page / redirect | Browser leg passed; complete Eclipse Copilot chain still needs a successful control click |
+
+Eclipse's MCP configuration accepted per-server `requestInit.headers`; the real client transmitted
+`Arc1-Ide-Client: eclipse` and a mapping to the probe. This verifies a place to configure future
+style/mapping preferences, not support for an `eclipse` mode in this PR.
 
 Then add an explicit Eclipse presentation mode, with these acceptance conditions:
 
@@ -126,7 +224,7 @@ Then add an explicit Eclipse presentation mode, with these acceptance conditions
 - Use verified ADT object URIs, not arbitrary URI templates, command URLs, or project-creation data.
 - Treat any SID-only mode as a manual navigation aid: label the researched target, explain project
   selection, and do not promise or attempt to enforce a chooser remotely. For exact selection,
-  qualify SAP's richer matching format or use a
+  qualify the native encoded-project/destination matching or use a
   local companion that maps the service identity plus public target ID to an existing Eclipse project.
 - Do not automatically choose the first project with a matching SID. Test duplicate SIDs, duplicate
   SID/client pairs, different clients, HTTP/cloud projects, absent projects and malformed mappings.
@@ -242,7 +340,12 @@ experiments do not replace or broaden that evidence.
 The focused local regression run passed **4 files / 98 tests**: `ide-links`, `ide-request`,
 `ide-links-http`, and `dispatch-ide-links`. `npm run build`, `git diff --check`, and
 `mkdocs build --strict` also passed. No runtime code, authorization policy, tool schema or test
-assertions changed in this follow-up.
+assertions changed in that initial documentation pass. The later client-identity work adds three
+regression cases across `ide-links-http` and `mcp-era-contract` (24 tests in the focused run).
+Full typecheck, size/schema budgets and strict docs passed. The first full unit run had three
+subprocess startup/time-limit failures in the unrelated CLI/shutdown suites (9,408 passed).
+Those two files passed in isolation (56 tests); a complete rerun with two workers passed
+**337 files / 9,411 tests**, with no skipped or failed tests. No timeout or assertion was relaxed.
 
 Claude Code 2.1.302 / Opus 5.5 at max effort independently reviewed the documentation and relevant
 implementation. It found a blocking configuration risk in the process-wide Claude launch recipe:

@@ -346,28 +346,31 @@ Both the dialog path and Chrome → Eclipse path opened live source in ADT 3.60.
 Check the opened project's backend and client even if no chooser appears: one locally matching SID
 does not establish that it is the system ARC-1 researched, and ARC-1 cannot force Eclipse to ask.
 
-There are two unresolved problems before adding automatic Eclipse links to ARC-1:
+Direct clicking from Eclipse Copilot is now verified by the user's screenshots: the link opened
+the native project chooser, then CL_ABAP_CLASSDESCR source. The chooser is expected when more than
+one local project matches `A4H`; it is not a link error or authentication prompt. This was a diagnostic
+probe link, not an implemented ARC-1 Eclipse output mode.
 
-- **Project identity:** Eclipse's generated Share Link contained SID `A4H`, while two local projects
-  represented different A4H installations with client 001. Eclipse displayed both projects. A SID
-  is insufficient to select the backend researched through a BTP target. The tested `A4H.2023`
-  authority variant and the literal project-name authority `A4H_2023` were both rejected as invalid
-  system IDs. Inspection found a native project-name match with underscores replaced by dots.
-  `adt://H01.EN/...` selected the existing `H01_EN` project without a chooser in a live test, but its
-  unavailable backend prevented source opening. Java URI validation rejects underscores and the
-  tested numeric final label in `A4H.2023`. A validated, unique local project mapping may therefore
-  avoid a companion extension; arbitrary project names and ambiguous encodings are not qualified.
-- **Copilot click handling:** Eclipse Copilot 0.21.0 rendered an `adt://` Markdown link, but clicking
-  it did not open a project chooser or source. External handler registration was enabled during the
-  test. A later plain HTTP control link also failed under automation, so this does not establish an
-  `adt://`-specific Copilot defect. Copying the URI into Open ADT Link is the verified fallback.
-  A browser page with an explicit ADT link and an HTTP redirect to ADT both opened source, but the
-  complete Copilot-to-browser-to-Eclipse path remains unqualified.
+Backend selection remains the issue before adding automatic Eclipse links to ARC-1. Eclipse's
+generated Share Link contained SID `A4H`, while two local projects represented different A4H
+installations with client 001. A SID is insufficient to select the backend researched through a
+BTP target. The tested `A4H.2023` authority and literal project-name authority `A4H_2023` were both
+rejected as invalid system IDs. Inspection found a native project-name match with underscores
+replaced by dots. `adt://H01.EN/...` selected `H01_EN` without a chooser, but its unavailable backend
+prevented source opening. Java URI validation rejects underscores and the tested numeric final
+label in `A4H.2023`. A validated, unique local project mapping may avoid a companion extension;
+arbitrary project names and ambiguous encodings are not qualified.
+
+Earlier automated clicks failed even for the ordinary HTTP control, which the user then opened
+successfully. Those failures do not establish a Copilot defect. Direct ADT links work on the tested
+installation and do not require an HTTP helper. A browser page and HTTP redirect also opened source
+in separate tests, but their complete sequence starting in Copilot remains unqualified.
 
 The current PR accepts only `off` and `vscode`; `Arc1-Ide-Client: eclipse` deliberately receives no
-VS Code links. Eclipse support needs a separate, explicit client preference plus a qualified click
-handler and a policy for ambiguous projects. Eclipse's per-server HTTP `requestInit.headers` was
-verified to transmit presentation preferences, so configuration transport is available. A local
+VS Code links. Eclipse support needs a separate, explicit client preference and a policy for
+ambiguous projects. A SID-based link with manual selection is the simplest candidate; it must label
+the researched target and cannot promise an automatic backend match. Eclipse's per-server HTTP
+`requestInit.headers` was verified to transmit presentation preferences, so configuration transport is available. A local
 companion remains an option for mappings that native project selection cannot safely represent.
 Do not put credentials or
 project-creation connection parameters into shared links. BTP deployment alone cannot provide the

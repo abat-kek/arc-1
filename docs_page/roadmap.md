@@ -425,16 +425,20 @@ and closed [PR #676](https://github.com/arc-mcp/arc-1/pull/676).
 - **Category:** Compatibility
 
 **Remaining gap.** Eclipse ADT 3.60.2 opened live source through Open ADT Link and a registered
-Chrome `adt://` link. Eclipse Copilot 0.21.0 rendered the same scheme but did not navigate on click.
-An ordinary HTTP control also failed under automation, so a scheme-specific defect is not established.
+Chrome `adt://` link. The user also verified a direct Eclipse Copilot 0.21.0 click, with screenshots
+of the project chooser and opened source. The earlier automated failures were false negatives;
+the HTTP control also opens a browser by user report. Direct click dispatch is no longer a blocker
+on this installation.
 SID-only links showed both A4H projects, even though they represent different backends with the same
 client. Native encoded authority `H01.EN` selected `H01_EN`, but its unavailable backend prevented
 source opening; some project names fail Java URI host validation. Browser landing-page and HTTP
 redirect prototypes opened source. PR #1025 still supports only `off` and `vscode`; it does not ship
 Eclipse decoration. Real Eclipse per-server `requestInit.headers` transmission was verified.
 
-**Resume with.** Obtain a successful Copilot HTTP control click, then qualify direct ADT and browser
-handoff independently. Test native encoded-project/destination matching, authority validation,
+**Resume with.** Implement/test an explicit Eclipse mode using verified real SID/ADT object URIs,
+with clearly labeled manual project selection as the smallest candidate. It cannot promise or
+force a chooser or an automatic backend match. For exact selection, test native encoded-project/destination
+matching, authority validation,
 collisions and fallbacks before requiring richer links or a local companion mapping service
 identity plus public target to an existing project. Preserve per-request client opt-in and fail closed
 on unknown mappings; never pick the first matching SID. Cover single-system local stdio, single HTTP,

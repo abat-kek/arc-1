@@ -1,5 +1,10 @@
 # BTP editor acceptance after CF reauthentication
 
+> Historical experiment: the direct VS Code link builder and destination-map settings were
+> removed from PR #1025 on 19 October. VS Code now uses SAP ADT MCP exclusively.
+> Eclipse links remain. See the [current setup](../../docs_page/ide-integration.md).
+
+
 Draft [PR #1025](https://github.com/arc-mcp/arc-1/pull/1025), read-only acceptance on 19 October 2026.
 This closes the deployment blocker recorded in the [native MCP composition follow-up](2026-10-19-native-mcp-composition.md).
 It tests the direct ARC-1 links and delivery of the optional native-navigation hint, not successful

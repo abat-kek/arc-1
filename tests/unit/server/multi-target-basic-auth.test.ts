@@ -306,52 +306,56 @@ describe('multi-target shared Basic authentication', () => {
     expect(sharedAuthState.getHealth('A4H/100').status).toBe('healthy');
   });
 
-  it.each(['pinned', 'aggregate'] as const)('keeps aliases request-local for shared Basic %s calls', async (mode) => {
-    const instanceConfig = { ...INSTANCE_CONFIG, ideLinks: 'vscode' as const };
-    const current = registry(undefined, instanceConfig);
-    const target = current.targets[0];
-    const sharedAuthState = new MultiTargetSharedAuthState();
-    setCachedFeatures(featuresOff(), target.target);
-    resolveRuntimeSubaccountDestination.mockResolvedValue(BASE_DESTINATION);
-    vi.spyOn(AdtClient.prototype, 'getClass').mockResolvedValue({
-      source: 'CLASS zcl_test DEFINITION.',
-      notModified: false,
-      statusCode: 200,
-    });
-    vi.spyOn(AdtHttpClient.prototype, 'get').mockResolvedValue(DISCOVERY_RESPONSE);
-    const config =
-      mode === 'pinned'
-        ? buildMultiTargetConfig(instanceConfig, target)
-        : buildAggregateToolSurfaceConfig(instanceConfig, current.targets);
-    const server = createServer(config, {
-      btpConfig: BTP_CONFIG,
-      multiTarget: { mode, registry: current, instanceConfig, target, sharedAuthState },
-    });
-    try {
-      const request = {
-        method: 'tools/call',
-        params: {
-          name: 'SAPRead',
-          arguments: { type: 'CLAS', name: 'ZCL_TEST', ...(mode === 'aggregate' ? { target: target.target } : {}) },
-        },
-      };
-      for (const alias of ['ALICE', 'BOB', undefined]) {
-        const result = await requestHandler(server)(request, {
-          authInfo: READ_AUTH,
-          requestInfo: {
-            headers: alias ? { 'arc1-ide-client': 'vscode', 'arc1-ide-destinations-v1': `A4H/100=${alias}` } : {},
+  it.each(['pinned', 'aggregate'] as const)(
+    'keeps Eclipse preferences request-local for shared Basic %s calls',
+    async (mode) => {
+      const instanceConfig = { ...INSTANCE_CONFIG, ideLinks: 'eclipse' as const };
+      const current = registry(undefined, instanceConfig);
+      const target = current.targets[0];
+      const sharedAuthState = new MultiTargetSharedAuthState();
+      setCachedFeatures(featuresOff(), target.target);
+      resolveRuntimeSubaccountDestination.mockResolvedValue(BASE_DESTINATION);
+      vi.spyOn(AdtClient.prototype, 'getClass').mockResolvedValue({
+        source: 'CLASS zcl_test DEFINITION.',
+        notModified: false,
+        statusCode: 200,
+      });
+      vi.spyOn(AdtHttpClient.prototype, 'get').mockResolvedValue(DISCOVERY_RESPONSE);
+      const config =
+        mode === 'pinned'
+          ? buildMultiTargetConfig(instanceConfig, target)
+          : buildAggregateToolSurfaceConfig(instanceConfig, current.targets);
+      const server = createServer(config, {
+        btpConfig: BTP_CONFIG,
+        multiTarget: { mode, registry: current, instanceConfig, target, sharedAuthState },
+      });
+      try {
+        const request = {
+          method: 'tools/call',
+          params: {
+            name: 'SAPRead',
+            arguments: { type: 'CLAS', name: 'ZCL_TEST', ...(mode === 'aggregate' ? { target: target.target } : {}) },
           },
-        });
-        expect(result.isError).not.toBe(true);
-        expect(result.content).toHaveLength(alias ? 2 : 1);
-        if (alias) expect(result.content[1].text).toContain(`target: A4H/100; destination: ${alias}`);
+        };
+        for (const editor of ['eclipse', 'vscode', undefined, 'eclipse']) {
+          const result = await requestHandler(server)(request, {
+            authInfo: READ_AUTH,
+            requestInfo: {
+              headers: editor ? { 'arc1-ide-client': editor } : {},
+            },
+          });
+          expect(result.isError).not.toBe(true);
+          expect(result.content).toHaveLength(editor === 'eclipse' ? 2 : 1);
+          if (editor === 'eclipse')
+            expect(result.content[1].text).toContain('target: A4H/100; SAP SID: A4H; client: 100');
+        }
+        expect(sharedAuthState.getHealth(target.target).status).toBe('healthy');
+        expect(resolveRuntimeSubaccountPpDestination).not.toHaveBeenCalled();
+      } finally {
+        await server.close();
       }
-      expect(sharedAuthState.getHealth(target.target).status).toBe('healthy');
-      expect(resolveRuntimeSubaccountPpDestination).not.toHaveBeenCalled();
-    } finally {
-      await server.close();
-    }
-  });
+    },
+  );
 
   it('builds a fresh Basic-only client with current credentials and no inherited user auth state', async () => {
     const current = registry();

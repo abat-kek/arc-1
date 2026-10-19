@@ -8,19 +8,18 @@ The npm package installs three equivalent executable names: `arc1`, `arc-1`, and
 guide uses `arc1`. The separate `arc1-source` helper prepares local files for an
 [existing Codex MCP connection](codex-file-source.md); it does not connect to SAP.
 
-## Generate editor-link configuration
+## Generate Eclipse link configuration
 
 `arc1 config ide` prints a small JSON fragment to merge into one existing MCP server entry.
 It is offline and preserves connection/authentication setup. For example:
 
 ```bash
-arc1 config ide --destination DEV-001
 arc1 config ide --mcp-client eclipse --system-id A4H
 arc1 config ide --mcp-client eclipse --endpoint https://YOUR-ARC1/A4H/001/mcp
 ```
 
-See [IDE integration](ide-integration.md) for BTP prerequisites, aggregate mappings, and Eclipse
-project selection. Use `--mcp-client`, not the `--client` flag that selects the SAP logon client.
+See [IDE integration](ide-integration.md) for BTP prerequisites and Eclipse project selection.
+VS Code uses SAP ADT MCP and needs no generated ARC-1 link settings. Use `--mcp-client`, not the `--client` flag that selects the SAP logon client.
 
 ## Install reproducibly
 

@@ -167,9 +167,7 @@ export interface ServerConfig {
   minimalErrors: boolean;
 
   // --- IDE navigation (HTTP requires explicit per-request editor preferences) ---
-  ideLinks: 'off' | 'vscode' | 'eclipse' | 'on';
-  /** Stdio-only local SAP ADT alias; HTTP never inherits this value. */
-  ideDestination: string;
+  ideLinks: 'off' | 'eclipse';
   /** Configured real SAP SID for Eclipse navigation; multi-target runtimes use the selected target's SID. */
   ideSystemId: string;
 
@@ -318,7 +316,6 @@ export const DEFAULT_CONFIG: ServerConfig = {
   ppAllowSharedCookies: false,
   disableSaml2: false,
   ideLinks: 'off',
-  ideDestination: '',
   ideSystemId: '',
   toolMode: 'standard',
   schemaNullableOptionals: 'auto',

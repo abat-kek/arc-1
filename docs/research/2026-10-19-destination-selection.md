@@ -9,13 +9,12 @@ exact confirmed destination.
 
 | Path | What identifies the local destination? | Can everyone use just the SID? |
 |---|---|---|
-| Direct ARC-1 VS Code links | Exact local alias in `abap:/flat/<alias>/…` | No SID resolver is invoked. A SID only works here if it is also the actual alias. |
+| Direct ARC-1 VS Code links (removed from the draft) | Exact local alias in `abap:/flat/<alias>/…` | No SID resolver is invoked. A SID only works here if it is also the actual alias. |
 | SAP native MCP resolver | Exact destination, with a SID fallback | Supported, but not reliable when SID/client/backend matches are ambiguous. |
 | Eclipse `adt://` | SID, resolved by Eclipse projects | Project selection may be necessary; the link does not prove backend/client identity. |
 
-Personal alias names need not match across developers. With direct HTTP links, each client supplies
-its own map; local stdio uses per-server environment settings. With native composition, a confirmed
-mapping is kept in the user's chat/instructions. The BTP server does not inspect laptop settings.
+Personal alias names need not match across developers. The duplicate direct-link path and its
+HTTP/stdio mapping settings have been removed. With native composition, a confirmed mapping is kept in the user's chat/instructions. The BTP server does not inspect laptop settings.
 
 ## SAP 1.2 contract and implementation
 
@@ -70,7 +69,7 @@ Do not ship a guess based on an alias spelling, an unsigned target label, or one
 
 ## Documentation validation
 
-The setup page now separates local VS Code, remote VS Code, Eclipse and optional native composition;
+The setup page now has one native-resolver workflow for local/BTP VS Code and a separate Eclipse setup;
 uses one consistent example; and identifies administrator versus developer settings. It uses plain
 Markdown so the same instructions remain readable on GitHub and the MkDocs site. Configuration
 examples are checked against the existing offline helper/request resolver, and the strict site build

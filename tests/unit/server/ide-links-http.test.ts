@@ -75,7 +75,8 @@ const CONFIG: ServerConfig = {
   transport: 'http-streamable',
   httpAddr: '127.0.0.1:0',
   xsuaaAuth: true,
-  ideLinks: 'vscode',
+  ideLinks: 'eclipse',
+  ideSystemId: 'A4H',
   multiTargetEndpoints: true,
   multiTargetAuthorization: 'xsuaa-attribute',
   cacheMode: 'none',
@@ -154,7 +155,7 @@ function result(response: { status: number; text: string }): Result {
   return message.result;
 }
 
-describe('request-scoped VS Code links over real pinned/aggregate HTTP routing', () => {
+describe('request-scoped Eclipse links over real pinned/aggregate HTTP routing', () => {
   let app: express.Express;
   let httpServer: HttpServer;
   let sequence = 0;
@@ -280,41 +281,7 @@ describe('request-scoped VS Code links over real pinned/aggregate HTTP routing',
     if (token) call.set('Authorization', `Bearer ${token}`);
     return call.send({ jsonrpc: '2.0', id: ++sequence, method, ...(params ? { params } : {}) });
   }
-  const preference = (map: string, client = 'vscode') => ({
-    'Arc1-Ide-Client': client,
-    'Arc1-Ide-Destinations-V1': map,
-  });
-  it.each([true, false])(
-    'selects Eclipse or VS Code per request with a shared HTTP ceiling (pinned=%s)',
-    async (pinned) => {
-      await start(makeRegistry(), { ...CONFIG, ideLinks: 'on' });
-      const token = addUser(['A4H/000', 'A4H-OTHER/000']);
-      for (const target of ['A4H/000', 'A4H-OTHER/000']) {
-        const response = await read(token, target, pinned, { 'Arc1-Ide-Client': 'eclipse' });
-        expect(response.isError).not.toBe(true);
-        expect(response.content?.[0]).toEqual({ type: 'text', text: SOURCE });
-        expect(response.content).toHaveLength(2);
-        expect(response.content![1].text).toContain(`target: ${target}; SAP SID: A4H; client: 000`);
-        expect(response.content![1].text).toContain('(adt://A4H/sap/bc/adt/oo/classes/cl_abap_typedescr)');
-        expect(response.content![1].text).not.toContain('vscode://');
-        expectDestination(await read(token, target, pinned, preference(`${target}=LOCAL`)), 'LOCAL', target);
-        expectDestination(await read(token, target, pinned));
-      }
-      const denied = await rpc(
-        token,
-        'tools/call',
-        {
-          name: 'SAPRead',
-          arguments: { type: 'CLAS', name: 'CL_ABAP_TYPEDESCR', ...(pinned ? {} : { target: 'A4H/001' }) },
-        },
-        pinned ? '/A4H/001/mcp' : '/multi/mcp',
-        { 'Arc1-Ide-Client': 'eclipse' },
-      );
-      if (pinned) expect(denied.status).toBe(404);
-      else expect(result(denied).isError).toBe(true);
-      expect(denied.text).not.toContain('adt://');
-    },
-  );
+  const preference = { 'Arc1-Ide-Client': 'eclipse' };
   async function read(
     token: string,
     target: string,
@@ -332,22 +299,22 @@ describe('request-scoped VS Code links over real pinned/aggregate HTTP routing',
       ),
     );
   }
-  function expectDestination(response: Result, destination?: string, target?: string, source = SOURCE) {
+  function expectLinks(response: Result, enabled = false, target?: string, source = SOURCE) {
     expect(response.isError, JSON.stringify(response)).not.toBe(true);
     expect(response.content?.[0]).toEqual({ type: 'text', text: source });
-    expect(response.content).toHaveLength(destination ? 2 : 1);
-    if (destination) {
+    expect(response.content).toHaveLength(enabled ? 2 : 1);
+    expect(JSON.stringify(response)).not.toContain('vscode://');
+    if (enabled) {
       const text = response.content![1].text;
-      expect(text).toContain(target ? `target: ${target}; destination: ${destination}` : `destination: ${destination}`);
-      const link = text.match(/vscode:\/\/[^\s]+/)![0].replace(/\)$/, '');
-      expect(decodeURIComponent(new URL(new URL(link).searchParams.get('abapUri')!).pathname.split('/')[2])).toBe(
-        destination,
-      );
+      expect(text).toContain('SAP SID: A4H; client:');
+      if (target) expect(text).toContain(`target: ${target};`);
+      else expect(text).not.toContain('target:');
+      expect(text).toContain('(adt://A4H/sap/bc/adt/oo/classes/cl_abap_typedescr)');
     }
   }
 
   it.each(['standard', 'xsuaa-attribute'] as const)(
-    'isolates concurrent users/workspaces across both endpoints, SAP clients and duplicate-SID route aliases (%s)',
+    "isolates concurrent users' preferences across both endpoints, SAP clients and duplicate-SID route aliases (%s)",
     async (mode) => {
       const config = { ...CONFIG, multiTargetAuthorization: mode };
       await start(makeRegistry(3, [], config), config);
@@ -357,11 +324,10 @@ describe('request-scoped VS Code links over real pinned/aggregate HTTP routing',
       await Promise.all(
         [alice, bob].flatMap((user, u) =>
           [true, false].flatMap((pinned) =>
-            targets.map(async (target, t) => {
-              const alias = `USER${u}-WORKSPACE${Number(pinned)}-${t}`;
-              const map = targets.map((key) => `${key}=${key === target ? alias : 'WRONG'}`).join(',');
+            targets.map(async (target) => {
+              const enabled = u === 0;
               for (let repeat = 0; repeat < 2; repeat++)
-                expectDestination(await read(user, target, pinned, preference(map)), alias, target);
+                expectLinks(await read(user, target, pinned, enabled ? preference : {}), enabled, target);
             }),
           ),
         ),
@@ -369,15 +335,13 @@ describe('request-scoped VS Code links over real pinned/aggregate HTTP routing',
       expect(resolveDestination).toHaveBeenCalledTimes(24);
       expect(vi.mocked(AdtHttpClient.prototype.get).mock.calls).toHaveLength(24);
       // Presentation does not add a SAP call, leak into its headers, or appear in audit previews.
-      expect(JSON.stringify(vi.mocked(AdtHttpClient.prototype.get).mock.calls)).not.toMatch(
-        /USER[01]-WORKSPACE|Arc1-Ide/i,
-      );
-      expect(JSON.stringify(vi.mocked(logger.emitAudit).mock.calls)).not.toMatch(/USER[01]-WORKSPACE|Arc1-Ide/i);
+      expect(JSON.stringify(vi.mocked(AdtHttpClient.prototype.get).mock.calls)).not.toMatch(/adt:\/\/|Arc1-Ide/i);
+      expect(JSON.stringify(vi.mocked(logger.emitAudit).mock.calls)).not.toMatch(/adt:\/\/|Arc1-Ide/i);
     },
   );
 
   it.each(['api-key', 'jwt'] as const)(
-    'uses @single only with an authenticated traditional /mcp request (%s)',
+    'requires authentication for traditional /mcp presentation (%s)',
     async (auth) => {
       const config: ServerConfig = {
         ...CONFIG,
@@ -400,22 +364,25 @@ describe('request-scoped VS Code links over real pinned/aggregate HTTP routing',
       await listen();
       const token = auth === 'jwt' ? addUser([]) : 'single-viewer-key-for-test';
       const params = { name: 'SAPRead', arguments: { type: 'CLAS', name: 'CL_ABAP_TYPEDESCR' } };
-      const denied = await rpc(undefined, 'tools/call', params, '/mcp', preference('@single=SECRET'));
+      const denied = await rpc(undefined, 'tools/call', params, '/mcp', preference);
       expect(denied.status).toBe(401);
-      expect(denied.text).not.toMatch(/vscode:|SECRET/);
+      expect(denied.text).not.toMatch(/vscode:|adt:/);
       expect(AdtHttpClient.prototype.get).not.toHaveBeenCalled();
-      for (const [mapping, alias] of [
-        ['@single=DEV', 'DEV'],
-        ['A4H/000=WRONG', undefined],
-      ] as const) {
-        expectDestination(result(await rpc(token, 'tools/call', params, '/mcp', preference(mapping))), alias);
-      }
-      expectDestination(result(await rpc(token, 'tools/call', params, '/mcp')));
+      expectLinks(result(await rpc(token, 'tools/call', params, '/mcp', preference)), true);
+      expectLinks(
+        result(
+          await rpc(token, 'tools/call', params, '/mcp', {
+            'Arc1-Ide-Client': 'vscode',
+            'Arc1-Ide-Destinations-V1': '@single=LOCAL',
+          }),
+        ),
+      );
+      expectLinks(result(await rpc(token, 'tools/call', params, '/mcp')));
       expect(resolveDestination).not.toHaveBeenCalled();
     },
   );
 
-  it('keeps per-user aliases out of a shared single-target source cache', async () => {
+  it('keeps presentation out of a shared single-target source cache', async () => {
     const cachingLayer = new CachingLayer(new MemoryCache());
     const config: ServerConfig = {
       ...CONFIG,
@@ -443,16 +410,16 @@ describe('request-scoped VS Code links over real pinned/aggregate HTTP routing',
     await listen();
     const params = { name: 'SAPRead', arguments: { type: 'CLAS', name: 'CL_ABAP_TYPEDESCR', version: 'active' } };
     const revalidated = `[cached:revalidated]\n${SOURCE}`;
-    for (const [user, alias, source] of [
-      ['alice', 'ALICE_LOCAL', SOURCE],
-      ['bob', 'BOB_LOCAL', revalidated],
-      ['alice', undefined, revalidated],
-      ['bob', 'BOB_LOCAL', revalidated],
+    for (const [user, enabled, source] of [
+      ['alice', true, SOURCE],
+      ['bob', false, revalidated],
+      ['alice', false, revalidated],
+      ['bob', false, revalidated],
     ] as const) {
-      const headers = alias ? preference(`@single=${alias}`) : {};
-      expectDestination(
+      const headers = enabled ? preference : {};
+      expectLinks(
         result(await rpc(`${user}-viewer-key-for-test`, 'tools/call', params, '/mcp', headers)),
-        alias,
+        enabled,
         undefined,
         source,
       );
@@ -462,65 +429,19 @@ describe('request-scoped VS Code links over real pinned/aggregate HTTP routing',
     const reads = vi.mocked(AdtHttpClient.prototype.get).mock.calls;
     expect(reads).toHaveLength(4);
     for (const read of reads.slice(1)) expect(read[1]).toMatchObject({ 'If-None-Match': 'source-v1' });
-    expect(JSON.stringify(reads)).not.toMatch(/ALICE_LOCAL|BOB_LOCAL|Arc1-Ide/i);
+    expect(JSON.stringify(reads)).not.toMatch(/adt:\/\/|Arc1-Ide/i);
   });
 
-  it.each([
-    ['on', 'A4H', true, true],
-    ['on', '', false, true],
-    ['eclipse', 'A4H', true, false],
-  ] as const)(
-    'selects traditional HTTP editors with ceiling=%s and SID=%s',
-    async (ideLinks, ideSystemId, eclipse, vscode) => {
-      const config: ServerConfig = {
-        ...CONFIG,
-        url: 'https://sap.example.test',
-        client: '001',
-        xsuaaAuth: false,
-        multiTargetEndpoints: false,
-        multiTargetAuthorization: 'standard',
-        ideLinks,
-        ideSystemId,
-        apiKeys: [{ key: 'single-viewer-key-for-test', profile: 'viewer' }],
-      };
-      setCachedFeatures(featuresOff());
-      await startHttpServer(() => {
-        const server = createServer(config);
-        servers.push(server);
-        return server;
-      }, config);
-      await listen();
-      const params = { name: 'SAPRead', arguments: { type: 'CLAS', name: 'CL_ABAP_TYPEDESCR' } };
-      const token = 'single-viewer-key-for-test';
-      const native = result(await rpc(token, 'tools/call', params, '/mcp', { 'Arc1-Ide-Client': 'eclipse' }));
-      expect(native.isError).not.toBe(true);
-      expect(native.content?.[0]).toEqual({ type: 'text', text: SOURCE });
-      expect(native.content).toHaveLength(eclipse ? 2 : 1);
-      if (eclipse) {
-        expect(native.content![1].text).toContain('SAP SID: A4H; client: 001');
-        expect(native.content![1].text).toContain('(adt://A4H/sap/bc/adt/oo/classes/cl_abap_typedescr)');
-        expect(native.content![1].text).not.toContain('target:');
-      }
-      expectDestination(
-        result(await rpc(token, 'tools/call', params, '/mcp', preference('@single=LOCAL'))),
-        vscode ? 'LOCAL' : undefined,
-      );
-      expectDestination(result(await rpc(token, 'tools/call', params, '/mcp')));
-      expect(resolveDestination).not.toHaveBeenCalled();
-    },
-  );
-
   it('handles duplicate raw header lines without ambiguity or a sticky preference', async () => {
-    await start(makeRegistry(), { ...CONFIG, ideLinks: 'on' });
+    await start();
     const token = addUser(['A4H/000']);
     const address = httpServer.address();
     if (!address || typeof address === 'string') throw new Error('Expected TCP test listener');
-    for (const [clients, maps, expected] of [
-      [['vscode'], ['A4H/000=DEV', 'A4H/000=DEV'], 'DEV'],
-      [['vscode'], ['A4H/000=DEV', 'A4H/000=QA'], undefined],
-      [['vscode', 'vscode'], ['A4H/000=DEV'], undefined],
-      [['eclipse', 'eclipse'], [], undefined],
-      [['vscode', 'eclipse'], ['A4H/000=DEV'], undefined],
+    for (const [clients, expected] of [
+      [['eclipse'], true],
+      [['eclipse', 'eclipse'], false],
+      [['vscode'], false],
+      [['vscode', 'eclipse'], false],
     ] as const) {
       const body = JSON.stringify({
         jsonrpc: '2.0',
@@ -552,7 +473,6 @@ describe('request-scoped VS Code links over real pinned/aggregate HTTP routing',
               'MCP-Protocol-Version',
               '2025-11-25',
               ...clients.flatMap((value) => ['Arc1-Ide-Client', value]),
-              ...maps.flatMap((value) => ['Arc1-Ide-Destinations-V1', value]),
             ],
           },
           (res) => {
@@ -568,9 +488,9 @@ describe('request-scoped VS Code links over real pinned/aggregate HTTP routing',
         req.on('error', reject);
         req.end(body);
       });
-      expectDestination(result(response), expected, 'A4H/000');
+      expectLinks(result(response), expected, 'A4H/000');
     }
-    expectDestination(await read(token, 'A4H/000', true));
+    expectLinks(await read(token, 'A4H/000', true));
   });
 
   it.each([true, false])(
@@ -588,11 +508,11 @@ describe('request-scoped VS Code links over real pinned/aggregate HTTP routing',
           clientInfo: { name: 'Visual Studio Code', version: '1.142.0' },
         },
         path,
-        preference('A4H/000=INIT_ONLY'),
+        preference,
       );
       expect(init.status).toBe(200);
       expect(init.headers['mcp-session-id']).toBeUndefined();
-      expectDestination(
+      expectLinks(
         await read(token, 'A4H/000', pinned, {
           'User-Agent': 'Visual Studio Code/1.142.0',
           'Arc1-Ide-Destinations-V1': 'A4H/000=USER_AGENT_ONLY',
@@ -613,42 +533,35 @@ describe('request-scoped VS Code links over real pinned/aggregate HTTP routing',
         path,
         { 'Arc1-Ide-Destinations-V1': 'A4H/000=METADATA_ONLY' },
       );
-      expectDestination(result(claimedMetadata));
+      expectLinks(result(claimedMetadata));
       // Presentation is an explicit preference, not proof of a particular client binary.
-      expectDestination(
+      expectLinks(
         await read(token, 'A4H/000', pinned, {
-          ...preference('A4H/000=EXPLICIT'),
+          ...preference,
           'User-Agent': 'GithubCopilot/1.527.0',
         }),
-        'EXPLICIT',
+        true,
         'A4H/000',
       );
-      expectDestination(await read(token, 'A4H/000', pinned));
+      expectLinks(await read(token, 'A4H/000', pinned));
     },
   );
 
-  it.each([true, false])('leaves ordinary clients and missing/invalid maps unchanged (pinned=%s)', async (pinned) => {
+  it.each([true, false])('ignores ordinary clients and removed VS Code mappings (pinned=%s)', async (pinned) => {
     await start();
     const token = addUser(['A4H/000']);
     for (const headers of [
       {},
-      { 'User-Agent': 'Visual Studio Code' },
+      { 'User-Agent': 'Eclipse' },
       { 'Arc1-Ide-Destinations-V1': 'A4H/000=DEV' },
-      preference('A4H/000=DEV', 'claude'),
-      preference('@single=WRONG'),
-      preference('A4H/001=WRONG'),
-      preference('A4H/000=DEV,A4H/000=QA'),
-      preference('A4H/000=%252Fescape'),
-      preference('bad'),
+      { 'Arc1-Ide-Client': 'claude' },
+      { 'Arc1-Ide-Client': 'vscode', 'Arc1-Ide-Destinations-V1': 'A4H/000=DEV' },
+      { 'Arc1-Ide-Client': 'vscode', 'Arc1-Ide-Destinations-V1': 'bad' },
     ] as Record<string, string>[])
-      expectDestination(await read(token, 'A4H/000', pinned, headers));
-    expectDestination(
-      await read(token, 'A4H/000', pinned, preference('A4H/000=D%C3%89V%20(001)')),
-      'DÉV (001)',
-      'A4H/000',
-    );
+      expectLinks(await read(token, 'A4H/000', pinned, headers));
+    expectLinks(await read(token, 'A4H/000', pinned, preference), true, 'A4H/000');
     // A following request from the same authenticated user has no remembered preference.
-    expectDestination(await read(token, 'A4H/000', pinned));
+    expectLinks(await read(token, 'A4H/000', pinned));
   });
 
   it.each([true, false])(
@@ -664,11 +577,11 @@ describe('request-scoped VS Code links over real pinned/aggregate HTTP routing',
           arguments: { type: 'CLAS', name: 'CL_ABAP_TYPEDESCR', ...(pinned ? {} : { target: 'A4H/001' }) },
         },
         pinned ? '/A4H/001/mcp' : '/multi/mcp',
-        preference('A4H/001=SECRET'),
+        preference,
       );
       if (pinned) expect(denied.status).toBe(404);
       else expect(result(denied).isError).toBe(true);
-      expect(denied.text).not.toMatch(/vscode:|SECRET/);
+      expect(denied.text).not.toMatch(/vscode:|adt:/);
       const noRead = addUser(['A4H/000'], []);
       const scopeDenied = await rpc(
         noRead,
@@ -678,10 +591,10 @@ describe('request-scoped VS Code links over real pinned/aggregate HTTP routing',
           arguments: { type: 'CLAS', name: 'CL_ABAP_TYPEDESCR', ...(pinned ? {} : { target: 'A4H/000' }) },
         },
         pinned ? '/A4H/000/mcp' : '/multi/mcp',
-        preference('A4H/000=SECRET'),
+        preference,
       );
       expect(scopeDenied.status).toBe(403);
-      expect(scopeDenied.text).not.toMatch(/vscode:|SECRET/);
+      expect(scopeDenied.text).not.toMatch(/vscode:|adt:/);
       expect(resolveDestination).not.toHaveBeenCalled();
     },
   );
@@ -696,28 +609,27 @@ describe('request-scoped VS Code links over real pinned/aggregate HTTP routing',
       return value;
     });
     for (const pinned of [true, false]) {
-      const response = await read(token, 'A4H/000', pinned, preference('A4H/000=PRIVATE_ALIAS'));
+      const response = await read(token, 'A4H/000', pinned, preference);
       expect(response.isError).toBe(true);
       expect(JSON.parse(response.content![0].text).error).toBe('TARGET_CONFIG_CHANGED');
-      expect(JSON.stringify(response)).not.toMatch(/vscode:|PRIVATE_ALIAS/);
+      expect(JSON.stringify(response)).not.toMatch(/vscode:|adt:/);
     }
     expect(AdtHttpClient.prototype.get).not.toHaveBeenCalled();
   });
 
   it('inherits only the admin switch and refuses a valid preference when disabled', async () => {
-    const base = { ...CONFIG, ideLinks: 'off' as const, ideDestination: 'STALE_GLOBAL' };
+    const base = { ...CONFIG, ideLinks: 'off' as const, ideSystemId: 'DEV' };
     const registry = makeRegistry(3, [], base);
-    expect(buildMultiTargetConfig({ ...base, ideLinks: 'vscode' }, registry.targets[0])).toMatchObject({
-      ideLinks: 'vscode',
-      ideDestination: '',
+    expect(buildMultiTargetConfig({ ...base, ideLinks: 'eclipse' }, registry.targets[0])).toMatchObject({
+      ideLinks: 'eclipse',
+      ideSystemId: 'A4H',
     });
-    expect(buildAggregateToolSurfaceConfig({ ...base, ideLinks: 'vscode' }, registry.targets)).toMatchObject({
-      ideLinks: 'vscode',
-      ideDestination: '',
+    expect(buildAggregateToolSurfaceConfig({ ...base, ideLinks: 'eclipse' }, registry.targets)).toMatchObject({
+      ideLinks: 'eclipse',
+      ideSystemId: '',
     });
     await start(registry, base);
     const token = addUser(['A4H/000']);
-    for (const pinned of [true, false])
-      expectDestination(await read(token, 'A4H/000', pinned, preference('A4H/000=DEV')));
+    for (const pinned of [true, false]) expectLinks(await read(token, 'A4H/000', pinned, preference));
   });
 });

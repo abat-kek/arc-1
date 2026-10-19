@@ -37,7 +37,7 @@ The successful test workspace contained only:
 `ARC1_IDE_LINKS` remained unset/off on BTP. No local alias or native MCP token went to BTP. No new
 ARC-1 tool, schema, bridge process, custom agent or application-authentication mechanism was added.
 The [setup guide](../../docs_page/ide-integration.md#compose-arc-1-with-saps-native-resolver)
-contains the minimal JSON and mapping; the same mapping principle works with local stdio or single-target HTTP.
+contains the configuration steps and personal mapping; the same mapping principle works with local stdio or single-target HTTP.
 
 ## Environment and evidence method
 
@@ -144,3 +144,23 @@ tools; the two BTP test groups and native resolver group were deselected. The is
 native MCP provider and temporary communication logging were disabled, its window was closed,
 and completed test login pages were closed. Existing destination credentials and the user's other
 VS Code window were not changed.
+
+## Native-only simplification after live acceptance
+
+At the user's request, the draft now removes ARC-1's duplicate flat-URI builder, local alias
+configuration, and HTTP destination-map parser. Both former VS Code paths required the SAP ADT
+extension anyway. VS Code now uses the local SAP ADT MCP resolver exclusively; the initialize hint
+no longer prefers direct ARC-1 links and is conditional on the native tools being available.
+Eclipse retains its SID links, `off|eclipse` modes, per-request HTTP opt-in and offline setup helper.
+Old `vscode`/`on` settings fail with resolver/setup guidance. Old VS Code mapping headers are inert.
+
+Validation of this deletion: 9,388 unit tests across 339 files passed, with no failures/skips;
+build, typecheck, lint, policy, file/schema budgets and strict docs passed. A real local HTTP SDK
+smoke made eight calls across four concurrent clients: Eclipse, no preference, ordinary client,
+and old VS Code headers. Only Eclipse received links; all source blocks stayed unchanged. Pinned,
+aggregate, PP/shared-Basic, authentication/target denials, caching and repeated-header tests remain.
+The tool-definition snapshots did not change. Removed tests covered the deleted alias parser/formatter.
+
+This simplification was not redeployed for another live editor run. The successful native-only
+BTP/Copilot opening above used `0447d506`, with ARC-1 direct links already off. The test deployment
+remains restored to its original droplet; the local checks do not replace that distinction.

@@ -1,5 +1,10 @@
 # Native ADT links from a BTP ARC-1 deployment
 
+> Historical experiment: the direct VS Code link builder and destination-map settings were
+> removed from PR #1025 on 19 October. VS Code now uses SAP ADT MCP exclusively.
+> Eclipse links remain. See the [current setup](../../docs_page/ide-integration.md).
+
+
 Implementation and verification: 2026-10-18, [draft PR #1025](https://github.com/arc-mcp/arc-1/pull/1025).
 This continues the [ADT 1.2 investigation](2026-10-17-adt12-native-ide-links.md).
 

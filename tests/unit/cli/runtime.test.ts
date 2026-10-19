@@ -62,10 +62,10 @@ describe('CLI runtime', () => {
     'keeps CLI source/search exports unchanged with IDE env opt-in (output=%s)',
     async (output) => {
       vi.stubEnv('SAP_URL', 'https://sap.example.test');
-      vi.stubEnv('ARC1_IDE_LINKS', 'vscode');
-      vi.stubEnv('ARC1_IDE_DESTINATION', 'DEV');
+      vi.stubEnv('ARC1_IDE_LINKS', 'eclipse');
+      vi.stubEnv('ARC1_IDE_SYSTEM_ID', 'DEV');
       const configuration = resolveConfig([]);
-      expect(configuration.config.ideLinks).toBe('vscode');
+      expect(configuration.config.ideLinks).toBe('eclipse');
       const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
       for (const [command, payload] of [
         [['source', 'PROG', 'ZHELLO'], 'REPORT zhello.'],
@@ -80,7 +80,7 @@ describe('CLI runtime', () => {
         const printed = log.mock.calls.map(([line]) => String(line)).join('\n');
         if (output === 'json') expect(JSON.parse(printed)).toEqual(original);
         else expect(printed).toBe(payload);
-        expect(configuration.config.ideLinks).toBe('vscode');
+        expect(configuration.config.ideLinks).toBe('eclipse');
       }
     },
   );

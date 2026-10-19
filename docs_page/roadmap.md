@@ -374,14 +374,14 @@ fixtures avoid the pre-delete, but do not fix this runtime gap; do not add a ski
 - **Category:** Compatibility
 
 **Remaining gap.** [PR #1025](https://github.com/arc-mcp/arc-1/pull/1025) has live public-router,
-XSUAA OAuth, pinned/aggregate PP and shared-Basic reads, request-local workspace mapping,
+XSUAA OAuth, pinned/aggregate PP and shared-Basic reads, request-local Eclipse preferences,
 restart/token-refresh and VS Code Copilot-to-native-ADT evidence. A4H/100 now has successful discovery and
 pinned/aggregate source samples, but also repeatable 120-second source-read timeouts, including with
 explicit active selection after restart. Two distinct SAP identities, a known-but-ungranted target
 under `xsuaa-attribute`, and PP-only multi-instance routing remain unqualified live. Automated coverage
 exists for both authorization modes and distinct clients/users; it does not replace these live checks.
 The [19 October follow-up](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-btp-editor-acceptance.md)
-adds both editor styles on four live targets, six actual Copilot reads across Eclipse/VS Code,
+records the earlier direct-link experiment on four live targets and six Copilot reads across Eclipse/VS Code,
 and restart/refresh recovery. Client 100 still timed out; CF authentication is no longer a blocker.
 
 **Resume with.** Trace the A4H/100 SAP/Connectivity source-read timeout using the request IDs and UTC
@@ -403,8 +403,9 @@ keeps these deployment gaps distinct from canonical editor identity (COMPAT-20).
 - **Priority / effort / status:** P2 / M / Needs research
 - **Category:** Compatibility
 
-**Remaining gap.** ADT 1.2 opens qualified source through `abap:/flat/…`, but the same object can
-already have a dirty `repotree-v1` editor. Successful navigation does not establish buffer reuse,
+**Remaining gap.** VS Code now uses SAP ADT MCP canonical source URIs exclusively; the duplicate
+ARC-1 flat-link builder and alias-mapping configuration were removed. Opening a canonical URI
+does not yet establish dirty-buffer reuse,
 Keep/Undo, save, validation, transport assignment, or activation parity. The
 [ABAP Bridge](https://github.com/arc-mcp/arc1-abap-bridge) still supports validation and editable diffs.
 
@@ -431,7 +432,7 @@ text, so the hint now uses SAP's verified `/open?abapUri=` handler.
 **Resume with.** Diagnose the local ADT session logoff and test reliable recovery. Canonical opening
 now has the narrow live evidence above; test editor identity and dirty-buffer reuse on disposable
 objects with unsaved edits next.
-For setup, investigate a local destination picker that saves each developer's confirmed mapping.
+For setup, no ARC-1 destination-map headers remain. Investigate a local destination picker that saves each developer's confirmed mapping.
 SAP's SID fallback selects the first logged-on match without checking backend/client; it cannot
 replace that mapping generally. [Destination-selection research](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-destination-selection.md).
 Qualify each edit/save operation separately before replacing

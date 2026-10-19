@@ -408,15 +408,14 @@ Optional pre-write validation layers and tool/schema selection.
 
 ## IDE navigation
 
-Optional [native source links for SAP ADT for VS Code 1.2.0 and Eclipse ADT](ide-integration.md).
-HTTP/BTP requires explicit per-request editor preferences; VS Code also needs a matching target map. These options affect presentation,
-not SAP connection selection or authorization.
+[VS Code navigation](ide-integration.md#compose-arc-1-with-saps-native-resolver) uses the local SAP
+ADT MCP resolver and requires no ARC-1 link settings or destination-map headers. The options below
+are only for Eclipse presentation; they never select the SAP connection or grant authorization.
 
 | Flag | Env var | Default | Effect |
 |---|---|---|---|
-| `--ide-links` | `ARC1_IDE_LINKS` | `off` | `vscode` or `eclipse` enables that style. HTTP-only `on` allows either style, selected explicitly by each request. Up to eight links in a separate text block; original source/JSON unchanged and no extra SAP calls. Stdio must select one editor. |
-| `--ide-destination` | `ARC1_IDE_DESTINATION` | — | Exact local ADT connection alias for the same SAP system/client. Required with `vscode` on stdio; rejected on HTTP, which uses the request mapping instead. Never inferred from SID or client roots. 1–128 letters/digits/spaces/`_`/`.`/`-`/parentheses, starting with a letter, digit or `_`, with no surrounding whitespace. |
-| `--ide-system-id` | `ARC1_IDE_SYSTEM_ID` | — | Real three-character SAP SID (uppercase, starting with a letter) for Eclipse navigation on single-target stdio/HTTP. Required in single-target `eclipse` mode; with HTTP `on`, missing SID suppresses Eclipse links. Multi-target uses the selected destination’s `sap-sysid` and rejects a global value. SID links are navigation aids, not exact local-project bindings. |
+| `--ide-links` | `ARC1_IDE_LINKS` | `off` | `eclipse` enables up to eight links in a separate text block. HTTP also requires `Arc1-Ide-Client: eclipse` on each request. Source/JSON remains unchanged; no extra SAP calls. |
+| `--ide-system-id` | `ARC1_IDE_SYSTEM_ID` | — | Real three-character SAP SID (uppercase, starting with a letter), required for single-target Eclipse links on stdio/HTTP. Multi-target uses the selected destination's `sap-sysid` and rejects a global value. The SID does not guarantee an exact local-project match. |
 
 ---
 

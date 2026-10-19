@@ -1,5 +1,10 @@
 # Simple native MCP composition: implementation and acceptance
 
+> Historical implementation stage: the direct VS Code path and its `on`/`vscode` modes were
+> subsequently removed. The native hint is now the only VS Code path; Eclipse remains opt-in.
+> See the [current setup](../../docs_page/ide-integration.md).
+
+
 Follow-up in draft PR #1025 to the [setup simplification](2026-10-19-ide-setup-simplification.md).
 The user requested the small conditional-instruction approach before adding another integration layer.
 

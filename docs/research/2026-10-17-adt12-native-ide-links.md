@@ -1,5 +1,10 @@
 # ADT for VS Code 1.2: native research-to-editor links
 
+> Historical experiment: the direct VS Code link builder and destination-map settings were
+> removed from PR #1025 on 19 October. VS Code now uses SAP ADT MCP exclusively.
+> Eclipse links remain. See the [current setup](../../docs_page/ide-integration.md).
+
+
 Research started 2026-10-17, against ARC-1 main `37fece94` (1.6.0). This is a focused continuation
 of the earlier IDE/bridge work, not a replay of all ADT 1.2 feature work.
 

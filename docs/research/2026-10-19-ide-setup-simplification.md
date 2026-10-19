@@ -1,5 +1,10 @@
 # Native Eclipse links and smaller per-client configuration
 
+> Historical experiment: the direct VS Code link builder and destination-map settings were
+> removed from PR #1025 on 19 October. VS Code now uses SAP ADT MCP exclusively.
+> Eclipse links remain. See the [current setup](../../docs_page/ide-integration.md).
+
+
 Follow-up to [editor-link research](2026-10-19-editor-links-and-setup.md) in draft PR #1025.
 The earlier record describes the experiments before the Eclipse formatter existed. This follow-up
 implements that formatter and an offline configuration helper. It is not yet in published `@latest`.

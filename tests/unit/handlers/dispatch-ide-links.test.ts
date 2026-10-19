@@ -5,7 +5,7 @@ import { mockResponse } from '../../helpers/mock-fetch.js';
 import { createClient, mockFetch } from './setup-undici-mock.js';
 
 const { handleToolCall } = await import('../../../src/handlers/dispatch.js');
-const config = { ...DEFAULT_CONFIG, ideLinks: 'vscode' as const, ideDestination: 'DEV' };
+const config = { ...DEFAULT_CONFIG, ideLinks: 'eclipse' as const, ideSystemId: 'DEV' };
 const args = { type: 'PROG', name: 'ZHELLO' };
 
 describe('native IDE links through the real dispatcher', () => {
@@ -20,7 +20,7 @@ describe('native IDE links through the real dispatcher', () => {
     const result = await handleToolCall(createClient(), config, 'SAPRead', args);
     expect(result.isError).toBeUndefined();
     expect(result.content[0]).toEqual(base.content[0]);
-    expect(result.content.at(-1)?.text).toContain('vscode://sapse.adt-vscode/open?abapUri=');
+    expect(result.content.at(-1)?.text).toContain('adt://DEV/');
     expect(mockFetch).toHaveBeenCalledTimes(baselineCalls);
   });
   it('does not decorate a denied call or issue a SAP request', async () => {
@@ -50,7 +50,7 @@ describe('native IDE links through the real dispatcher', () => {
       expect(linked.isError).toBeUndefined();
       expect(linked.content[0]).toEqual(baseline.content[0]);
       expect(() => JSON.parse(linked.content[0].text)).not.toThrow();
-      expect(linked.content[1].text).toContain('zcl_test.clas.abap');
+      expect(linked.content[1].text).toContain('oo/classes/zcl_test');
       expect(mockFetch).toHaveBeenCalledTimes(count);
     },
   );
@@ -75,7 +75,7 @@ describe('native IDE links through the real dispatcher', () => {
     });
     expect(result.isError).toBeUndefined();
     expect(JSON.parse(result.content[0].text).references[0].name).toBe('ZCL_CALLER');
-    expect(result.content[1].text).toContain('zcl_caller.clas.abap');
+    expect(result.content[1].text).toContain('oo/classes/zcl_caller');
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
   it('does not duplicate links through the hyperfocused wrapper', async () => {
@@ -84,14 +84,14 @@ describe('native IDE links through the real dispatcher', () => {
       params: args,
     });
     expect(result.isError).toBeUndefined();
-    expect(result.content.filter((item) => item.text.includes('vscode://sapse.adt-vscode/'))).toHaveLength(1);
+    expect(result.content.filter((item) => item.text.includes('adt://DEV/'))).toHaveLength(1);
   });
   it.each(['standard', 'hyperfocused'] as const)(
     'keeps HTTP presentation out of SAP requests and all %s audit previews',
     async (toolMode) => {
       const audit = vi.spyOn(logger, 'emitAudit').mockImplementation(() => {});
       try {
-        const http = { ...config, ideDestination: '', transport: 'http-streamable' as const, toolMode };
+        const http = { ...config, transport: 'http-streamable' as const, toolMode };
         const name = toolMode === 'hyperfocused' ? 'SAP' : 'SAPRead';
         const input =
           toolMode === 'hyperfocused' ? { action: 'read', params: { ...args, include: null, action: '' } } : args;
@@ -108,12 +108,12 @@ describe('native IDE links through the real dispatcher', () => {
           undefined,
           undefined,
           undefined,
-          { style: 'vscode', destination: 'PRIVATE_WORKSPACE' },
+          { style: 'eclipse', systemId: 'DEV' },
         );
         expect(result.content).toHaveLength(2);
-        expect(result.content[1].text).toContain('PRIVATE_WORKSPACE');
-        expect(JSON.stringify(audit.mock.calls)).not.toContain('PRIVATE_WORKSPACE');
-        expect(JSON.stringify(mockFetch.mock.calls)).not.toContain('PRIVATE_WORKSPACE');
+        expect(result.content[1].text).toContain('adt://DEV/');
+        expect(JSON.stringify(audit.mock.calls)).not.toContain('adt://DEV/');
+        expect(JSON.stringify(mockFetch.mock.calls)).not.toContain('adt://DEV/');
         const absent = await handleToolCall(createClient(), http, name, input);
         expect(absent.content).toHaveLength(1);
       } finally {

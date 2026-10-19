@@ -40,14 +40,17 @@ duplicating it here proved to drift). The compact per-variable table stays in AG
 
 ## Native IDE source links
 
-Native VS Code source links: `src/server/ide-links.ts` appends a separate, bounded text block after
-successful research dispatch. `ARC1_IDE_LINKS=vscode` requires an explicit local ADT alias and local
-single-target stdio. Preserve original source/JSON, ignore arbitrary backend URIs, and avoid extra
-SAP requests. SAP's 1.2 handler opens flat AFF source filenames; namespaces use `(ns)name`.
-See [the contract and live checks](research/2026-10-17-adt12-native-ide-links.md) before expanding
-object types or claiming editor/save parity. `ide-config.ts` keeps alias validation independent of
-the handler import graph. Direct CLI calls explicitly disable decoration to preserve source/JSON
-exports. Eclipse uses a configured real SID, with selected multi-target `sap-sysid` replacing any global value; public route aliases are never SIDs. HTTP `on` permits either explicit client preference. `src/cli-ide.ts` generates offline fragments without resolving SAP config. Tests: `server/ide-*`, `handlers/dispatch-ide-links`, `cli/ide-setup`, and `cli/runtime`.
+VS Code navigation composes ARC-1 research with the local SAP ADT MCP resolver through the conditional
+initialize hint in `server-instructions.ts`. No ARC-1 flat-file URI builder or destination-map header
+remains. Require a user-confirmed backend/client mapping; never infer it from a SID or bypass an
+ARC-1 denial. [Native acceptance and limits](research/2026-10-19-btp-native-end-to-end.md).
+
+Eclipse: `src/server/ide-links.ts` appends a separate, bounded text block after successful research
+dispatch. Preserve source/JSON, ignore arbitrary backend URIs, and avoid extra SAP requests. The real
+SID comes from config or the selected multi-target destination's `sap-sysid`, never its route alias.
+HTTP requires both `ARC1_IDE_LINKS=eclipse` and a request-local `Arc1-Ide-Client: eclipse` preference.
+Direct CLI exports stay undecorated. `src/cli-ide.ts` generates Eclipse fragments offline.
+Tests: `server/ide-*`, `handlers/dispatch-ide-links`, `cli/ide-setup`, and `cli/runtime`.
 
 ## Live relations verification
 

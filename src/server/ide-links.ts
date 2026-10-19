@@ -7,20 +7,14 @@ import {
   objectBasePath,
 } from '../handlers/object-types.js';
 import type { ToolResult } from '../handlers/shared.js';
-import { isIdeDestination, isIdeSystemId } from './ide-config.js';
+import { isIdeSystemId } from './ide-config.js';
 import type { IdeLinkContext } from './ide-request.js';
 import type { ServerConfig } from './types.js';
 
 export const IDE_LINK_LIMIT = 8;
 const MAX_RESULT_CHARS = 256 * 1024;
 const MAX_CANDIDATES = 1000;
-const SOURCE_SUFFIXES: Readonly<Record<string, string>> = {
-  CLAS: 'clas.abap',
-  INTF: 'intf.abap',
-  PROG: 'prog.abap',
-  DDLS: 'ddls.acds',
-};
-const CLASS_INCLUDES = new Set(['definitions', 'implementations', 'macros', 'testclasses']);
+const SOURCE_TYPES = new Set(['CLAS', 'INTF', 'PROG', 'DDLS']);
 
 export interface IdeObject {
   type: string;
@@ -32,31 +26,13 @@ export interface IdeObject {
 export function buildEclipseLink(systemId: string, object: IdeObject): string | undefined {
   if (!isIdeSystemId(systemId)) return undefined;
   const type = normalizeObjectType(object.type);
-  if (!SOURCE_SUFFIXES[type] || object.name.length > 80 || !/^(?:\/[A-Z0-9_]+\/)?[A-Z0-9_]+$/i.test(object.name)) {
+  if (!SOURCE_TYPES.has(type) || object.name.length > 80 || !/^(?:\/[A-Z0-9_]+\/)?[A-Z0-9_]+$/i.test(object.name)) {
     return undefined;
   }
   const include = object.include?.trim().toLowerCase();
   // Initial qualification covers main objects only. Do not promise include/version/fragment navigation.
   if (include && include !== 'main') return undefined;
   return `adt://${systemId}${objectBasePath(type)}${encodeURIComponent(object.name.toLowerCase())}`;
-}
-
-/** SAP AFF uses (namespace)name, unlike abapGit's #namespace#name convention. */
-export function buildVsCodeLink(destination: string, object: IdeObject): string | undefined {
-  if (!isIdeDestination(destination)) return undefined;
-  const type = normalizeObjectType(object.type);
-  let suffix = SOURCE_SUFFIXES[type];
-  if (!suffix || object.name.length > 80 || !/^(?:\/[A-Z0-9_]+\/)?[A-Z0-9_]+$/i.test(object.name)) {
-    return undefined;
-  }
-  const include = object.include?.trim().toLowerCase();
-  if (include && include !== 'main') {
-    if (type !== 'CLAS' || !CLASS_INCLUDES.has(include)) return undefined;
-    suffix = `clas.${include}.abap`;
-  }
-  const filename = `${object.name.toLowerCase().replace(/^\/([^/]+)\//, '($1)')}.${suffix}`;
-  const uri = `abap:/flat/${encodeURIComponent(destination)}/${encodeURIComponent(filename)}`;
-  return `vscode://sapse.adt-vscode/open?abapUri=${encodeURIComponent(uri).replace(/[()]/g, (char) => (char === '(' ? '%28' : '%29'))}`;
 }
 
 function asObject(value: unknown): Record<string, unknown> | undefined {
@@ -131,23 +107,17 @@ export function appendIdeLinks(
   config: ServerConfig,
   requestContext?: IdeLinkContext,
 ): ToolResult {
-  if (result.isError || config.ideLinks === 'off') return result;
-  // HTTP presentation comes exclusively from this request. A global stdio alias is never a fallback.
+  if (result.isError || config.ideLinks !== 'eclipse') return result;
+  // HTTP presentation comes exclusively from this request, never a sticky/global client preference.
   const context: IdeLinkContext | undefined =
     config.transport === 'http-streamable'
       ? requestContext?.target === config.targetId && (!config.multiTargetEndpoints || !!config.targetId)
         ? requestContext
         : undefined
       : !config.multiTargetEndpoints && !config.targetId && !config.destinationName
-        ? config.ideLinks === 'vscode'
-          ? { style: 'vscode', destination: config.ideDestination }
-          : config.ideLinks === 'eclipse'
-            ? { style: 'eclipse', systemId: config.ideSystemId }
-            : undefined
+        ? { style: 'eclipse', systemId: config.ideSystemId }
         : undefined;
-  if (!context || (config.ideLinks !== 'on' && context.style !== config.ideLinks)) return result;
-  if (context.style === 'vscode' && !isIdeDestination(context.destination)) return result;
-  if (context.style === 'eclipse' && (!isIdeSystemId(context.systemId) || context.systemId !== config.ideSystemId))
+  if (context?.style !== 'eclipse' || !isIdeSystemId(context.systemId) || context.systemId !== config.ideSystemId)
     return result;
   try {
     if (tool === 'SAP') {
@@ -158,10 +128,7 @@ export function appendIdeLinks(
     }
     const links = new Map<string, string>();
     for (const object of candidates(tool, args, result)) {
-      const link =
-        context.style === 'vscode'
-          ? buildVsCodeLink(context.destination, object)
-          : buildEclipseLink(context.systemId, object);
+      const link = buildEclipseLink(context.systemId, object);
       if (!link || links.has(link)) continue;
       links.set(link, `- [${object.name.toUpperCase()} (${normalizeObjectType(object.type)})](${link})`);
       if (links.size >= IDE_LINK_LIMIT) break;
@@ -173,10 +140,7 @@ export function appendIdeLinks(
         ...result.content,
         {
           type: 'text',
-          text:
-            context.style === 'vscode'
-              ? `\nOpen current source in SAP ADT for VS Code (${config.targetId ? `target: ${config.targetId}; ` : ''}destination: ${context.destination}; up to ${IDE_LINK_LIMIT} links):\n${[...links.values()].join('\n')}`
-              : `\nOpen current source in Eclipse ADT (${config.targetId ? `target: ${config.targetId}; ` : ''}SAP SID: ${context.systemId}; client: ${config.client}; up to ${IDE_LINK_LIMIT} links). Check the local project matches this backend; duplicate SIDs may show a project chooser.\n${[...links.values()].join('\n')}`,
+          text: `\nOpen current source in Eclipse ADT (${config.targetId ? `target: ${config.targetId}; ` : ''}SAP SID: ${context.systemId}; client: ${config.client}; up to ${IDE_LINK_LIMIT} links). Check the local project matches this backend; duplicate SIDs may show a project chooser.\n${[...links.values()].join('\n')}`,
         },
       ],
     };

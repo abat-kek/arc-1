@@ -34,7 +34,8 @@ app.post(
         const config = {
           ...DEFAULT_CONFIG,
           transport: 'http-streamable',
-          ideLinks: 'vscode',
+          ideLinks: 'eclipse',
+          ideSystemId: 'A4H',
           targetId: target,
           multiTargetEndpoints: true,
         };
@@ -54,26 +55,19 @@ const listener = await new Promise((resolve) => {
   const l = app.listen(0, '127.0.0.1', () => resolve(l));
 });
 const url = new URL(`http://127.0.0.1:${listener.address().port}/A4H/001/mcp`);
-const encode = (targets) =>
-  Object.entries(targets)
-    .map(([key, alias]) => `${key}=${encodeURIComponent(alias)}`)
-    .join(',');
 const cases = [
-  ['first workspace', encode({ [target]: 'DEV-ALICE' }), 'DEV-ALICE'],
-  ['second workspace', encode({ [target]: 'DEV-BOB' }), 'DEV-BOB'],
-  ['Unicode/spaced alias bytes', encode({ [target]: 'DÉV 系統 (001)' }), 'DÉV 系統 (001)'],
-  ['no preference', undefined, undefined],
-  ['different client', encode({ 'A4H/100': 'WRONG' }), undefined],
-  ['invalid alias', encode({ [target]: '../other' }), undefined],
-  ['malformed header', 'v1.!', undefined],
+  ['Eclipse', { 'Arc1-Ide-Client': 'eclipse' }, true],
+  ['no preference', {}, false],
+  ['removed VS Code mapping', { 'Arc1-Ide-Client': 'vscode', 'Arc1-Ide-Destinations-V1': 'A4H/001=DEV' }, false],
+  ['ordinary client', { 'Arc1-Ide-Client': 'claude' }, false],
 ];
 try {
   await Promise.all(
-    cases.map(async ([label, header, expected]) => {
+    cases.map(async ([label, headers, expected]) => {
       const client = new Client({ name: label, version: '1.0' });
       await client.connect(
         new StreamableHTTPClientTransport(url, {
-          requestInit: { headers: header ? { 'Arc1-Ide-Client': 'vscode', 'Arc1-Ide-Destinations-V1': header } : {} },
+          requestInit: { headers },
         }),
       );
       try {
@@ -86,9 +80,7 @@ try {
           assert.equal(result.content[0].text, payload);
           assert.equal(result.content.length, expected ? 2 : 1);
           if (expected) {
-            const outer = new URL(result.content[1].text.match(/vscode:\/\/[^\s]+/)[0].replace(/\)$/, ''));
-            const inner = new URL(outer.searchParams.get('abapUri'));
-            assert.equal(decodeURIComponent(inner.pathname.split('/')[2]), expected);
+            assert.ok(result.content[1].text.includes('adt://A4H/sap/bc/adt/oo/classes/cl_abap_typedescr'));
           }
         }
         console.log(`PASS ${label}`);
@@ -97,18 +89,18 @@ try {
       }
     }),
   );
-  assert.equal(calls, 14);
+  assert.equal(calls, cases.length * 2);
   const original = { content: [{ type: 'text', text: 'CLASS cl_abap_typedescr DEFINITION.' }] };
   assert.equal(
     appendIdeLinks(
       original,
       'SAPRead',
       { type: 'CLAS', name: 'CL_ABAP_TYPEDESCR' },
-      { ...DEFAULT_CONFIG, transport: 'http-streamable', ideLinks: 'vscode', ideDestination: 'DEV' },
+      { ...DEFAULT_CONFIG, transport: 'http-streamable', ideLinks: 'eclipse', ideSystemId: 'A4H' },
     ),
     original,
   );
-  console.log('PASS no request preference means no HTTP decoration (global alias ignored)');
+  console.log('PASS no request preference means no HTTP decoration');
   console.log(
     JSON.stringify({
       calls,

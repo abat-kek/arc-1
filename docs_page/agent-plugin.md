@@ -21,9 +21,10 @@ client; ARC-1 uses the two portable 1.0 components, Agent Skills and stdio MCP.
 ## Optional editor links
 
 The Claude Code plugin and Desktop bundle include per-connection editor preferences. Leave
-**Editor links (off, vscode, eclipse)** at `off` for ordinary chat or terminal use. For VS Code,
-set `vscode` and the exact local ADT destination alias. For Eclipse, set `eclipse` and the real
+**Eclipse links (off, eclipse)** at `off` for ordinary chat or terminal use. To open in Eclipse,
+set `eclipse` and the real
 three-character SAP SID; check the opened project matches your backend when SIDs are duplicated.
+VS Code uses the local SAP ADT MCP resolver instead.
 These settings apply only to that plugin server. The portable Agent Plugin has no client-specific
 settings form; a dedicated MCP entry is available where needed.
 

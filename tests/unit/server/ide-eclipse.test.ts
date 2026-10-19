@@ -1,9 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { textResult } from '../../../src/handlers/shared.js';
 import { validateConfig } from '../../../src/server/config.js';
 import { appendIdeLinks, buildEclipseLink, IDE_LINK_LIMIT } from '../../../src/server/ide-links.js';
 import { resolveHttpIdeContext } from '../../../src/server/ide-request.js';
-import { logger } from '../../../src/server/logger.js';
 import { DEFAULT_CONFIG, type ServerConfig } from '../../../src/server/types.js';
 
 const source = textResult('CLASS cl_abap_typedescr DEFINITION.');
@@ -57,11 +56,11 @@ describe('native Eclipse navigation', () => {
     expect(appendIdeLinks(source, 'SAPRead', args, { ...local, multiTargetEndpoints: true })).toBe(source);
   });
 
-  it('supports both editors on one HTTP server and never treats a route alias as the SID', () => {
+  it('opts in to Eclipse on an HTTP server and never treats a route alias as the SID', () => {
     const config: ServerConfig = {
       ...local,
       transport: 'http-streamable',
-      ideLinks: 'on',
+      ideLinks: 'eclipse',
       multiTargetEndpoints: true,
       targetId: 'A4H-2025/001',
     };
@@ -75,14 +74,9 @@ describe('native Eclipse navigation', () => {
       'arc1-ide-client': 'vscode',
       'arc1-ide-destinations-v1': 'A4H-2025/001=LOCAL',
     });
-    expect(appendIdeLinks(source, 'SAPRead', args, config, vscode).content[1].text).toContain('vscode://');
+    expect(appendIdeLinks(source, 'SAPRead', args, config, vscode)).toBe(source);
     expect(appendIdeLinks(source, 'SAPRead', args, config)).toBe(source);
-    for (const overrides of [
-      { ideLinks: 'off' as const },
-      { ideLinks: 'vscode' as const },
-      { ideSystemId: '' },
-      { targetId: undefined },
-    ]) {
+    for (const overrides of [{ ideLinks: 'off' as const }, { ideSystemId: '' }, { targetId: undefined }]) {
       expect(resolveHttpIdeContext({ ...config, ...overrides }, { 'arc1-ide-client': 'eclipse' })).toBeUndefined();
     }
     expect(
@@ -90,33 +84,10 @@ describe('native Eclipse navigation', () => {
     ).toBe(source);
   });
 
-  it('validates explicit local SID and HTTP-only multi-editor ceiling', () => {
+  it('validates explicit local SID', () => {
     expect(() => validateConfig(local)).not.toThrow();
     expect(() => validateConfig({ ...local, ideSystemId: '' })).toThrow(/requires ARC1_IDE_SYSTEM_ID/);
     expect(() => validateConfig({ ...local, ideSystemId: 'A4H-2025' })).toThrow(/three-character SAP SID/);
-    expect(() => validateConfig({ ...local, ideLinks: 'on' })).toThrow(/HTTP-only/);
     expect(() => validateConfig({ ...local, multiTargetEndpoints: true })).toThrow(/single-target only/);
-  });
-
-  it('explains missing Eclipse SID at startup without disabling mapped VS Code navigation', () => {
-    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
-    try {
-      const config: ServerConfig = {
-        ...local,
-        transport: 'http-streamable',
-        ideLinks: 'on',
-        ideSystemId: '',
-        allowHttpNoAuth: true,
-      };
-      expect(() => validateConfig(config)).not.toThrow();
-      expect(warn).toHaveBeenCalledWith(
-        expect.stringContaining('Eclipse links are unavailable; VS Code links remain available'),
-      );
-      warn.mockClear();
-      validateConfig({ ...config, ideSystemId: 'A4H' });
-      expect(warn).not.toHaveBeenCalledWith(expect.stringContaining('Eclipse links are unavailable'));
-    } finally {
-      warn.mockRestore();
-    }
   });
 });

@@ -7,63 +7,40 @@ import { DEFAULT_CONFIG } from '../../../src/server/types.js';
 afterEach(() => vi.restoreAllMocks());
 
 describe('offline IDE configuration helper', () => {
-  it('defaults to the client editor and overrides inherited preferences only for this stdio entry', () => {
-    expect(buildIdeConfigFragment({ client: 'vscode', destination: 'DEV' })).toEqual({
-      env: { ARC1_IDE_LINKS: 'vscode', ARC1_IDE_DESTINATION: 'DEV', ARC1_IDE_SYSTEM_ID: '' },
-    });
+  it('generates local Eclipse settings and keeps Claude links off by default', () => {
     expect(buildIdeConfigFragment({ client: 'eclipse', systemId: 'A4H' })).toEqual({
-      env: { ARC1_IDE_LINKS: 'eclipse', ARC1_IDE_DESTINATION: '', ARC1_IDE_SYSTEM_ID: 'A4H' },
+      env: { ARC1_IDE_LINKS: 'eclipse', ARC1_IDE_SYSTEM_ID: 'A4H' },
     });
     expect(buildIdeConfigFragment({ client: 'claude' })).toEqual({
-      env: { ARC1_IDE_LINKS: 'off', ARC1_IDE_DESTINATION: '', ARC1_IDE_SYSTEM_ID: '' },
+      env: { ARC1_IDE_LINKS: 'off', ARC1_IDE_SYSTEM_ID: '' },
     });
   });
-  it.each(['/A4H-2025/001/mcp', '/mcp'])('generates the exact mapping key from %s', (path) => {
-    const fragment = buildIdeConfigFragment({
-      client: 'vscode',
-      endpoint: `https://arc.example${path}`,
-      destination: 'DÉV (001)',
-    });
-    const targetId = path === '/mcp' ? undefined : 'A4H-2025/001';
-    expect(
-      resolveHttpIdeContext(
-        {
-          ...DEFAULT_CONFIG,
-          transport: 'http-streamable',
-          ideLinks: 'vscode',
-          multiTargetEndpoints: !!targetId,
-          targetId,
-        },
-        Object.fromEntries(
-          Object.entries(fragment.headers as Record<string, string>).map(([k, v]) => [k.toLowerCase(), v]),
-        ),
-      ),
-    ).toEqual({ style: 'vscode', destination: 'DÉV (001)', target: targetId });
-  });
-  it('round-trips aggregate mappings and uses Eclipse requestInit.headers', () => {
-    const endpoint = 'https://arc.example/multi/mcp';
-    const fragment = buildIdeConfigFragment({ client: 'vscode', endpoint, map: ['A4H/001=DEV', 'A4H-2025/001=NEXT'] });
-    for (const [targetId, destination] of [
-      ['A4H/001', 'DEV'],
-      ['A4H-2025/001', 'NEXT'],
-    ]) {
+  it.each(['/mcp', '/A4H-2025/001/mcp', '/multi/mcp'])(
+    'generates Eclipse headers for %s without alias mappings',
+    (path) => {
+      const endpoint = `https://arc.example${path}`;
+      const fragment = buildIdeConfigFragment({ client: 'eclipse', endpoint });
+      expect(fragment).toEqual({ requestInit: { headers: { 'Arc1-Ide-Client': 'eclipse' } } });
+      const targetId = path === '/mcp' ? undefined : 'A4H-2025/001';
       expect(
         resolveHttpIdeContext(
-          { ...DEFAULT_CONFIG, transport: 'http-streamable', ideLinks: 'on', multiTargetEndpoints: true, targetId },
-          Object.fromEntries(
-            Object.entries(fragment.headers as Record<string, string>).map(([k, v]) => [k.toLowerCase(), v]),
-          ),
+          {
+            ...DEFAULT_CONFIG,
+            transport: 'http-streamable',
+            ideLinks: 'eclipse',
+            ideSystemId: 'A4H',
+            targetId,
+            multiTargetEndpoints: !!targetId,
+          },
+          { 'arc1-ide-client': 'eclipse' },
         ),
-      ).toEqual({ style: 'vscode', destination, target: targetId });
-    }
-    expect(buildIdeConfigFragment({ client: 'eclipse', endpoint })).toEqual({
-      requestInit: { headers: { 'Arc1-Ide-Client': 'eclipse' } },
-    });
-    expect(buildIdeConfigFragment({ client: 'claude', editor: 'eclipse', endpoint })).toEqual({
-      headers: { 'Arc1-Ide-Client': 'eclipse' },
-    });
-  });
-  it('rejects ambiguous, malformed, or mixed setup inputs', () => {
+      ).toEqual({ style: 'eclipse', systemId: 'A4H', target: targetId });
+      expect(buildIdeConfigFragment({ client: 'claude', editor: 'eclipse', endpoint })).toEqual({
+        headers: { 'Arc1-Ide-Client': 'eclipse' },
+      });
+    },
+  );
+  it('rejects malformed or mixed setup inputs', () => {
     for (const endpoint of [
       'https://user:pass@arc.example/mcp',
       'https://arc.example/mcp?token=secret',
@@ -72,29 +49,18 @@ describe('offline IDE configuration helper', () => {
       'https://arc.example/unknown',
       'bad',
     ]) {
-      expect(() => buildIdeConfigFragment({ client: 'vscode', endpoint, destination: 'DEV' })).toThrow();
-    }
-    for (const map of [
-      [],
-      ['A4H/001=DEV', 'A4H/001=QA'],
-      ['@single=DEV'],
-      ['A4H/001=X?x'],
-      Array.from({ length: 33 }, (_, i) => `A4H/${String(i).padStart(3, '0')}=DEV`),
-    ]) {
-      expect(() =>
-        buildIdeConfigFragment({ client: 'vscode', endpoint: 'https://arc.example/multi/mcp', map }),
-      ).toThrow();
+      expect(() => buildIdeConfigFragment({ client: 'eclipse', endpoint })).toThrow();
     }
     expect(() => buildIdeConfigFragment({ client: 'eclipse' })).toThrow(/system-id/);
-    expect(() => buildIdeConfigFragment({ client: 'vscode' })).toThrow(/destination/);
-    expect(() => buildIdeConfigFragment({ client: 'eclipse', systemId: 'A4H', destination: 'DEV' })).toThrow();
+    expect(() => buildIdeConfigFragment({ client: 'eclipse', systemId: 'DEV-001' })).toThrow(/system-id/);
+    expect(() =>
+      buildIdeConfigFragment({ client: 'eclipse', systemId: 'A4H', endpoint: 'https://arc.example/mcp' }),
+    ).toThrow(/server supplies/);
+    expect(() => buildIdeConfigFragment({ client: 'claude', systemId: 'A4H' })).toThrow(/only for Eclipse/);
   });
-  it.each(['vscode', 'eclipse', 'claude'] as const)('explains how to disable HTTP links for %s', (client) => {
+  it.each(['eclipse', 'claude'] as const)('explains how to disable HTTP links for %s', (client) => {
     expect(() => buildIdeConfigFragment({ client, editor: 'off', endpoint: 'https://arc.example/mcp' })).toThrow(
       /sends no Arc1-Ide-\* headers; remove them/,
-    );
-    expect(() => buildIdeConfigFragment({ client: 'claude', endpoint: 'https://arc.example/mcp' })).toThrow(
-      /sends no Arc1-Ide-\* headers/,
     );
   });
   it.each([

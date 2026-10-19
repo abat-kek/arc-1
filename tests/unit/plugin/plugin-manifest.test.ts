@@ -90,7 +90,6 @@ describe('Claude Code plugin.json', () => {
   it('scopes editor preferences to its own server with links off by default and no newer picker requirement', () => {
     const fields = {
       ARC1_IDE_LINKS: ['arc1_ide_links', 'off'],
-      ARC1_IDE_DESTINATION: ['arc1_ide_destination', ''],
       ARC1_IDE_SYSTEM_ID: ['arc1_ide_system_id', ''],
     };
     for (const [env, [key, defaultValue]] of Object.entries(fields)) {
@@ -206,7 +205,6 @@ describe('config surface parity (plugin ↔ mcpb)', () => {
     'ARC1_UI_OPEN',
     'ARC1_UI_ADDR',
     'ARC1_IDE_LINKS',
-    'ARC1_IDE_DESTINATION',
     'ARC1_IDE_SYSTEM_ID',
   ];
 

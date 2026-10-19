@@ -1,9 +1,8 @@
 # Open ARC-1 results in your editor
 
-Use **ARC-1 for research and SAP ADT for opening the object**. In VS Code, the recommended workflow
-uses SAP's native MCP resolver. The ABAP Bridge is not required for navigation.
+Use **ARC-1 for research and SAP ADT for opening the object**. In VS Code, navigation uses SAP's native MCP resolver. The ABAP Bridge is not required for navigation.
 
-**Both VS Code paths require SAP's ABAP Development Tools extension.** Open its ABAP workspace
+**VS Code requires SAP's ABAP Development Tools extension and its MCP server.** Open its ABAP workspace
 and log on to the matching system. Links open SAP source in that extension's ABAP editor.
 
 > **Before you start:** These settings need a build containing [draft PR #1025](https://github.com/arc-mcp/arc-1/pull/1025).
@@ -13,13 +12,12 @@ and log on to the matching system. Links open SAP source in that extension's ABA
 
 | Your setup | Follow this section |
 |---|---|
-| VS Code with local `npx` or BTP ARC-1 | [SAP's native resolver](#compose-arc-1-with-saps-native-resolver) — recommended |
+| VS Code with local `npx` or BTP ARC-1 | [SAP's native resolver](#compose-arc-1-with-saps-native-resolver) |
 | Eclipse with local or BTP ARC-1 | [Eclipse](#eclipse-configuration-and-project-selection) — SID links |
-| VS Code with the ADT extension, without using its MCP tools | [Direct links](#fallback-direct-arc-1-links) — fallback |
 
 ## Compose ARC-1 with SAP's native resolver
 
-**Recommended for VS Code; currently experimental.** The same setup works whether ARC-1 runs
+**Currently experimental.** The same setup works whether ARC-1 runs
 locally through `npx` or remotely on BTP. It supports one system and multiple targets.
 
 Copilot reads through ARC-1, asks SAP's local MCP server for the source URI, and returns a link
@@ -47,7 +45,7 @@ then confirm the matching connection. This saves typing; it does not automatical
 
 **Can I use just the SID?** SAP's resolver accepts it, but chooses the first logged-on matching
 project when several share a SID. It does not match the backend or SAP client. Use a confirmed
-exact destination for now; direct ARC-1 links do not use this fallback.
+exact destination for now.
 [Destination discovery and the proposed local picker](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-destination-selection.md).
 
 ## Which destination name do I use?
@@ -59,10 +57,10 @@ Find it with **ABAP: Open Destination Settings (JSON)**. Check that its backend 
 |---|---|
 | `DEV` | SAP system ID (SID) |
 | `DEV/001` | ARC-1 target: system or route alias + SAP client |
-| `My-Dev` | Your local VS Code ADT destination ID; use this in the examples below |
+| `My-Dev` | Your local VS Code ADT destination ID; confirm this for native navigation |
 
 **Your colleague can use a different destination ID.** Keep the mapping in your personal Copilot
-instructions, or in personal MCP settings when using direct links. No one needs to rename their connection or use the BTP Destination name.
+instructions. No one needs to rename their connection or use the BTP Destination name.
 A SID alone does not distinguish two backends or SAP clients with the same SID.
 
 A local picker that remembers this choice is planned, but **not implemented yet**.
@@ -82,7 +80,6 @@ The link opens **current source**, not a historical version or an exact method/l
 | Destination disconnected / file not found | Log on in ADT, close the failed preview and click again. BTP login does not log on your local editor. |
 | Native resolver says no project | Open an object with **ABAP: Open Object...** in the same window first. Recover the confirmed destination before retrying. |
 | Old tools/instructions after an update | Reset cached MCP tools, run **Developer: Reload Window**, then start a fresh chat. |
-| No direct fallback link | Check the per-server environment or headers and the remote admin switch. Main objects: CLAS, INTF, PROG, DDLS. |
 
 For Claude/plugin clients, leave links off unless you explicitly want an editor handoff.
 See [plugin preferences](agent-plugin.md#optional-editor-links); click behavior in Claude UIs is not yet verified.
@@ -101,7 +98,7 @@ Open an Eclipse ADT project connected to the same backend and SAP client as ARC-
 
 ### ARC-1 on BTP / HTTP
 
-**Administrator:** enable `ARC1_IDE_LINKS=on`. Multi-target destinations supply the SID.
+**Administrator:** enable `ARC1_IDE_LINKS=eclipse`. Multi-target destinations supply the SID.
 A traditional single-system `/mcp` deployment also needs `ARC1_IDE_SYSTEM_ID=DEV` on the server.
 
 **Developer:** add this to the existing Eclipse Copilot HTTP server entry:
@@ -137,73 +134,6 @@ If clicking does nothing, paste the link into **Open ADT Link**. For browser han
 under **Preferences → General → Link Handlers**. Native opening was verified; direct dispatch from
 Eclipse Copilot remains unconfirmed.
 
-## Fallback: direct ARC-1 links
-
-This still requires the **same SAP ADT extension and ABAP editor**; only its MCP server is optional.
-ARC-1 generates links for supported objects using your exact local alias. These settings are **only for this fallback**, not the native
-workflow above. Direct links are off by default.
-
-### Local VS Code
-
-Prerequisite: ARC-1 already connects to SAP. Open the matching ADT workspace and log on locally.
-
-1. Run **MCP: Open User Configuration** in VS Code, or edit your existing private `.vscode/mcp.json`.
-2. In that ARC-1 server entry, add these values to `env`; keep its existing SAP settings and launch command:
-
-    ```json
-    {
-      "env": {
-        "ARC1_IDE_LINKS": "vscode",
-        "ARC1_IDE_DESTINATION": "My-Dev"
-      }
-    }
-    ```
-
-3. Restart that MCP server and [try a link](#try-it).
-
-This works with a local `npx` package or a built checkout. For several local servers, configure each
-entry separately with its matching destination. Do not set one alias globally for all clients.
-
-### BTP and other HTTP deployments
-
-**Administrator:** set `ARC1_IDE_LINKS=on` in the deployment environment or `.mtaext` properties.
-Leave `ARC1_IDE_DESTINATION` unset on the server: each developer supplies their own local name.
-
-**Developer:** open **MCP: Open User Configuration** in VS Code. Add the headers below to your
-existing ARC-1 entry, keeping its URL and authentication. Open your ADT workspace and log on there too.
-
-```json
-{
-  "servers": {
-    "arc-1-dev": {
-      "type": "http",
-      "url": "https://YOUR-ARC1-HOST/DEV/001/mcp",
-      "headers": {
-        "Arc1-Ide-Client": "vscode",
-        "Arc1-Ide-Destinations-V1": "DEV/001=My-Dev"
-      }
-    }
-  }
-}
-```
-
-Choose the mapping format that matches your existing endpoint:
-
-| Your ARC-1 URL ends with | `Arc1-Ide-Destinations-V1` example |
-|---|---|
-| `/DEV/001/mcp` — one selected target | `DEV/001=My-Dev` |
-| `/multi/mcp` — several targets | `DEV/001=My-Dev,QAS/100=My-QA` |
-| `/mcp` — traditional single-system deployment | `@single=My-Dev` |
-
-Use the exact target from your pinned URL or `SAPTargets`; it may contain a route alias.
-On a multi-target deployment, use a pinned URL even if you only want one system; `@single` does not apply there.
-Other clients receive no direct links unless their own configuration requests them.
-
-**Optional: generate the settings.** This PR's CLI prints a fragment to merge into your entry:
-
-```bash
-arc1 config ide --endpoint https://YOUR-ARC1-HOST/DEV/001/mcp --destination My-Dev
-```
-
-It handles spaces in aliases. For `/multi/mcp`, use repeatable `--map DEV/001=My-Dev` arguments
-instead of `--destination`. For local stdio, omit `--endpoint`.
+If you tested an earlier draft: remove `ARC1_IDE_DESTINATION` and
+`Arc1-Ide-Destinations-V1`. Replace `ARC1_IDE_LINKS=vscode` with `off`; replace `on` with
+`eclipse` only where Eclipse links are wanted. VS Code now uses SAP's resolver exclusively.

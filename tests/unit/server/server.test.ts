@@ -151,6 +151,9 @@ describe('MCP Server', () => {
 
   it('advertises the SAP URI handler while retaining native-navigation identity and failure boundaries', () => {
     const instructions = NATIVE_NAVIGATION_INSTRUCTIONS;
+    expect(instructions).toContain('VS Code on request: if available, use SAP ADT MCP');
+    expect(instructions).not.toContain('prefer ARC-1 links');
+    expect(instructions).not.toContain('abap:/flat');
     // Preserve the returned URI when generating the outer query value. Downstream editor
     // URL decoding is separate; the live acceptance only qualifies the tested characters.
     expect(instructions).toContain(

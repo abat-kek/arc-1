@@ -149,15 +149,15 @@ describe('MCP Server', () => {
     expect(instructions?.length).toBeLessThan(2_048);
   });
 
-  it('advertises the SAP URI handler while retaining native-navigation identity and failure boundaries', async () => {
-    const { instructions } = await initializeServer(DEFAULT_CONFIG);
-    // A bare abap: Markdown link is stripped by the tested Copilot renderer. The inner URI
-    // must stay intact (including existing % escapes), rather than guessing a flat/tree path.
+  it('advertises the SAP URI handler while retaining native-navigation identity and failure boundaries', () => {
+    const instructions = NATIVE_NAVIGATION_INSTRUCTIONS;
+    // Preserve the returned URI when generating the outer query value. Downstream editor
+    // URL decoding is separate; the live acceptance only qualifies the tested characters.
     expect(instructions).toContain(
       'Link returned abap: URIs via vscode://sapse.adt-vscode/open?abapUri= + encodeURIComponent(exact URI)',
     );
     expect(instructions).toContain('Require user-confirmed destination for backend/client');
-    expect(instructions).toContain('Verify source identity, not .json');
+    expect(instructions).toContain('Verify name/type/source, not .json');
     expect(instructions).toContain('On mismatch/error stop; no resolver/bridge/destination retries');
     expect(instructions).toContain('never edit/activate natively');
   });

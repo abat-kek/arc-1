@@ -15,9 +15,11 @@ ADT 1.2 URI handler registers `/open`, reads `abapUri` using `URLSearchParams`, 
 vscode://sapse.adt-vscode/open?abapUri=<encodeURIComponent(exact returned abap: URI)>
 ```
 
-The exact inner URI is preserved; `%20` becomes `%2520` in the outer query, and namespace escapes
-are preserved the same way. The hint prefers `abap_object_get_file_uri` with name/type for an
-object and reserves `abap_object_list_file_uris` for include selection. It retains explicit
+The generated outer query preserves the exact inner URI: `%20` becomes `%2520`, and namespace escapes
+are encoded the same way. This is a statement about link construction, not every downstream URL
+decode; unusual reserved characters in local aliases remain unqualified. The hint prefers
+`abap_object_get_file_uri` with name/type for an object and reserves `abap_object_list_file_uris`
+for include selection. It retains explicit
 backend/client mapping, source-identity checks, no metadata links, no denial bypass and no native
 editing/activation. On errors/mismatches it tells the client to stop rather than retry another
 resolver, bridge or destination. These are instructions, not cross-server authorization enforcement.
@@ -109,6 +111,26 @@ object/type collisions, other OS/harness combinations, canonical include opening
 reuse, Keep/Undo, save/transport/activation semantics, second-user PP and PP-only multi-instance
 routing. Existing client-100 timeouts remain separate BTP acceptance gaps. Native composition stays
 experimental; direct ARC-1 links remain the simpler option when SAP's local MCP server is not otherwise used.
+
+## Review follow-up
+
+Actual Claude Code **Opus 5.5, max effort** completed a read-only review of the implementation,
+installed handler code and evidence, with **no blocking findings**. Its suggestions were applied:
+the hint explicitly requests name/type/source verification; setup claims are limited to the tested
+Copilot runs; repeated setup instructions were removed; and the guide distinguishes outer-query
+encoding from downstream decoding, with stable VS Code and alias-character qualifications.
+
+The review also found a pre-existing instruction-budget edge case: 160 unpaired UTF-16 surrogates
+in a target description expanded the aggregate initialization instructions to **2,662 characters**.
+New regression tests reproduced that failure before the fix. Display normalization now removes
+unpaired surrogates while retaining valid pairs such as emoji; routing and grants are unchanged.
+The budget tests now use the real destination-registry path, covering quotes, backslashes, both
+unpaired surrogate types and valid pairs with the maximum target alias.
+
+After these follow-ups, **9,453 unit tests passed in 339 files**, including 173 focused server tests.
+Build, typecheck, lint, policy validation, size/schema budgets and strict documentation build passed.
+The live editor runs above tested runtime commit `0447d506`; the later explicit name/type wording
+and malformed-label fix were tested locally and were not redeployed after restoring the test app.
 
 ## Restoration
 

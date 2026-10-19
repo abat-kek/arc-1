@@ -1,5 +1,9 @@
 # Eclipse links and simpler local/remote editor setup
 
+> Later follow-up: [BTP-to-native end-to-end acceptance](2026-10-19-btp-native-end-to-end.md)
+> verifies pinned/aggregate canonical source opening after client/session recovery. The failures
+> recorded below describe the earlier run; long-lived sessions and editing remain unqualified.
+
 > Historical research before the Eclipse formatter. The [subsequent implementation and setup checks](2026-10-19-ide-setup-simplification.md) supersede statements below that Eclipse output is not implemented.
 
 Research and read-only experiments: 2026-10-18/19, continuing
@@ -292,8 +296,9 @@ Definitions and a namespaced CDS URI resolved without guessed tree paths. Openin
 canonical source link in the editor still disconnected the destination during this run. No write,
 activation, Keep/Undo, dirty-editor identity or version-selection claims follow from these reads.
 The displayed error does not establish the cause; URI shape or VS Code window routing may still
-be involved. A future Markdown link builder must escape parentheses as well as applying
-`encodeURIComponent`, especially for namespaced object paths.
+be involved. ARC-1's flat-link builder additionally escapes parentheses for Markdown. The later
+native-handler acceptance preserves the resolver's already escaped namespace path when generating
+the outer query; this earlier failure does not establish that native links need another encoding pass.
 
 VS Code's MCP reference supports input variables, but documents that the Copilot harness does not
 forward servers needing interactive `${input:...}`. Therefore an alias prompt inside the MCP JSON

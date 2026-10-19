@@ -35,7 +35,12 @@ function requestHandler(server: Server, method: string): RequestHandler {
 function registry(
   count: number,
   policy = { data: false, sql: false },
-  options: { includeInvalid?: boolean; authentication?: 'PrincipalPropagation' | 'BasicAuthentication' } = {},
+  options: {
+    includeInvalid?: boolean;
+    authentication?: 'PrincipalPropagation' | 'BasicAuthentication';
+    description?: string;
+    targetAlias?: string;
+  } = {},
 ) {
   const canonicalUrl = canonicalDestinationUrl('http://sap.internal:50000') as string;
   const subaccount = Array.from({ length: count }, (_, index) => {
@@ -50,12 +55,13 @@ function registry(
       proxyType: 'OnPremise',
       sapSysId: sid,
       sapClient: client,
-      description: `SAP target ${index}`,
+      description: options.description ?? `SAP target ${index}`,
       hasCloudConnectorLocationId: false,
       arcProperties: {
         'arc1.enabled': 'true',
         'arc1.allow_data_preview': String(policy.data),
         'arc1.allow_free_sql': String(policy.sql),
+        ...(options.targetAlias ? { 'arc1.target_alias': options.targetAlias } : {}),
       },
     };
   });
@@ -109,9 +115,15 @@ function parseError(result: Record<string, any>) {
 }
 
 describe('multi-target MCP servers', () => {
-  it('keeps a sole granted target with a maximally escaped label within the instruction budget', () => {
-    const targets = registry(1);
-    const target = { ...targets.targets[0], target: `${'A'.repeat(32)}/001`, description: '"'.repeat(160) };
+  it.each([
+    ['quotes', '"'.repeat(160)],
+    ['backslashes', '\\'.repeat(160)],
+    ['unpaired high surrogates', '\uD800'.repeat(160)],
+    ['unpaired low surrogates', '\uDC00'.repeat(160)],
+    ['valid surrogate pairs', '🚀'.repeat(80)],
+  ])('keeps a sole granted target within the instruction budget with %s', (_name, description) => {
+    const targets = registry(1, undefined, { description, targetAlias: 'A'.repeat(32) });
+    const target = targets.targets[0];
     const instructions = buildMultiTargetServerInstructions({
       mode: 'aggregate',
       registry: targets,

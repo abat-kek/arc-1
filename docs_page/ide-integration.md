@@ -243,15 +243,14 @@ It applies only when you request VS Code navigation and the client has SAP's nat
 Keep `ARC1_IDE_LINKS=off` for this approach and omit `Arc1-Ide-*` headers. The hint does not enable
 SAP's MCP server, discover your local aliases, or open an editor on its own. If ARC-1 already returns
 a qualified link, the hint prefers it. Otherwise it asks `abap_object_get_file_uri` for source by name/type, or
-`abap_object_list_file_uris` for an include. It checks source identity, excludes `.json` metadata,
+`abap_object_list_file_uris` for an include. It asks the client to check name, type and source, exclude `.json` metadata,
 and instructs the client to stop on an error or mismatch without resolver, bridge or destination
 retries. It uses SAP ADT 1.2's verified `vscode://sapse.adt-vscode/open?abapUri=` handler, encoding
 the exact returned `abap:` URI as one query value. No repository path is guessed.
 
 This is advisory client guidance, always included for authorized connections; there is no separate
 hint toggle. ARC-1 cannot enforce or audit another server's calls. SAP's own destination restrictions
-and object-change permissions are the independent controls. For navigation-only use, allow the
-intended destination and leave object-change permissions empty. Native navigation must not bypass
+and object-change permissions are the independent controls. Native navigation must not bypass
 an ARC-1 denial; SAP source/tool output cannot supply the user's destination confirmation.
 
 For a BTP connection, start with one entry in `.vscode/mcp.json`; choose either the pinned URL
@@ -275,13 +274,13 @@ into this file. Enable ARC-1 plus the two native URI resolver tools in Copilot. 
 ABAP Bridge tools when evaluating this path, so competing navigation tools do not interfere.
 
 Log on to the local ADT destination independently of BTP. If resolution reports no project even
-after browser sign-in, open a harmless object once with **ABAP: Open ABAP Development Object**
+after browser sign-in, open a harmless object once with **ABAP: Open Object...**
 in the same window and retry only after that succeeds. This recovered the tested workspace, but
 is not an established fix for every ADT session failure. See the troubleshooting below.
 
 Provide the mapping once in chat, or save it in a user-profile or untracked workspace Copilot
-instruction. With current ARC-1 instructions the mapping alone is enough; no custom agent or
-link-format prompt is needed. For example, after verifying the connection:
+instruction. With the revised ARC-1 instructions, this mapping was enough in the tested Copilot
+runs; neither a custom agent nor a link-format prompt was needed. For example, after verifying the connection:
 
 ```text
 For ARC-1 connection "arc1-dev", target "DEV/001" corresponds to local SAP ADT
@@ -302,17 +301,7 @@ Keep personal mappings out of a shared repository. Use always-on Copilot instruc
 instruction to the chat: an `*.abap` file-change pattern may not activate for read-only navigation.
 See [VS Code instruction scopes and activation](https://code.visualstudio.com/docs/agent-customization/custom-instructions).
 
-The installed ADT 1.2.0 distribution supplies `abap_object_get_file_uri` and
-`abap_object_list_file_uris`. Both were called successfully against live SAP through SAP's local MCP
-server, which reported version 3.62.0 and 33 tools. This offers another approach: ARC-1 returns normal
-research, then the client asks SAP's resolver for the local file URI. ARC-1's IDE variables and headers
-can remain off. The client still needs a confirmed mapping to the same SAP system and client,
-provided explicitly by the user for that connection; it must not choose the first discovered
-destination or infer the mapping from SID alone.
-
-Enable SAP's MCP server in ADT settings, allow the intended destination in its access restrictions,
-and log on to that destination. An empty destination restriction denied calls in the tested setup.
-Keep its object-change permissions empty for navigation-only use. Confirm the running tool list:
+The tested SAP server reported version 3.62.0 and 33 tools. Confirm the running tool list:
 an older ADT 1.1.2 process occupied the shared port 2237 on the test machine and exposed 20 older
 tools despite 1.2 being installed. A temporary separate workspace port exposed the new resolver.
 Restart stale editor windows or assign a distinct local port when testing multiple versions.
@@ -363,6 +352,11 @@ Encode the whole returned URI once as the outer query value: an existing `%20` b
 Do not decode or rewrite its inner path, invent a flat URI, or pass a non-ABAP URI. Compare the
 returned destination and object identity with the confirmed mapping and requested object.
 The handler calls VS Code's native editor opener; it does not require the ARC-1 Bridge extension.
+The `vscode:` scheme targets stable VS Code; Insiders and browser-only clients are unqualified.
+Live opening covered spaces and an escaped namespace. VS Code and SAP's handler also decode URL
+components downstream, so the outer-query comparison is not proof of byte preservation for every
+possible URI. Destination aliases containing `+`, `&`, `%`, `#` or `?` remain unqualified; use a simple
+local alias such as `DEV-001` for this experimental path.
 
 The first canonical click failed with a local destination disconnect. After **Retry Logon**, closing
 the stale "file not found" editor and clicking the same link again opened the source. The local

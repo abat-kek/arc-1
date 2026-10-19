@@ -1,12 +1,13 @@
-/** Presentation-only links for SAP's ADT for VS Code 1.2 URI handler. No SAP or filesystem access. */
+/** Presentation-only native ADT links. No SAP or filesystem access. */
 import { expandHyperfocusedArgs } from '../handlers/hyperfocused.js';
 import {
   detectLocalHandlerInclude,
   normalizeObjectType,
   normalizeTypeArgsForValidation,
+  objectBasePath,
 } from '../handlers/object-types.js';
 import type { ToolResult } from '../handlers/shared.js';
-import { isIdeDestination } from './ide-config.js';
+import { isIdeDestination, isIdeSystemId } from './ide-config.js';
 import type { IdeLinkContext } from './ide-request.js';
 import type { ServerConfig } from './types.js';
 
@@ -25,6 +26,19 @@ export interface IdeObject {
   type: string;
   name: string;
   include?: string;
+}
+
+/** SID navigation is a local project-selection aid, not an exact backend binding. */
+export function buildEclipseLink(systemId: string, object: IdeObject): string | undefined {
+  if (!isIdeSystemId(systemId)) return undefined;
+  const type = normalizeObjectType(object.type);
+  if (!SOURCE_SUFFIXES[type] || object.name.length > 80 || !/^(?:\/[A-Z0-9_]+\/)?[A-Z0-9_]+$/i.test(object.name)) {
+    return undefined;
+  }
+  const include = object.include?.trim().toLowerCase();
+  // Initial qualification covers main objects only. Do not promise include/version/fragment navigation.
+  if (include && include !== 'main') return undefined;
+  return `adt://${systemId}${objectBasePath(type)}${encodeURIComponent(object.name.toLowerCase())}`;
 }
 
 /** SAP AFF uses (namespace)name, unlike abapGit's #namespace#name convention. */
@@ -117,17 +131,24 @@ export function appendIdeLinks(
   config: ServerConfig,
   requestContext?: IdeLinkContext,
 ): ToolResult {
-  if (result.isError || config.ideLinks !== 'vscode') return result;
+  if (result.isError || config.ideLinks === 'off') return result;
   // HTTP presentation comes exclusively from this request. A global stdio alias is never a fallback.
-  const destination =
+  const context: IdeLinkContext | undefined =
     config.transport === 'http-streamable'
       ? requestContext?.target === config.targetId && (!config.multiTargetEndpoints || !!config.targetId)
-        ? requestContext?.destination
+        ? requestContext
         : undefined
       : !config.multiTargetEndpoints && !config.targetId && !config.destinationName
-        ? config.ideDestination
+        ? config.ideLinks === 'vscode'
+          ? { style: 'vscode', destination: config.ideDestination }
+          : config.ideLinks === 'eclipse'
+            ? { style: 'eclipse', systemId: config.ideSystemId }
+            : undefined
         : undefined;
-  if (!destination || !isIdeDestination(destination)) return result;
+  if (!context || (config.ideLinks !== 'on' && context.style !== config.ideLinks)) return result;
+  if (context.style === 'vscode' && !isIdeDestination(context.destination)) return result;
+  if (context.style === 'eclipse' && (!isIdeSystemId(context.systemId) || context.systemId !== config.ideSystemId))
+    return result;
   try {
     if (tool === 'SAP') {
       const expanded = expandHyperfocusedArgs(args);
@@ -137,7 +158,10 @@ export function appendIdeLinks(
     }
     const links = new Map<string, string>();
     for (const object of candidates(tool, args, result)) {
-      const link = buildVsCodeLink(destination, object);
+      const link =
+        context.style === 'vscode'
+          ? buildVsCodeLink(context.destination, object)
+          : buildEclipseLink(context.systemId, object);
       if (!link || links.has(link)) continue;
       links.set(link, `- [${object.name.toUpperCase()} (${normalizeObjectType(object.type)})](${link})`);
       if (links.size >= IDE_LINK_LIMIT) break;
@@ -149,7 +173,10 @@ export function appendIdeLinks(
         ...result.content,
         {
           type: 'text',
-          text: `\nOpen current source in SAP ADT for VS Code (${config.targetId ? `target: ${config.targetId}; ` : ''}destination: ${destination}; up to ${IDE_LINK_LIMIT} links):\n${[...links.values()].join('\n')}`,
+          text:
+            context.style === 'vscode'
+              ? `\nOpen current source in SAP ADT for VS Code (${config.targetId ? `target: ${config.targetId}; ` : ''}destination: ${context.destination}; up to ${IDE_LINK_LIMIT} links):\n${[...links.values()].join('\n')}`
+              : `\nOpen current source in Eclipse ADT (${config.targetId ? `target: ${config.targetId}; ` : ''}SAP SID: ${context.systemId}; client: ${config.client}; up to ${IDE_LINK_LIMIT} links). Check the local project matches this backend; duplicate SIDs may show a project chooser.\n${[...links.values()].join('\n')}`,
         },
       ],
     };

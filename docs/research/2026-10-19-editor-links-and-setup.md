@@ -1,5 +1,7 @@
 # Eclipse links and simpler local/remote editor setup
 
+> Historical research before the Eclipse formatter. The [subsequent implementation and setup checks](2026-10-19-ide-setup-simplification.md) supersede statements below that Eclipse output is not implemented.
+
 Research and read-only experiments: 2026-10-18/19, continuing
 [draft PR #1025](https://github.com/arc-mcp/arc-1/pull/1025).
 Runtime tested: `28406c16d5ea0e54516eb52b569d92308010e2e2`.

@@ -284,6 +284,37 @@ describe('request-scoped VS Code links over real pinned/aggregate HTTP routing',
     'Arc1-Ide-Client': client,
     'Arc1-Ide-Destinations-V1': map,
   });
+  it.each([true, false])(
+    'selects Eclipse or VS Code per request with a shared HTTP ceiling (pinned=%s)',
+    async (pinned) => {
+      await start(makeRegistry(), { ...CONFIG, ideLinks: 'on' });
+      const token = addUser(['A4H/000', 'A4H-OTHER/000']);
+      for (const target of ['A4H/000', 'A4H-OTHER/000']) {
+        const response = await read(token, target, pinned, { 'Arc1-Ide-Client': 'eclipse' });
+        expect(response.isError).not.toBe(true);
+        expect(response.content?.[0]).toEqual({ type: 'text', text: SOURCE });
+        expect(response.content).toHaveLength(2);
+        expect(response.content![1].text).toContain(`target: ${target}; SAP SID: A4H; client: 000`);
+        expect(response.content![1].text).toContain('(adt://A4H/sap/bc/adt/oo/classes/cl_abap_typedescr)');
+        expect(response.content![1].text).not.toContain('vscode://');
+        expectDestination(await read(token, target, pinned, preference(`${target}=LOCAL`)), 'LOCAL', target);
+        expectDestination(await read(token, target, pinned));
+      }
+      const denied = await rpc(
+        token,
+        'tools/call',
+        {
+          name: 'SAPRead',
+          arguments: { type: 'CLAS', name: 'CL_ABAP_TYPEDESCR', ...(pinned ? {} : { target: 'A4H/001' }) },
+        },
+        pinned ? '/A4H/001/mcp' : '/multi/mcp',
+        { 'Arc1-Ide-Client': 'eclipse' },
+      );
+      if (pinned) expect(denied.status).toBe(404);
+      else expect(result(denied).isError).toBe(true);
+      expect(denied.text).not.toContain('adt://');
+    },
+  );
   async function read(
     token: string,
     target: string,

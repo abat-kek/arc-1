@@ -112,7 +112,7 @@ Full per-option details (defaults, clamps, layer interactions): [docs_page/confi
 | `SAP_SYSTEM_TYPE` | `auto` (default), `btp`, `onprem` |
 | `SAP_ABAP_RELEASE` | SAP_BASIS release override for abaplint (e.g. 758, 816); probe wins |
 | `ARC1_TOOL_MODE` | `standard` (12 tools) or `hyperfocused` (1 tool, ~200 tokens) |
-| `ARC1_IDE_LINKS` / `ARC1_IDE_DESTINATION` | Opt-in native ADT 1.2 links (`off`/`vscode`); local alias is stdio-only, HTTP needs per-request VS Code headers (docs_page/ide-integration.md); CLI exports stay unchanged |
+| `ARC1_IDE_LINKS` / `ARC1_IDE_DESTINATION` / `ARC1_IDE_SYSTEM_ID` | Native VS Code/Eclipse links; HTTP `on` allows both per-request styles. VS Code needs a local alias; Eclipse uses configured real SID (multi-target: destination `sap-sysid`). `arc1 config ide` generates preference fragments; docs_page/ide-integration.md |
 | `ARC1_SCHEMA_NULLABLE_OPTIONALS` | `auto`/`off`/`on` for optional `SAPWrite` schema null unions; default `auto` emits portable plain schemas, `on` is explicit OpenAI/Azure strict-mode compatibility (#360/#520) |
 | `ARC1_PLUGINS` | FEAT-61 extensions: CSV of absolute LOCAL paths (`.js`/`.json`), NOT npm. Adds `Custom_*` tools (reads + gated non-ADT writes/execute) — docs_page/extensions.md |
 | `SAP_ALLOW_PLUGIN_EXECUTE` | Opt-in (default false): let plugin tools execute ABAP classes/reports (`ctx.run.classRun` / `ctx.run.programRun`). ALSO needs `SAP_ALLOW_WRITES` + a `write`-scoped tool |

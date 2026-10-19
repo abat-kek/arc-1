@@ -1,10 +1,10 @@
-# Open researched objects in SAP ADT for VS Code
+# Open researched objects in VS Code or Eclipse ADT
 
-ARC-1 can add clickable **Open current source** links to successful research results. SAP ADT for
+ARC-1 can add clickable **Open current source** links to successful research results in VS Code or Eclipse. SAP ADT for
 VS Code **1.2.0** handles these links directly; the ARC-1 ABAP Bridge is not required for this
 navigation path. This opt-in compatibility feature is qualified against 1.2.0; its flat URI
 representation is not a documented stable SAP API. Links are off by default. Local stdio and HTTP/BTP connections are supported; HTTP
-requires explicit preferences on every request, scoped to the VS Code MCP connection.
+requires explicit preferences on every request, scoped to each MCP connection. Eclipse uses native `adt://` links with a configured SAP SID; see the Eclipse section below.
 
 This feature is currently in [draft PR #1025](https://github.com/arc-mcp/arc-1/pull/1025).
 The local `npx` checks used a package built from that branch, not the published `arc-1@latest`.
@@ -19,7 +19,9 @@ Use a build containing the PR before applying these settings.
 | HTTP/BTP, traditional single-system `/mcp` | Admin enables links; client sends `Arc1-Ide-Client: vscode` and `Arc1-Ide-Destinations-V1: @single=DEV-001` |
 | HTTP/BTP, pinned `/<target>/<client>/mcp` | Same `vscode` presentation marker; one mapping such as `A4H/001=DEV-001` |
 | HTTP/BTP, aggregate `/multi/mcp` | Same `vscode` presentation marker; mappings for the selected public targets |
-| Claude plugin | Current plugin has no IDE preference fields; use a dedicated per-server MCP entry for experiments |
+| Eclipse, local stdio | `ARC1_IDE_LINKS=eclipse` and `ARC1_IDE_SYSTEM_ID=A4H` in that server entry |
+| Eclipse, HTTP/BTP | Admin enables Eclipse; client sends only `Arc1-Ide-Client: eclipse`. Multi-target uses the selected destination’s `sap-sysid` |
+| Claude Code plugin / Desktop bundle | Editor mode defaults off; configure its editor mode and matching local alias or SID in that plugin’s own settings |
 | VS Code Agent Plugin | Use a dedicated MCP entry instead of the plugin's MCP server when preferences cannot be scoped to that server |
 
 A single pinned target still uses its exact public target ID, even if it is the only system you use.
@@ -27,6 +29,37 @@ The `@single` key describes the traditional endpoint implementation, not the num
 It requires `ARC1_MULTI_TARGET_ENDPOINTS` to be off. The bare `/mcp` on a multi-target deployment
 does not produce IDE links with `@single`; use a pinned route for one selected target there.
 You do not need the bridge or SAP's local MCP server for ARC-1's direct links.
+
+## Generate the preference fragment
+
+Use a build containing this draft PR. The offline helper prints JSON to merge into **one existing
+MCP server entry**. It does not write settings, inspect or emit credentials, contact SAP, or replace your connection
+and authentication configuration. Merge nested `env`/`headers` members; keep the existing members.
+
+```bash
+# Single local npx server in VS Code
+arc1 config ide --destination A4H2023-2
+
+# Pinned BTP endpoint: the helper derives A4H/001 from the URL
+arc1 config ide --endpoint https://YOUR-ARC1/A4H/001/mcp --destination A4H2023-2
+
+# Eclipse on BTP: generates requestInit.headers with one editor preference
+arc1 config ide --mcp-client eclipse --endpoint https://YOUR-ARC1/A4H/001/mcp
+
+# Local Eclipse server: same connection, explicit real SAP SID
+arc1 config ide --mcp-client eclipse --system-id A4H
+
+# Aggregate VS Code endpoint: explicitly map only the targets you use
+arc1 config ide --endpoint https://YOUR-ARC1/multi/mcp \
+  --map A4H/001=A4H2023-2 --map A4H-2025/001=A4H2025
+```
+
+`--mcp-client claude` uses Claude's configuration shape and defaults links to `off`.
+Use `--editor vscode` or `--editor eclipse` only when you want that opening destination in the
+particular Claude connection. The helper does not configure the plugin's saved preferences.
+`--mcp-client` is separate from the existing `--client` SAP logon-client flag.
+For `/mcp`, the helper emits `@single`; this works only on the traditional single-target server.
+It cannot inspect the remote deployment or validate your local IDE's backend mapping.
 
 ## Configure the local destination
 
@@ -93,10 +126,21 @@ supply a stale alias for a connection overridden by the client.
 
 ### Claude plugin and other local clients
 
-The Claude plugin launches a local stdio ARC-1 process. Its current manifest exposes SAP connection
-and safety settings but no IDE link controls. The portable plugin also launches `npx arc-1@latest`
-from `${PLUGIN_DATA}`; see [agent plugin setup](agent-plugin.md). Neither entry currently pins the
-unreleased feature branch.
+The Claude Code plugin and Desktop bundle expose three settings: **Editor links (off, vscode, eclipse)**,
+**VS Code ADT destination alias**, and **Eclipse SAP system ID**. Defaults are `off` and empty identifiers.
+Set only the identifier needed by your chosen editor. These settings apply to the plugin's own MCP
+server, alongside its SAP connection; they do not set a process-wide alias for other servers.
+Ordinary string fields preserve compatibility without requiring the newer dropdown-field schema.
+
+The Claude Code plugin still launches `npx arc-1@latest`; these draft settings need a build containing
+this PR and are not available from an older published package. An isolated real Claude plugin probe
+verified defaults and a settings-file override reaching the MCP environment. The actual installed
+ARC-1 configuration UI, Desktop click surface, and all plugin authentication combinations are not
+qualified by that probe. Native links can be requested explicitly in Claude, but link rendering/opening
+in every Claude UI is not promised.
+
+The portable Agent Plugin `mcp.json` has no client-specific preference UI; use a dedicated per-server
+entry when its client cannot scope IDE preferences to the plugin server.
 
 For experiments, configure a dedicated ARC-1 MCP server in the intended client and put the two IDE
 variables in that server's own `env`, next to its SAP connection settings. Use a build containing
@@ -330,9 +374,38 @@ around a stale client schema.
 See the [BTP implementation and verification record](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-18-btp-native-ide-links.md)
 for tested behavior and remaining deployment limitations.
 
-## Eclipse: verified navigation and remaining integration work
+## Eclipse configuration and project selection
 
-Eclipse ADT has its own link format:
+Eclipse ADT has its own link format. No bridge or HTTP helper is needed on the tested installation.
+For local stdio, add to the existing server entry:
+
+```json
+"env": {
+  "ARC1_IDE_LINKS": "eclipse",
+  "ARC1_IDE_SYSTEM_ID": "A4H"
+}
+```
+
+For a shared BTP server, the administrator sets `ARC1_IDE_LINKS=on` to allow both VS Code and Eclipse.
+Existing `vscode` allows only VS Code; `eclipse` allows only Eclipse; `off` disables both.
+Each client still opts in independently. In Eclipse Copilot, add to its existing HTTP server entry:
+
+```json
+"requestInit": {
+  "headers": {
+    "Arc1-Ide-Client": "eclipse"
+  }
+}
+```
+
+This works on pinned and aggregate endpoints. The selected BTP destination's configured `sap-sysid`
+supplies the SID, even when its public route uses an alias such as `A4H-2025/001`. Do not configure a
+global `ARC1_IDE_SYSTEM_ID` in multi-target mode. For traditional single-target HTTP, the administrator
+sets `ARC1_IDE_SYSTEM_ID=A4H` alongside the editor switch. The setting is presentation-only and does
+not select the SAP backend. Keep it paired with that server's connection settings.
+
+Main objects of types CLAS, INTF, PROG and DDLS are supported. Eclipse class includes, version queries
+and line fragments are deliberately omitted pending qualification. A generated class link is:
 
 ```text
 adt://A4H/sap/bc/adt/oo/classes/cl_abap_typedescr
@@ -349,9 +422,9 @@ does not establish that it is the system ARC-1 researched, and ARC-1 cannot forc
 Direct clicking from Eclipse Copilot is now verified by the user's screenshots: the link opened
 the native project chooser, then CL_ABAP_CLASSDESCR source. The chooser is expected when more than
 one local project matches `A4H`; it is not a link error or authentication prompt. This was a diagnostic
-probe link, not an implemented ARC-1 Eclipse output mode.
+probe link. The follow-up implemented ARC-1 Eclipse output and verified generated links for classes, interfaces, programs and CDS definitions through the native dialog.
 
-Backend selection remains the issue before adding automatic Eclipse links to ARC-1. Eclipse's
+Exact automatic backend selection remains a separate limitation. Eclipse's
 generated Share Link contained SID `A4H`, while two local projects represented different A4H
 installations with client 001. A SID is insufficient to select the backend researched through a
 BTP target. The tested `A4H.2023` authority and literal project-name authority `A4H_2023` were both
@@ -366,15 +439,13 @@ successfully. Those failures do not establish a Copilot defect. Direct ADT links
 installation and do not require an HTTP helper. A browser page and HTTP redirect also opened source
 in separate tests, but their complete sequence starting in Copilot remains unqualified.
 
-The current PR accepts only `off` and `vscode`; `Arc1-Ide-Client: eclipse` deliberately receives no
-VS Code links. Eclipse support needs a separate, explicit client preference and a policy for
-ambiguous projects. A SID-based link with manual selection is the simplest candidate; it must label
-the researched target and cannot promise an automatic backend match. Eclipse's per-server HTTP
-`requestInit.headers` was verified to transmit presentation preferences, so configuration transport is available. A local
-companion remains an option for mappings that native project selection cannot safely represent.
+The Eclipse mode labels the researched public target, configured SID and client, and asks you to check
+the local project matches. It does not promise or force a chooser, nor validate the local project's
+backend. Eclipse's per-server `requestInit.headers` transmission was verified. Exact project mapping
+remains separate work; a local companion is an option where native matching is insufficient.
 Do not put credentials or
 project-creation connection parameters into shared links. BTP deployment alone cannot provide the
 local Eclipse project, SAP logon, or laptop network route.
 
 The [editor setup research record](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-editor-links-and-setup.md)
-contains the experiment matrix and proposed follow-up order.
+contains the earlier experiment matrix. The [setup simplification follow-up](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-ide-setup-simplification.md) records the implemented mode, helper, and new tests.

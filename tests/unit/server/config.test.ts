@@ -84,7 +84,7 @@ describe('parseArgs', () => {
     expect(parseArgs([]).ideDestination).toBe('DEV 001');
     expect(parseArgs(['--ide-destination', 'QA']).ideDestination).toBe('QA');
     expect(parseArgs(['--ide-links', 'off']).ideLinks).toBe('off');
-    expect(() => parseArgs(['--ide-links', 'auto'])).toThrow(/must be off or vscode/);
+    expect(() => parseArgs(['--ide-links', 'auto'])).toThrow(/must be off, vscode/);
     expect(() => parseArgs(['--ide-destination', 'x?command=evil'])).toThrow(/local ADT alias/);
     expect(() => parseArgs(['--ide-destination', 'DEV '])).toThrow(/local ADT alias/);
     expect(() => parseArgs(['--transport', 'http-streamable'])).toThrow(/stdio-only/);
@@ -95,6 +95,17 @@ describe('parseArgs', () => {
     const config = parseArgs(['--transport', 'http-streamable', '--api-keys', 'test-key:viewer']);
     expect(config.ideLinks).toBe('vscode');
     expect(config.ideDestination).toBe('');
+  });
+
+  it('resolves Eclipse SID with CLI precedence and permits both editors only on HTTP', () => {
+    process.env.ARC1_IDE_LINKS = 'eclipse';
+    process.env.ARC1_IDE_SYSTEM_ID = 'A4H';
+    expect(parseArgs([])).toMatchObject({ ideLinks: 'eclipse', ideSystemId: 'A4H' });
+    expect(parseArgs(['--ide-system-id', 'DEV']).ideSystemId).toBe('DEV');
+    expect(() => parseArgs(['--ide-links', 'on'])).toThrow(/HTTP-only/);
+    expect(
+      parseArgs(['--ide-links', 'on', '--transport', 'http-streamable', '--api-keys', 'test-key:viewer']).ideLinks,
+    ).toBe('on');
   });
 
   it('parses CLI flags (--flag value)', () => {

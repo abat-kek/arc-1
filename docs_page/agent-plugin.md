@@ -18,6 +18,18 @@ ChatGPT/Codex, and other clients listed by the
 [Agent Plugins project](https://agent-plugins.org/compatible-clients). Component support varies by
 client; ARC-1 uses the two portable 1.0 components, Agent Skills and stdio MCP.
 
+## Optional editor links
+
+The Claude Code plugin and Desktop bundle include per-connection editor preferences. Leave
+**Editor links (off, vscode, eclipse)** at `off` for ordinary chat or terminal use. For VS Code,
+set `vscode` and the exact local ADT destination alias. For Eclipse, set `eclipse` and the real
+three-character SAP SID; check the opened project matches your backend when SIDs are duplicated.
+These settings apply only to that plugin server. The portable Agent Plugin has no client-specific
+settings form; a dedicated MCP entry is available where needed.
+
+This feature is in draft PR #1025 and needs a corresponding ARC-1 build; it is not supplied by an
+older `arc-1@latest`. See [IDE integration](ide-integration.md) for setup and tested-client limits.
+
 ## Choose The Package For Your Client
 
 | Package | Best fit | Configuration experience |

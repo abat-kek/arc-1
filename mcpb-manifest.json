@@ -42,7 +42,10 @@
         "SAP_ALLOW_GIT_WRITES": "${user_config.sap_allow_git_writes}",
         "ARC1_UI": "${user_config.arc1_ui}",
         "ARC1_UI_OPEN": "${user_config.arc1_ui_open}",
-        "ARC1_UI_ADDR": "${user_config.arc1_ui_addr}"
+        "ARC1_UI_ADDR": "${user_config.arc1_ui_addr}",
+        "ARC1_IDE_LINKS": "${user_config.arc1_ide_links}",
+        "ARC1_IDE_DESTINATION": "${user_config.arc1_ide_destination}",
+        "ARC1_IDE_SYSTEM_ID": "${user_config.arc1_ide_system_id}"
       }
     }
   },
@@ -226,6 +229,24 @@
       "description": "Loopback bind address for the local read-only UI.",
       "default": "127.0.0.1:8711",
       "required": false
+    },
+    "arc1_ide_links": {
+      "type": "string",
+      "title": "Editor links (off, vscode, eclipse)",
+      "description": "Optional opening destination for this plugin connection only: off, vscode, or eclipse. Leave off in clients where editor links are not useful. Requires an ARC-1 version containing native IDE link support.",
+      "default": "off"
+    },
+    "arc1_ide_destination": {
+      "type": "string",
+      "title": "VS Code ADT destination alias",
+      "description": "For vscode links, the exact local SAP ADT alias for this same SAP system and client. Leave empty for other modes.",
+      "default": ""
+    },
+    "arc1_ide_system_id": {
+      "type": "string",
+      "title": "Eclipse SAP system ID",
+      "description": "For eclipse links, the real uppercase three-character SAP SID, for example A4H. Check the opened local project matches the SAP backend; duplicate SIDs may show a chooser. Leave empty for other modes.",
+      "default": ""
     }
   }
 }

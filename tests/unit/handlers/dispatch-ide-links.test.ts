@@ -108,7 +108,7 @@ describe('native IDE links through the real dispatcher', () => {
           undefined,
           undefined,
           undefined,
-          { destination: 'PRIVATE_WORKSPACE' },
+          { style: 'vscode', destination: 'PRIVATE_WORKSPACE' },
         );
         expect(result.content).toHaveLength(2);
         expect(result.content[1].text).toContain('PRIVATE_WORKSPACE');

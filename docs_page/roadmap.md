@@ -424,28 +424,23 @@ and closed [PR #676](https://github.com/arc-mcp/arc-1/pull/676).
 - **Priority / effort / status:** P2 / M / Needs research
 - **Category:** Compatibility
 
-**Remaining gap.** Eclipse ADT 3.60.2 opened live source through Open ADT Link and a registered
-Chrome `adt://` link. The user also verified a direct Eclipse Copilot 0.21.0 click, with screenshots
-of the project chooser and opened source. The earlier automated failures were false negatives;
-the HTTP control also opens a browser by user report. Direct click dispatch is no longer a blocker
-on this installation.
-SID-only links showed both A4H projects, even though they represent different backends with the same
-client. Native encoded authority `H01.EN` selected `H01_EN`, but its unavailable backend prevented
-source opening; some project names fail Java URI host validation. Browser landing-page and HTTP
-redirect prototypes opened source. PR #1025 still supports only `off` and `vscode`; it does not ship
-Eclipse decoration. Real Eclipse per-server `requestInit.headers` transmission was verified.
+**Remaining gap.** PR #1025 now implements explicit Eclipse SID navigation and an offline
+`arc1 config ide` fragment generator. Local packed npx and single-HTTP reads passed, and generated
+CLAS/INTF/PROG/DDLS links opened in native Eclipse ADT. Earlier user screenshots qualify direct
+Eclipse Copilot clicking. New Eclipse output still needs a deployed BTP candidate and a fresh
+real Copilot session. Pinned/aggregate routing is covered by real HTTP middleware tests with
+synthetic SAP/Destination responses, not new live BTP acceptance.
 
-**Resume with.** Implement/test an explicit Eclipse mode using verified real SID/ADT object URIs,
-with clearly labeled manual project selection as the smallest candidate. It cannot promise or
-force a chooser or an automatic backend match. For exact selection, test native encoded-project/destination
-matching, authority validation,
-collisions and fallbacks before requiring richer links or a local companion mapping service
-identity plus public target to an existing project. Preserve per-request client opt-in and fail closed
-on unknown mappings; never pick the first matching SID. Cover single-system local stdio, single HTTP,
-pinned and aggregate BTP independently. A one-time configuration picker can simplify VS Code/Claude
-setup without sharing one alias across unrelated servers or enabling links in every client.
+Exact project selection remains open. A4H_2023 and A4H_2025 share SID A4H/client 001; native selection
+is not fail-closed and ARC-1 cannot force a chooser. Encoded H01.EN selected H01_EN, but its unavailable
+backend prevented source opening. Some project names fail Java URI host validation.
 
-Evidence and acceptance conditions: [editor links and setup research](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-editor-links-and-setup.md).
+**Resume with.** Qualify exact native project/destination matching, authority validation, collisions,
+missing-project fallbacks, cloud projects and other OSes before adding richer links or a companion.
+Retain explicit per-client opt-in and clear target/SID/client labels. Claude plugin preference substitution passed a real isolated plugin probe for defaults and a settings-file override; production plugin/MCPB fields now default off. Qualify the installed ARC-1 UI and Desktop opening separately. A dropdown remains deferred until a minimum-client policy accepts its v2.1.271+ requirement. A dedicated per-server entry remains available. No automatic SID/client-name inference or global local-alias sharing.
+
+Evidence: [original editor research](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-editor-links-and-setup.md)
+and [implementation/setup follow-up](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-ide-setup-simplification.md).
 
 <a id="sec-14"></a>
 ### SEC-14 — DNS rebinding and Host-header hardening

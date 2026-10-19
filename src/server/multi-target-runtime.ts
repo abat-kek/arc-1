@@ -38,6 +38,7 @@ function buildReadOnlyRuntimeConfig(
     transport: 'http-streamable',
     // Only the administrator ceiling; every caller must provide its own alias on each request.
     ideLinks: base.ideLinks,
+    ideSystemId: target?.sid ?? '',
     httpAddr: base.httpAddr,
     allowWrites: safety.allowWrites,
     allowDataPreview: safety.allowDataPreview,

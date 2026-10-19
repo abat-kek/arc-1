@@ -20,7 +20,7 @@ import { parseBlockedDataSourcesCsv } from '../adt/data-source-name.js';
 import type { SafetyConfig } from '../adt/safety.js';
 import { resolveSapUserAgent } from '../adt/user-agent.js';
 import { parseDenyActions, validateDenyActions } from './deny-actions.js';
-import { isIdeDestination } from './ide-config.js';
+import { isIdeDestination, isIdeSystemId } from './ide-config.js';
 import { logger } from './logger.js';
 import type {
   ConfigSource,
@@ -82,8 +82,13 @@ export const CLI_CONFIG_OPTION_SPECS: readonly CliConfigOptionSpec[] = [
   { name: 'max-http-request-bytes', valueName: 'bytes', description: 'MCP HTTP JSON body limit (1–16777216 bytes)' },
   { name: 'port', valueName: 'port', description: 'HTTP transport port override' },
   { name: 'server-name', valueName: 'name', description: 'MCP server name' },
-  { name: 'ide-links', valueName: 'mode', description: 'Local stdio source links: off or vscode (SAP ADT 1.2+)' },
+  {
+    name: 'ide-links',
+    valueName: 'mode',
+    description: 'Source links: off, vscode (ADT 1.2.0), eclipse, or on (HTTP allows both)',
+  },
   { name: 'ide-destination', valueName: 'name', description: 'Exact local SAP ADT destination alias for source links' },
+  { name: 'ide-system-id', valueName: 'sid', description: 'Real SAP SID for Eclipse links (single-target only)' },
   { name: 'system-label', valueName: 'label', description: 'Connected-system label shown in MCP instructions' },
   {
     name: 'ui',
@@ -899,11 +904,12 @@ export function resolveConfig(args: string[]): { config: ServerConfig; sources: 
   config.disableSaml2 = resolveBool('disable-saml', 'SAP_DISABLE_SAML', false, 'disableSaml2');
 
   const ideLinks = resolveStr('ide-links', 'ARC1_IDE_LINKS', 'off', 'ideLinks');
-  if (ideLinks !== 'off' && ideLinks !== 'vscode') {
-    throw new Error('ARC1_IDE_LINKS must be off or vscode.');
+  if (ideLinks !== 'off' && ideLinks !== 'vscode' && ideLinks !== 'eclipse' && ideLinks !== 'on') {
+    throw new Error('ARC1_IDE_LINKS must be off, vscode, eclipse, or on (HTTP only).');
   }
   config.ideLinks = ideLinks;
   config.ideDestination = resolveStr('ide-destination', 'ARC1_IDE_DESTINATION', '', 'ideDestination');
+  config.ideSystemId = resolveStr('ide-system-id', 'ARC1_IDE_SYSTEM_ID', '', 'ideSystemId');
 
   // ── Tool Mode ──────────────────────────────────────────────────────
   const toolMode = resolveStr('tool-mode', 'ARC1_TOOL_MODE', 'standard', 'toolMode');
@@ -1072,6 +1078,18 @@ export function parseArgs(args: string[]): ServerConfig {
  * Fails fast at startup for invalid or dangerous config combinations.
  */
 export function validateConfig(config: ServerConfig): void {
+  if (config.ideSystemId && !isIdeSystemId(config.ideSystemId)) {
+    throw new Error('ARC1_IDE_SYSTEM_ID must be the real three-character SAP SID (uppercase, starting with a letter).');
+  }
+  if (config.multiTargetEndpoints && config.ideSystemId && !config.targetId) {
+    throw new Error('ARC1_IDE_SYSTEM_ID is single-target only; multi-target uses each destination sap-sysid.');
+  }
+  if (config.ideLinks === 'on' && config.transport === 'stdio') {
+    throw new Error('ARC1_IDE_LINKS=on is HTTP-only; choose vscode or eclipse for a stdio connection.');
+  }
+  if (config.ideLinks === 'eclipse' && !config.multiTargetEndpoints && !config.ideSystemId) {
+    throw new Error('ARC1_IDE_LINKS=eclipse requires ARC1_IDE_SYSTEM_ID for a single-target connection.');
+  }
   if (config.ideDestination && !isIdeDestination(config.ideDestination)) {
     throw new Error(
       'ARC1_IDE_DESTINATION must be a local ADT alias of 1–128 letters, digits, spaces, _, ., -, or parentheses; start with a letter, digit or _, with no surrounding whitespace.',

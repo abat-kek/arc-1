@@ -23,7 +23,11 @@ describe('per-request IDE mapping', () => {
       ['A4H/100', 'QA'],
       ['A4H-2025/001', 'NEW'],
     ]) {
-      expect(resolveHttpIdeContext({ ...config, targetId }, headers(map))).toEqual({ destination, target: targetId });
+      expect(resolveHttpIdeContext({ ...config, targetId }, headers(map))).toEqual({
+        style: 'vscode',
+        destination,
+        target: targetId,
+      });
     }
     expect(resolveHttpIdeContext({ ...config, targetId: 'A4H/002' }, headers(map))).toBeUndefined();
   });
@@ -47,6 +51,7 @@ describe('per-request IDE mapping', () => {
       ideDestination: 'STALE',
     };
     expect(resolveHttpIdeContext(single, headers('@single=LOCAL'))).toEqual({
+      style: 'vscode',
       destination: 'LOCAL',
       target: undefined,
     });
@@ -57,7 +62,7 @@ describe('per-request IDE mapping', () => {
   it('round-trips Unicode and spaces exactly once', () => {
     const destination = 'DÉV 系統 (001)';
     const context = resolveHttpIdeContext(config, headers(`A4H/001=${encodeURIComponent(destination)}`));
-    expect(context?.destination).toBe(destination);
+    expect(context?.style === 'vscode' && context.destination).toBe(destination);
     const result = appendIdeLinks(source, 'SAPRead', args, config, context);
     expect(result.content[0]).toEqual(source.content[0]);
     expect(result.content[1].text).toContain('target: A4H/001; destination: DÉV 系統 (001)');
@@ -66,9 +71,15 @@ describe('per-request IDE mapping', () => {
     expect(decodeURIComponent(abap.pathname.split('/')[2])).toBe(destination);
   });
   it('collapses identical duplicates and suppresses conflicting keys permanently', () => {
-    expect(resolveHttpIdeContext(config, headers('A4H/001=DEV, A4H/001=DEV'))?.destination).toBe('DEV');
+    expect(resolveHttpIdeContext(config, headers('A4H/001=DEV, A4H/001=DEV'))).toMatchObject({
+      style: 'vscode',
+      destination: 'DEV',
+    });
     expect(resolveHttpIdeContext(config, headers('A4H/001=DEV,A4H/001=QA,A4H/001=DEV'))).toBeUndefined();
-    expect(resolveHttpIdeContext(config, headers('A4H/100=DEV,A4H/100=QA,A4H/001=RIGHT'))?.destination).toBe('RIGHT');
+    expect(resolveHttpIdeContext(config, headers('A4H/100=DEV,A4H/100=QA,A4H/001=RIGHT'))).toMatchObject({
+      style: 'vscode',
+      destination: 'RIGHT',
+    });
   });
   it.each([
     '',
@@ -101,11 +112,16 @@ describe('per-request IDE mapping', () => {
     ).toBeUndefined();
   });
   it('refuses presentation context from a different selected target at the sink', () => {
-    expect(appendIdeLinks(source, 'SAPRead', args, config, { destination: 'DEV', target: 'A4H/100' })).toBe(source);
-    expect(appendIdeLinks(source, 'SAPRead', args, config, { destination: 'DEV' })).toBe(source);
     expect(
-      appendIdeLinks({ ...source, isError: true }, 'SAPRead', args, config, { destination: 'DEV', target: 'A4H/001' })
-        .content,
+      appendIdeLinks(source, 'SAPRead', args, config, { style: 'vscode', destination: 'DEV', target: 'A4H/100' }),
+    ).toBe(source);
+    expect(appendIdeLinks(source, 'SAPRead', args, config, { style: 'vscode', destination: 'DEV' })).toBe(source);
+    expect(
+      appendIdeLinks({ ...source, isError: true }, 'SAPRead', args, config, {
+        style: 'vscode',
+        destination: 'DEV',
+        target: 'A4H/001',
+      }).content,
     ).toEqual(source.content);
   });
 });

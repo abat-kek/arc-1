@@ -60,9 +60,15 @@ strict documentation build and the eight-call/four-client HTTP smoke passed. The
 page was inspected and 199 local/repository Markdown links checked. No tool schema or default changed.
 This cleanup was **not redeployed**; live opening evidence remains tied to `7b00407a` above.
 
+Fresh Claude Code **Opus 5.5 / max** read-only review confirmed code equivalence. Two documentation
+gaps were corrected: explicit ADT 1.2 minimum/recovery guidance and Eclipse qualification limits.
+Identity-probe scope and always-sent hint wording were clarified; the destination-settings command
+title was verified in the installed manifest. The reviewer inspected local evidence but ran no tests.
+
 ## Native resolver contract tests
 
-On 19 October, native SDK tests against the same confirmed A4H/001 connection made **18 calls**:
+On 19 October, native SDK tests against confirmed local destination `A4H2023-2`
+(A4H backend, SAP client 001) made **18 calls**:
 12 expected successes, two expected errors and **four unexpected mismatched-type successes**.
 Separately, 18 exported-schema assertions passed. These counts are not 18 acceptance passes.
 
@@ -79,6 +85,7 @@ Separately, 18 exported-schema assertions passed. These counts are not 18 accept
 Minimal mismatch reproduction: call `abap_object_get_file_uri` with the normal
 [name/type input](ide-navigation-decisions.md#vs-code-resolver-contract), changing CLAS to INTF.
 This does not establish same-name collision behavior. Verify returned identity before linking.
+No upstream type-mismatch report was sent during this investigation.
 Program lists also contained duplicate text-property URIs: select `mainFile`, not the first item.
 Canonical include resolution passed; include **opening** remains unqualified.
 Evidence: `/tmp/arc1-oneof-20261019/` (`tools.json`, `live.json`, `wrong-types.json`, `schema.json`).
@@ -93,7 +100,7 @@ not instructions for configuring the current implementation.
 | Flat VS Code handler, 17 October | CLAS, INTF, PROG, namespaced DDLS and class definitions/implementations opened. Macros/testclasses failed while disconnected; not qualified. Copilot rendering/opening was tested separately from ARC-1 dispatch. |
 | Packed `npx` ARC-1, links off / old VS Code / Eclipse | Live class reads had identical source hashes; only explicit modes added their links. Four Eclipse main-object types returned expected URIs. |
 | Local HTTP `/mcp` | Explicit preferences, opt-out and wrong mappings behaved correctly; source unchanged. Later native-only SDK smoke: eight calls from four concurrent clients, links only for Eclipse. |
-| Eclipse native dialog and Chrome handler | CLAS/INTF/PROG/DDLS opened in A4H_2023; duplicate A4H SID/client caused chooser. Chrome required normal OS confirmation and enabled `adt` handler. |
+| Eclipse native dialog and Chrome handler | Dialog opened CLAS/INTF/PROG/DDLS in A4H_2023; namespaced opening remains unverified. Chrome opened class source after OS confirmation and enabled `adt` handler. Duplicate A4H SID/client caused chooser. |
 | Eclipse Copilot local stdio | Per-server `env` arrived unchanged; one live class read and link rendering passed. Automated click did not establish a fresh opening. |
 | HTTP anchor / 302 → Eclipse | Both browser-to-Eclipse prototypes opened class source. User separately confirmed Copilot opens a browser. Full sequence not observed together; screenshots cannot distinguish direct link from handoff. |
 | Real VS Code `npx` + envFile/per-server env | Packed branch source read and exact generated-link rendering passed; uses the retired direct-link mode. |
@@ -120,7 +127,9 @@ Eight post-restart/token-refresh reads passed. Only A4H/001's real local alias w
 other aliases tested serialization, not laptop-to-backend matching. Both workspaces used one human
 identity, not two SAP users.
 
-19 October runtime `ecf89bde`, deployed head `22b9ff49`, added Eclipse:
+19 October runtime `ecf89bde`, deployed head `22b9ff49`, added Eclipse using the since-removed
+combined `ARC1_IDE_LINKS=on` mode. The current `eclipse`-only HTTP mode has automated coverage but
+has not been deployed for a fresh live Eclipse check:
 
 | Checks | Outcome |
 |---|---|

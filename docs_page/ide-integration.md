@@ -5,8 +5,9 @@
 **No extra ARC-1 configuration.** Keep your existing connection, whether ARC-1 runs on BTP or
 locally through `npx`. Copilot uses ARC-1 to research and SAP's ADT extension to open the source.
 
-1. In your ABAP workspace, enable [SAP's built-in MCP server](https://developers.sap.com/tutorials/abap-dev-adt-mcp-server-tools),
-   allow your destination and log on. Navigation needs no object-change permissions.
+1. Use **SAP ADT extension 1.2 or later**. In your ABAP workspace, enable
+   [SAP's built-in MCP server](https://developers.sap.com/tutorials/abap-dev-adt-mcp-server-tools),
+   allow your destination and log on. Your laptop needs access to SAP; navigation needs no object-change permissions.
 2. In Copilot's **Configure Tools**, select ARC-1 and SAP's `abap_object_get_file_uri`
    (`abap_object_list_file_uris` for includes). VS Code discovers SAP's server automatically.
 3. Tell Copilot which local ADT connection matches ARC-1, then ask for a link:
@@ -43,20 +44,21 @@ For BTP / HTTP, merge this into your **existing** server entry:
 
 Replace `DEV` with your real SAP SID. Ask Copilot to read an object and provide its Eclipse link.
 If Eclipse shows a project chooser, select the matching backend and client.
-If clicking does nothing, paste the link into **Open ADT Link**.
+If clicking does nothing, enable the `adt` link handler below or paste the link into **Open ADT Link**.
 
 ## If a link does not open
 
 | Symptom | Next step |
 |---|---|
-| VS Code has no resolver tools | Check SAP MCP is running and the tools are selected in Copilot. |
+| VS Code has no resolver tools | Check SAP MCP and tool selection. Close older ADT windows: their server can hold the MCP port even after installing 1.2. |
 | VS Code says disconnected / no project / file not found | Log on locally in ADT and open an object with **ABAP: Open Object...**. Close the failed preview, then retry the same link. BTP sign-in is separate. |
 | Copilot uses old tools after an update | **MCP: Reset Cached Tools**, then **Developer: Reload Window** and a fresh chat. |
 | Browser cannot hand off to Eclipse | Enable `adt` in **Preferences → General → Link Handlers**. |
 
 **Preview:** the ARC-1 guidance and Eclipse settings need a build containing
 [draft PR #1025](https://github.com/arc-mcp/arc-1/pull/1025).
-Tested on macOS with VS Code 1.142 / SAP ADT 1.2, including BTP pinned and aggregate opening.
+Tested on macOS with VS Code 1.142 / SAP ADT 1.2 and Copilot Local / Gemini 3.8 Flash,
+including BTP pinned and aggregate opening. Include opening remains unverified.
 Eclipse native opening passed; clicking directly from Eclipse Copilot is still unconfirmed.
 Links open current source; editing and activation are separate workflows.
 

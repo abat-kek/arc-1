@@ -419,6 +419,8 @@ Same SID/client can describe different backends; ARC-1 cannot force a chooser.
 **Already verified.** Local `npx`, HTTP/BTP pinned/aggregate reads, preference forwarding, rendering,
 restart recovery and native-dialog opening for CLAS/INTF/PROG/DDLS. Isolated Claude plugin preference
 substitution passed; installed ARC-1 UI and Desktop opening remain unqualified.
+Namespaced Eclipse opening is unverified. Live HTTP evidence used the retired combined `on` mode;
+the current `eclipse`-only mode has automated coverage, pending a fresh live Eclipse run.
 
 **Resume with.** Enable the `adt` handler and manually click a fresh answer containing only the direct
 link. Qualify project-name authorities, collisions, missing/cloud projects and other OSes before richer

@@ -45,8 +45,9 @@ and opens it with `vscode.open`. An already escaped inner `%20` becomes `%2520` 
 Do not reconstruct the localized tree path, substitute a flat URI or assume every alias character
 is qualified. The installed 1.1.2 bundle lacked this handler; open an ABAP workspace first.
 
-The short MCP initialize hint describes this client orchestration. It is conditional on requested
-VS Code navigation and available native tools. It says to stop on errors/mismatches, preserve ARC-1
+The short MCP initialize hint is always sent to authorized connections, without a separate toggle.
+Its wording conditions navigation on a VS Code request and available native tools.
+It says to stop on errors/mismatches, preserve ARC-1
 denials and never edit/activate natively. **Instructions cannot enforce another server's behavior.**
 URI resolution alone is not evidence of an opened editor.
 
@@ -59,7 +60,11 @@ Installed SAP 3.62 inspection (`AdtMcpDestination.computeResolveProject`) found 
 first, then the first logged-on SID match. The fallback checks neither backend nor client and
 does not reject ambiguity. `abap_destination_list` returns names, not verified backend/client
 metadata; it also returned aliases while project access failed. Neither one listed destination
-nor a matching SID replaces user confirmation.
+nor a matching SID replaces user confirmation. SAP's destination allowlist controls access to the
+resolved destination; it does not prove that it matches the ARC-1 backend.
+
+The installed 1.2 manifest confirms **ABAP: Open Destination Settings (JSON)** as the command title
+(`adt-vscode.openDestinationsJson`, category ABAP), rechecked 20 October.
 
 Keep the confirmation in personal chat/instructions, scoped to the ARC-1 connection and target.
 A future local picker could save that choice and invalidate it when either connection changes.
@@ -95,7 +100,7 @@ uses JFace/SWT launch; no scheme allowlist was found there.
 |---|---|---|
 | ARC-1 builds `abap:/flat/<alias>/<AFF file>` | CLAS/INTF/PROG/DDLS and two class includes opened; `(namespace)name`, not `#namespace#name`, is the SAP AFF representation | Requires the same ADT extension, duplicates SAP resolution, couples ARC-1 to internal filenames and may create a second editor beside a dirty canonical URI. Revisit only with a demonstrated native-resolver gap. |
 | Per-request VS Code alias map | Pinned/aggregate BTP preference isolation, encoding and exact target selection passed | Native composition keeps aliases local and removes the parser/configuration. Historical settings: `ARC1_IDE_DESTINATION`, `Arc1-Ide-Destinations-V1`, modes `vscode`/`on`. None is a current VS Code setup. |
-| Infer editor from MCP identity/User-Agent | Real VS Code, Eclipse and Claude identity probes reached BTP | Hints are self-declared; stateless later requests lacked initialized clientInfo. They express neither preferred editor nor local backend mapping. Never cache the last preference by user/token/IP. |
+| Infer editor from MCP identity/User-Agent | Three real-client loopback probes; VS Code and Eclipse also relayed to BTP | Hints are self-declared; stateless later requests lacked initialized clientInfo. They express neither preferred editor nor local backend mapping. Never cache the last preference by user/token/IP. |
 | Infer SID from discovery/host | Both A4H discovery endpoints returned 200 without a usable SID | No hostname, cookie, object-master-system or project-count guessing. Eclipse uses explicit SID provenance. |
 | Custom agent/proxy/bridge resolver | Earlier bridge tree search required 2,181 listings | Existing SAP MCP tools plus a short ARC-1 hint suffice for tested navigation; avoid another installed service. |
 | Interactive alias input in MCP JSON | VS Code has input variables | Copilot harness compatibility differs; no universally portable setup. Prefer personal confirmation. |
@@ -128,11 +133,17 @@ Keep these boundaries even when simplifying:
 - Ignore arbitrary URLs, source/SQL/plugin text, failures, unsupported includes and malformed results.
 - Keep initialize instructions under 2,048 characters, including escaped target labels.
 
+TADIR lookup links require ADT provenance; references may also contain database-derived interface
+implementers. A successful link is a navigation aid, not an additional existence/authorization check.
+
 Review scope on 20 October: all feature runtime/configuration/manifest changes and their tests.
 The substantial duplication was in documentation and the already removed VS Code path.
 The cleanup removes the redundant SID-validation wrapper and replaces nested formatter selection
 with explicit guards, preserving behavior. No new resolver layer or broader rewrite is warranted.
 The offline Eclipse fragment helper remains useful for different client JSON shapes; auth/cache/target tests cover distinct boundaries.
+
+An unrelated earlier review observation remains deferred: multi-target runtime configuration does
+not inherit `ARC1_SERVER_NAME`. It is not the cause of Copilot's stale input-validator cache.
 
 ## Evidence and sources
 

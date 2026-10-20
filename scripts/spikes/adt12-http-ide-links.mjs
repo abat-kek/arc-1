@@ -16,7 +16,7 @@ const { createMcpHandler } = await import(new URL('dist/server/http.js', root));
 const { appendIdeLinks } = await import(new URL('dist/server/ide-links.js', root));
 const { resolveHttpIdeContext } = await import(new URL('dist/server/ide-request.js', root));
 const { DEFAULT_CONFIG } = await import(new URL('dist/server/types.js', root));
-// Deliberately local transport spike, not a BTP deployment or production parser.
+// Local transport spike using the production parser; not a live BTP deployment.
 const target = 'A4H/001';
 const payload = JSON.stringify({ objectType: 'CLAS', objectName: 'CL_ABAP_TYPEDESCR', target });
 let calls = 0;

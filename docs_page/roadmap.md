@@ -373,29 +373,18 @@ fixtures avoid the pre-delete, but do not fix this runtime gap; do not add a ski
 - **Priority / effort / status:** P1 / S / Needs environment
 - **Category:** Compatibility
 
-**Remaining gap.** [PR #1025](https://github.com/arc-mcp/arc-1/pull/1025) has live public-router,
-XSUAA OAuth, pinned/aggregate PP and shared-Basic reads, request-local Eclipse preferences,
-restart/token-refresh and VS Code Copilot-to-native-ADT evidence. A4H/100 now has successful discovery and
-pinned/aggregate source samples, but also repeatable 120-second source-read timeouts, including with
-explicit active selection after restart. Two distinct SAP identities, a known-but-ungranted target
-under `xsuaa-attribute`, and PP-only multi-instance routing remain unqualified live. Automated coverage
-exists for both authorization modes and distinct clients/users; it does not replace these live checks.
-The [19 October follow-up](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-btp-editor-acceptance.md)
-records the earlier direct-link experiment on four live targets and six Copilot reads across Eclipse/VS Code,
-and restart/refresh recovery. Client 100 still timed out; CF authentication is no longer a blocker.
+**Remaining gap.** A4H/100 has successful discovery/source samples but recurring 120-second source
+read timeouts, reproduced on original 0.9.27 too. Second-user SAP identity, a known-but-ungranted
+live `xsuaa-attribute` target and PP-only multi-instance routing remain unqualified.
 
-**Resume with.** Trace the A4H/100 SAP/Connectivity source-read timeout using the request IDs and UTC
-windows in the acceptance record; successful PP setup and discovery narrow the problem but do not
-prove the entire backend path is healthy. Obtain a second authorized test identity and a denied-target
-test account, and use an isolated PP-only multi-instance deployment. The existing shared-Basic test
-app must retain one instance. Keep aggregate target selection and changed-tool-surface recovery in
-client acceptance; the tested Copilot stale-validator failure is resolved by a window reload and
-stable separate entries, including post-restart execution.
-Preferences opt in presentation; they do not attest the application or prove a local alias's backend.
+**Already verified.** Public-router OAuth, pinned/aggregate PP and shared-Basic reads, request-local
+Eclipse preferences, restart/token refresh, and actual Copilot → SAP ADT MCP → VS Code opening.
+[Evidence and timeout trace anchors](https://github.com/arc-mcp/arc-1/blob/main/docs/research/ide-navigation-verification.md#historical-btp-matrix).
 
-The [implementation and acceptance record](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-18-btp-native-ide-links.md)
-keeps these deployment gaps distinct from canonical editor identity (COMPAT-20). Closed
-[PR #676](https://github.com/arc-mcp/arc-1/pull/676) remains historical bridge context.
+**Resume with.** Trace the client-100 SAP/Connectivity source path, obtain a second authorized identity
+and denied-target account, then test an isolated PP-only multi-instance deployment. Keep the existing
+shared-Basic test app at one instance. Retain required aggregate `target`; stale Copilot validator
+recovery uses window reload and stable separate entries.
 
 <a id="compat-20"></a>
 ### COMPAT-20 — Canonical ADT editor identity for AI edits
@@ -403,45 +392,19 @@ keeps these deployment gaps distinct from canonical editor identity (COMPAT-20).
 - **Priority / effort / status:** P2 / M / Needs research
 - **Category:** Compatibility
 
-**Remaining gap.** VS Code now uses SAP ADT MCP canonical source URIs exclusively; the duplicate
-ARC-1 flat-link builder and alias-mapping configuration were removed. Opening a canonical URI
-does not yet establish dirty-buffer reuse,
-Keep/Undo, save, validation, transport assignment, or activation parity. The
-[ABAP Bridge](https://github.com/arc-mcp/arc1-abap-bridge) still supports validation and editable diffs.
+**Remaining gap.** Canonical opening does not establish dirty-buffer reuse, Keep/Undo, save,
+validation, transport or activation parity with the [ABAP Bridge](https://github.com/arc-mcp/arc1-abap-bridge).
+Local ADT session recovery, same-name/type collisions, includes and other clients also need qualification.
 
-**New evidence.** SAP `abap_object_get_file_uri`/`abap_object_list_file_uris` succeeded against live
-SAP through ADT 1.2's local MCP server (3.62.0, 33 tools). An older 1.1.2 process owning the configured
-port explained the previously missing tools. Class object resolution returned metadata; source URI,
-source AFF filename or `mainFile` selection returned canonical source URIs. Browser opening then
-encountered destination disconnects, including after successful browser logon.
-The simple conditional MCP initialize hint is now in draft PR #1025. A fresh native picker also
-disconnected independently of Copilot. The revised Copilot run preserved the confirmed alias and
-reported failure accurately, but still retried after a resolver error. Native composition remains
-experimental; instructions do not enforce cross-server behavior.
-[Current acceptance record](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-native-mcp-composition.md).
+**Already verified.** The simplified runtime `7b00407a` passed pinned/aggregate BTP reads, SAP name/type
+resolution, exact URI encoding, clicked interface/CDS opening and an explicit missing-object stop case.
+Earlier native-error retries failed; instructions cannot enforce cross-server behavior.
+[Current acceptance](https://github.com/arc-mcp/arc-1/blob/main/docs/research/ide-navigation-verification.md#final-simplified-runtime-acceptance).
 
-Fresh [name/type tests](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-native-mcp-identifiers.md)
-resolve CLAS, INTF, PROG and namespaced DDLS directly to source without a file-list call. The resolver
-also accepted mismatched/unknown supplied types; exact type matching and same-name collisions need
-qualification. The [BTP-to-native follow-up](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-btp-native-end-to-end.md)
-now verifies actual Copilot pinned/aggregate reads, native name/type resolution, exact URI encoding
-and canonical editor opening for an interface and namespaced CDS source. The disconnect cause remains
-unconfirmed; local sign-in/reload recovered the test. A bare `abap:` Markdown target was rendered as
-text, so the hint now uses SAP's verified `/open?abapUri=` handler.
-The final simplified runtime `7b00407a` repeated both openings with actual Copilot and passed the
-missing-object/no-fallback check; removal of the flat-link builder is now covered live. This short
-run does not establish persistent-session recovery or other models' stop behavior.
-
-**Resume with.** Diagnose the local ADT session logoff and test reliable recovery. Canonical opening
-now has the narrow live evidence above; test editor identity and dirty-buffer reuse on disposable
-objects with unsaved edits next.
-For setup, no ARC-1 destination-map headers remain. Investigate a local destination picker that saves each developer's confirmed mapping.
-SAP's SID fallback selects the first logged-on match without checking backend/client; it cannot
-replace that mapping generally. [Destination-selection research](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-destination-selection.md).
-Qualify each edit/save operation separately before replacing
-the bridge workflow; keep navigation available independently. Evidence: the
-[ADT 1.2 research record](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-17-adt12-native-ide-links.md)
-and closed [PR #676](https://github.com/arc-mcp/arc-1/pull/676).
+**Resume with.** Diagnose local session logoff; test dirty buffers and each edit/save operation on
+disposable objects. A local picker could save each developer's confirmed connection/target mapping;
+SAP's first-match SID fallback cannot verify backend/client. No ARC-1 VS Code mapping settings remain.
+[Decisions and original requirements](https://github.com/arc-mcp/arc-1/blob/main/docs/research/ide-navigation-decisions.md).
 
 <a id="compat-21"></a>
 ### COMPAT-21 — Eclipse Copilot links and exact project selection
@@ -449,27 +412,18 @@ and closed [PR #676](https://github.com/arc-mcp/arc-1/pull/676).
 - **Priority / effort / status:** P2 / M / Needs research
 - **Category:** Compatibility
 
-**Remaining gap.** PR #1025 now implements explicit Eclipse SID navigation and an offline
-`arc1 config ide` fragment generator. Local packed npx and single-HTTP reads passed, and generated
-CLAS/INTF/PROG/DDLS links opened in native Eclipse ADT. Fresh BTP acceptance now covers direct Eclipse
-OAuth, pinned/aggregate reads and link rendering, including after CF restart. Automated direct clicks
-remain inconclusive. Earlier user screenshots show project selection and source opening but do not
-distinguish the direct link from the HTTP handoff. HTTP `off` generation, the global
-`--client` ambiguity and missing single-target SID guidance are fixed. Actual Eclipse Copilot local-stdio
-`env` forwarding, live read and link rendering now pass. The CF authentication blocker was resolved.
+**Remaining gap.** Direct Eclipse Copilot clicking and exact project/backend matching. User screenshots
+show chooser and source but do not identify whether the direct or adjacent HTTP handoff link initiated it.
+Same SID/client can describe different backends; ARC-1 cannot force a chooser.
 
-Exact project selection remains open. A4H_2023 and A4H_2025 share SID A4H/client 001; native selection
-is not fail-closed and ARC-1 cannot force a chooser. Encoded H01.EN selected H01_EN, but its unavailable
-backend prevented source opening. Some project names fail Java URI host validation.
+**Already verified.** Local `npx`, HTTP/BTP pinned/aggregate reads, preference forwarding, rendering,
+restart recovery and native-dialog opening for CLAS/INTF/PROG/DDLS. Isolated Claude plugin preference
+substitution passed; installed ARC-1 UI and Desktop opening remain unqualified.
 
-**Resume with.** With the `adt` handler enabled, manually click a fresh Copilot answer containing only
-the generated `adt://` link to distinguish it from HTTP handoff. Qualify exact native project/destination matching, authority validation, collisions,
-missing-project fallbacks, cloud projects and other OSes before adding richer links or a companion.
-Retain explicit per-client opt-in and clear target/SID/client labels. Claude plugin preference substitution passed a real isolated plugin probe for defaults and a settings-file override; production plugin/MCPB fields now default off. Qualify the installed ARC-1 UI and Desktop opening separately. A dropdown remains deferred until a minimum-client policy accepts its v2.1.271+ requirement. A dedicated per-server entry remains available. No automatic SID/client-name inference or global local-alias sharing.
-
-Evidence: [original editor research](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-editor-links-and-setup.md)
-and [implementation/setup follow-up](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-ide-setup-simplification.md),
-plus [live BTP/Copilot acceptance](https://github.com/arc-mcp/arc-1/blob/main/docs/research/2026-10-19-btp-editor-acceptance.md).
+**Resume with.** Enable the `adt` handler and manually click a fresh answer containing only the direct
+link. Qualify project-name authorities, collisions, missing/cloud projects and other OSes before richer
+links or a companion. Keep per-client opt-in; defer the plugin dropdown pending a minimum-client policy.
+[Options and evidence limits](https://github.com/arc-mcp/arc-1/blob/main/docs/research/ide-navigation-decisions.md#eclipse-contract-and-unresolved-selection).
 
 <a id="sec-14"></a>
 ### SEC-14 — DNS rebinding and Host-header hardening

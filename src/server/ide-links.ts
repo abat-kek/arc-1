@@ -7,8 +7,8 @@ import {
   objectBasePath,
 } from '../handlers/object-types.js';
 import type { ToolResult } from '../handlers/shared.js';
-import { isIdeSystemId } from './ide-config.js';
 import type { IdeLinkContext } from './ide-request.js';
+import { SAP_SYSID_PATTERN } from './multi-target-identity.js';
 import type { ServerConfig } from './types.js';
 
 export const IDE_LINK_LIMIT = 8;
@@ -24,7 +24,7 @@ export interface IdeObject {
 
 /** SID navigation is a local project-selection aid, not an exact backend binding. */
 export function buildEclipseLink(systemId: string, object: IdeObject): string | undefined {
-  if (!isIdeSystemId(systemId)) return undefined;
+  if (!SAP_SYSID_PATTERN.test(systemId)) return undefined;
   const type = normalizeObjectType(object.type);
   if (!SOURCE_TYPES.has(type) || object.name.length > 80 || !/^(?:\/[A-Z0-9_]+\/)?[A-Z0-9_]+$/i.test(object.name)) {
     return undefined;
@@ -109,16 +109,19 @@ export function appendIdeLinks(
 ): ToolResult {
   if (result.isError || config.ideLinks !== 'eclipse') return result;
   // HTTP presentation comes exclusively from this request, never a sticky/global client preference.
-  const context: IdeLinkContext | undefined =
-    config.transport === 'http-streamable'
-      ? requestContext?.target === config.targetId && (!config.multiTargetEndpoints || !!config.targetId)
-        ? requestContext
-        : undefined
-      : !config.multiTargetEndpoints && !config.targetId && !config.destinationName
-        ? { style: 'eclipse', systemId: config.ideSystemId }
-        : undefined;
-  if (context?.style !== 'eclipse' || !isIdeSystemId(context.systemId) || context.systemId !== config.ideSystemId)
+  if (config.transport === 'http-streamable') {
+    if (
+      requestContext?.style !== 'eclipse' ||
+      requestContext.target !== config.targetId ||
+      requestContext.systemId !== config.ideSystemId ||
+      (config.multiTargetEndpoints && !config.targetId)
+    )
+      return result;
+  } else if (config.multiTargetEndpoints || config.targetId || config.destinationName) {
     return result;
+  }
+  const systemId = config.ideSystemId;
+  if (!SAP_SYSID_PATTERN.test(systemId)) return result;
   try {
     if (tool === 'SAP') {
       const expanded = expandHyperfocusedArgs(args);
@@ -128,7 +131,7 @@ export function appendIdeLinks(
     }
     const links = new Map<string, string>();
     for (const object of candidates(tool, args, result)) {
-      const link = buildEclipseLink(context.systemId, object);
+      const link = buildEclipseLink(systemId, object);
       if (!link || links.has(link)) continue;
       links.set(link, `- [${object.name.toUpperCase()} (${normalizeObjectType(object.type)})](${link})`);
       if (links.size >= IDE_LINK_LIMIT) break;
@@ -140,7 +143,7 @@ export function appendIdeLinks(
         ...result.content,
         {
           type: 'text',
-          text: `\nOpen current source in Eclipse ADT (${config.targetId ? `target: ${config.targetId}; ` : ''}SAP SID: ${context.systemId}; client: ${config.client}; up to ${IDE_LINK_LIMIT} links). Check the local project matches this backend; duplicate SIDs may show a project chooser.\n${[...links.values()].join('\n')}`,
+          text: `\nOpen current source in Eclipse ADT (${config.targetId ? `target: ${config.targetId}; ` : ''}SAP SID: ${systemId}; client: ${config.client}; up to ${IDE_LINK_LIMIT} links). Check the local project matches this backend; duplicate SIDs may show a project chooser.\n${[...links.values()].join('\n')}`,
         },
       ],
     };

@@ -20,8 +20,8 @@ import { parseBlockedDataSourcesCsv } from '../adt/data-source-name.js';
 import type { SafetyConfig } from '../adt/safety.js';
 import { resolveSapUserAgent } from '../adt/user-agent.js';
 import { parseDenyActions, validateDenyActions } from './deny-actions.js';
-import { isIdeSystemId } from './ide-config.js';
 import { logger } from './logger.js';
+import { SAP_SYSID_PATTERN } from './multi-target-identity.js';
 import type {
   ConfigSource,
   FeatureToggle,
@@ -1078,7 +1078,7 @@ export function parseArgs(args: string[]): ServerConfig {
  * Fails fast at startup for invalid or dangerous config combinations.
  */
 export function validateConfig(config: ServerConfig): void {
-  if (config.ideSystemId && !isIdeSystemId(config.ideSystemId)) {
+  if (config.ideSystemId && !SAP_SYSID_PATTERN.test(config.ideSystemId)) {
     throw new Error('ARC1_IDE_SYSTEM_ID must be the real three-character SAP SID (uppercase, starting with a letter).');
   }
   if (config.multiTargetEndpoints && config.ideSystemId && !config.targetId) {

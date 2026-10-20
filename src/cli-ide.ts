@@ -1,7 +1,6 @@
 /** Offline presentation-config generator. Never inspects credentials, writes settings, or contacts SAP. */
 import { type Command, Option } from 'commander';
-import { isIdeSystemId } from './server/ide-config.js';
-import { targetFromPinnedMcpPath } from './server/multi-target-identity.js';
+import { SAP_SYSID_PATTERN, targetFromPinnedMcpPath } from './server/multi-target-identity.js';
 
 export interface IdeSetupOptions {
   client: 'eclipse' | 'claude';
@@ -17,7 +16,7 @@ export function buildIdeConfigFragment(options: IdeSetupOptions): Record<string,
   }
   if (editor !== 'eclipse' && options.systemId) throw new Error('--system-id is only for Eclipse links.');
   if (!options.endpoint) {
-    if (editor === 'eclipse' && !isIdeSystemId(options.systemId ?? '')) {
+    if (editor === 'eclipse' && !SAP_SYSID_PATTERN.test(options.systemId ?? '')) {
       throw new Error('Provide --system-id with the real three-character SAP SID.');
     }
     return {

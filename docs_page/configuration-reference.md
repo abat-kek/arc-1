@@ -408,7 +408,7 @@ Optional pre-write validation layers and tool/schema selection.
 
 ## IDE navigation
 
-[VS Code navigation](ide-integration.md#compose-arc-1-with-saps-native-resolver) uses the local SAP
+[VS Code navigation](ide-integration.md#vs-code-with-sap-adt) uses the local SAP
 ADT MCP resolver and requires no ARC-1 link settings or destination-map headers. The options below
 are only for Eclipse presentation; they never select the SAP connection or grant authorization.
 

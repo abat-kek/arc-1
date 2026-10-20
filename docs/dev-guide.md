@@ -43,7 +43,7 @@ duplicating it here proved to drift). The compact per-variable table stays in AG
 VS Code navigation composes ARC-1 research with the local SAP ADT MCP resolver through the conditional
 initialize hint in `server-instructions.ts`. No ARC-1 flat-file URI builder or destination-map header
 remains. Require a user-confirmed backend/client mapping; never infer it from a SID or bypass an
-ARC-1 denial. [Native acceptance and limits](research/2026-10-19-btp-native-end-to-end.md).
+ARC-1 denial. [Native acceptance and limits](research/ide-navigation-verification.md).
 
 Eclipse: `src/server/ide-links.ts` appends a separate, bounded text block after successful research
 dispatch. Preserve source/JSON, ignore arbitrary backend URIs, and avoid extra SAP requests. The real

@@ -28,6 +28,7 @@ import {
 import { prepareDataPreviewWireBody } from './http-wire-body.js';
 import { legacyContentHandlerFallback, rejectEmptyAdtHtmlResponse } from './legacy-content-handler.js';
 import { fetchWithAttemptBudget } from './request-attempt-budget.js';
+import { hasSecuritySessionCookie, SecuritySessionGate } from './security-session-gate.js';
 import type { Semaphore } from './semaphore.js';
 import { resolveSapUserAgent } from './user-agent.js';
 
@@ -197,6 +198,8 @@ export class AdtHttpClient {
   private dbRetryInProgress = false;
   /** Set after a 401 clears stale cookies — triggers file reload on the next request */
   private cookiesCleared = false;
+  /** Keeps a cold client at one SAP security session (see security-session-gate.ts). */
+  private readonly securitySessionGate = new SecuritySessionGate();
   /** Shared by stateful clones so one rejected Basic credential cannot fan out internally. */
   private readonly authenticationAttemptState: AuthenticationAttemptState;
   constructor(config: AdtHttpConfig, authenticationAttemptState?: AuthenticationAttemptState) {
@@ -373,10 +376,12 @@ export class AdtHttpClient {
     // feature probes and compound handlers can otherwise start several requests with the same
     // expired password before the first 401 is observed. Once rejected, later requests on this
     // per-call client fail locally and never contact SAP.
-    if (this.config.retryUnauthorized === false) {
-      return this.runSerializedAuthenticationAttempt(path, execute, options);
-    }
-    return execute();
+    const run =
+      this.config.retryUnauthorized === false
+        ? () => this.runSerializedAuthenticationAttempt(path, execute, options)
+        : execute;
+    const cookieNames = () => [...this.cookieJar.keys(), ...Object.keys(this.config.cookies ?? {})];
+    return this.securitySessionGate.run(() => hasSecuritySessionCookie(cookieNames()), run, options);
   }
 
   private async runSerializedAuthenticationAttempt<T>(
@@ -1229,6 +1234,7 @@ export class AdtHttpClient {
   private resetSession(): void {
     this.cookieJar.clear();
     this.csrfToken = '';
+    this.securitySessionGate.reset();
   }
 
   /**
@@ -1263,10 +1269,7 @@ export class AdtHttpClient {
   }
 
   private storeCookies(response: Response): void {
-    const setCookieHeaders = response.headers.getSetCookie();
-    if (!setCookieHeaders || setCookieHeaders.length === 0) return;
-
-    for (const cookie of setCookieHeaders) {
+    for (const cookie of response.headers.getSetCookie() ?? []) {
       // Set-Cookie: name=value; Path=/; HttpOnly; ...
       const nameValue = cookie.split(';')[0];
       if (!nameValue) continue;
@@ -1276,6 +1279,7 @@ export class AdtHttpClient {
       const value = nameValue.substring(eqIdx + 1).trim();
       this.cookieJar.set(name, value);
     }
+    this.securitySessionGate.open();
   }
 
   /** Add SAP context query params unless the caller sends that context in headers. */

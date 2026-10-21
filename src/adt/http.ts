@@ -816,12 +816,6 @@ export class AdtHttpClient {
           const retryResp = await this.doFetch(url, method, fallbackHeaders, wireBody, options);
           const retryBody = await retryResp.text();
 
-          // Store CSRF token from retry response
-          const retryToken = retryResp.headers.get('x-csrf-token');
-          if (retryToken && retryToken !== 'Required') {
-            this.csrfToken = retryToken;
-          }
-
           const retryResult = this.handleResponse(retryResp.status, retryResp.headers, retryBody, path, expectBody);
 
           const currentContentType = contentType ?? headers['Content-Type'];
@@ -851,12 +845,6 @@ export class AdtHttpClient {
           return retryResult;
         }
         // No meaningful header change — fall through to normal error handling
-      }
-
-      // Store CSRF token from response
-      const responseToken = response.headers.get('x-csrf-token');
-      if (responseToken && responseToken !== 'Required') {
-        this.csrfToken = responseToken;
       }
 
       const result = this.handleResponse(response.status, response.headers, responseBody, path, expectBody);
@@ -1339,20 +1327,20 @@ export class AdtHttpClient {
       () => hasSecuritySessionCookie(cookieNames()),
       async (waited) => {
         const generation = this.securitySessionGate.generation;
-        const outbound = { ...headers };
         if (waited) {
           // A preceding response may have replaced both fields while this send waited.
+          // Keep the refreshed pair for this logical request's negotiation/retry paths too.
           const cookie = this.composeCookieHeader();
-          if (cookie) outbound.Cookie = cookie;
-          else delete outbound.Cookie;
-          if (isModifyingMethod(method)) outbound['X-CSRF-Token'] = this.csrfToken;
+          if (cookie) headers.Cookie = cookie;
+          else delete headers.Cookie;
+          if (isModifyingMethod(method)) headers['X-CSRF-Token'] = this.csrfToken;
         }
-        const response = await this.sendRequest(url, method, outbound, body, options);
-        const fetchingCsrf = outbound['X-CSRF-Token']?.toLowerCase() === 'fetch';
+        const response = await this.sendRequest(url, method, headers, body, options);
+        const fetchingCsrf = headers['X-CSRF-Token']?.toLowerCase() === 'fetch';
         if (generation === this.securitySessionGate.generation) {
           // Store once at the headers boundary, before releasing the bootstrap owner.
           this.storeCookies(response);
-          const token = fetchingCsrf ? usableCsrfToken(response) : undefined;
+          const token = usableCsrfToken(response);
           if (token) this.csrfToken = token;
         } else if (fetchingCsrf) {
           await response.body?.cancel();

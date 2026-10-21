@@ -331,4 +331,62 @@ describe('SAP security session recovery', () => {
     expect(sent[2]).toMatchObject({ Cookie: 'SAP_SESSIONID_A4H_001=FRESH', 'X-CSRF-Token': 'TOKEN-FRESH' });
     expect(mockFetch).toHaveBeenCalledTimes(3);
   });
+
+  it.each(['ordinary', 'negotiation'])('does not restore an old token after a slow %s body', async (kind) => {
+    const bodyStarted = deferred();
+    const bodyRelease = deferred();
+    let oldCalls = 0;
+    let writeHeaders: Record<string, string> | undefined;
+    mockFetch.mockImplementation(async (url, init) => {
+      if (new URL(url).pathname === '/old') {
+        if (++oldCalls === 1 && kind === 'negotiation') return mockResponse(406, 'Not acceptable');
+        const response = sessionResponse('OLD', 'TOKEN-OLD');
+        vi.spyOn(response, 'text').mockImplementation(async () => {
+          bodyStarted.resolve();
+          await bodyRelease.promise;
+          return 'old body';
+        });
+        return response;
+      }
+      if (init.method === 'HEAD') return sessionResponse('FRESH', 'TOKEN-FRESH');
+      writeHeaders = init.headers;
+      return mockResponse(200, 'ok');
+    });
+    const client = new AdtHttpClient({ ...config, cookieString: 'MYSAPSSO2=old' });
+    const old = client.get('/old', { Accept: 'application/vnd.sap.adt.test.v1+xml' });
+    await bodyStarted.promise;
+    client.markCookiesStale();
+    await client.fetchCsrfToken();
+    bodyRelease.resolve();
+    await old;
+    await client.post('/write', 'body');
+
+    expect(writeHeaders).toMatchObject({ Cookie: 'SAP_SESSIONID_A4H_001=FRESH', 'X-CSRF-Token': 'TOKEN-FRESH' });
+    expect(mockFetch).toHaveBeenCalledTimes(kind === 'ordinary' ? 3 : 4);
+  });
+
+  it('retains a queued request session on its content-negotiation retry', async () => {
+    const ownerStarted = deferred();
+    const ownerRelease = deferred();
+    const cookies: Array<string | undefined> = [];
+    mockFetch.mockImplementation(async (url, init) => {
+      if (new URL(url).pathname === '/owner') {
+        ownerStarted.resolve();
+        await ownerRelease.promise;
+        return sessionResponse('S1');
+      }
+      cookies.push(init.headers.Cookie);
+      return cookies.length === 1 ? mockResponse(406, 'Not acceptable') : mockResponse(200, 'ok');
+    });
+    const client = new AdtHttpClient(config);
+    const owner = client.get('/owner');
+    await ownerStarted.promise;
+    const queued = client.get('/negotiated', { Accept: 'application/vnd.sap.adt.test.v1+xml' });
+    await nextTurn();
+    ownerRelease.resolve();
+    await Promise.all([owner, queued]);
+
+    expect(cookies).toEqual(['SAP_SESSIONID_A4H_001=S1', 'SAP_SESSIONID_A4H_001=S1']);
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
 });

@@ -1,18 +1,11 @@
 /**
  * Lets one request establish the SAP security session before a cold client fans out.
  *
- * SAP issues a new security session to every request that arrives without the
- * `SAP_SESSIONID_<SID>_<CLNT>` cookie. A parallel fan-out on a cold client (startup
- * feature probes, compound handlers) therefore opens one session per request, and all
- * but one are never sent back. SAP counts those unused sessions per user
- * (SICF_SESSIONS "session limit", default 100, kept for http/security_session_timeout);
- * once the limit is reached it stops issuing sessions for that user. Reads still work
- * with Basic auth, but a stateful LOCK → PUT → UNLOCK then fails with
- * "400 Session not found" (ICF re-authentication, SAP Note 1301591) and leaves the
- * enqueue lock behind.
+ * Returning the first response's cookie avoids issuing unused sessions for every
+ * startup probe. See docs/research/2026-10-22-security-session-bootstrap.md.
  */
 
-import { awaitWithinRequestBudget, type RequestDeadlineOptions } from './http-deadline.js';
+import { awaitWithinRequestBudget, type RequestDeadlineOptions, throwIfRequestCancelled } from './http-deadline.js';
 
 /** True when one of the cookies is a SAP security session cookie (`SAP_SESSIONID_<SID>_<CLNT>`). */
 export function hasSecuritySessionCookie(cookieNames: Iterable<string>): boolean {
@@ -20,46 +13,50 @@ export function hasSecuritySessionCookie(cookieNames: Iterable<string>): boolean
 }
 
 export class SecuritySessionGate {
-  private opened: Promise<void> | undefined;
-  private release: (() => void) | undefined;
-  private done = false;
+  private pending: Promise<void> | undefined;
+  private ready = false;
+  private currentGeneration = 0;
+
+  get generation(): number {
+    return this.currentGeneration;
+  }
 
   /**
-   * Runs the request. Without a session cookie only the first request goes to SAP; the
-   * others wait until its response (and its Set-Cookie) has arrived, see open(). They do not
-   * wait for a long-running first request to finish. Once open, the gate stays open even if
-   * SAP sent no session cookie, so a system without security sessions is not serialized.
+   * Serialize only the first wire response. A rejection lets one waiter take over;
+   * a real cookie-less response opens the gate for systems without security sessions.
    */
   async run<T>(
     hasSessionCookie: () => boolean,
-    request: () => Promise<T>,
+    request: (waited: boolean) => Promise<T>,
     options?: RequestDeadlineOptions,
   ): Promise<T> {
-    if (this.done || hasSessionCookie()) return request();
-    if (this.opened) {
-      await awaitWithinRequestBudget(this.opened, options);
-      return request();
+    let waited = false;
+    while (this.pending) {
+      waited = true;
+      await awaitWithinRequestBudget(this.pending, options);
     }
-    this.opened = new Promise<void>((resolve) => {
-      this.release = resolve;
+    throwIfRequestCancelled(options);
+    if (this.ready || hasSessionCookie()) return request(waited);
+
+    const generation = this.generation;
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
     });
+    this.pending = pending;
     try {
-      return await request();
+      const result = await request(waited);
+      if (generation === this.generation) this.ready = true;
+      return result;
     } finally {
-      this.open();
+      if (this.pending === pending) this.pending = undefined;
+      release();
     }
   }
 
-  /** Called once a SAP response's cookies are stored: the session it issued (if any) now exists. */
-  open(): void {
-    this.done = true;
-    this.opened = undefined;
-    this.release?.();
-    this.release = undefined;
-  }
-
-  /** Arms the gate again after the session cookies were cleared. */
+  /** Keep a pending owner until it settles, but reject its old session state. */
   reset(): void {
-    this.done = false;
+    this.currentGeneration++;
+    this.ready = false;
   }
 }

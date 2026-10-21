@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mockResponse } from '../../helpers/mock-fetch.js';
 
 const mockFetch = vi.fn();
@@ -7,6 +7,7 @@ vi.mock('undici', async (importOriginal) => ({
   fetch: mockFetch,
 }));
 const { AdtHttpClient } = await import('../../../src/adt/http.js');
+const { logger } = await import('../../../src/server/logger.js');
 const config = { baseUrl: 'https://sap.example.test', username: 'user', password: 'secret', client: '001' };
 
 function deferred() {
@@ -26,6 +27,9 @@ const nextTurn = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 describe('SAP security session recovery', () => {
   beforeEach(() => {
     mockFetch.mockReset();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('lets only one surviving waiter bootstrap after a network rejection', async () => {
@@ -388,5 +392,34 @@ describe('SAP security session recovery', () => {
 
     expect(cookies).toEqual(['SAP_SESSIONID_A4H_001=S1', 'SAP_SESSIONID_A4H_001=S1']);
     expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('audits the context actually sent by a queued CSRF probe', async () => {
+    const started = deferred();
+    const release = deferred();
+    const audit = vi.spyOn(logger, 'emitAudit').mockImplementation(() => undefined);
+    let csrfCookie: string | undefined;
+    mockFetch.mockImplementation(async (_url, init) => {
+      if (init.method === 'GET') {
+        started.resolve();
+        await release.promise;
+        return mockResponse(200, 'ok', {}, ['SAP_SESSIONID_A4H_001=S1; Path=/', 'sap-contextid=CONTEXT; Path=/']);
+      }
+      csrfCookie = init.headers.Cookie;
+      return sessionResponse('S1', 'TOKEN-S1');
+    });
+    const client = new AdtHttpClient({ ...config, sessionType: 'stateful' });
+    const owner = client.get('/owner');
+    await started.promise;
+    const csrf = client.fetchCsrfToken();
+    await nextTurn();
+    release.resolve();
+    await Promise.all([owner, csrf]);
+
+    expect(csrfCookie).toContain('sap-contextid=CONTEXT');
+    const event = audit.mock.calls.map(([value]) => value).find((value) => value.event === 'http_csrf_fetch');
+    expect(event).toMatchObject({ hasContext: true, adtMode: 'stateful', success: true });
+    expect(JSON.stringify(event)).not.toContain('CONTEXT');
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 });

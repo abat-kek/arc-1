@@ -1045,7 +1045,7 @@ export class AdtHttpClient {
         success: !!usableCsrfToken(response),
         adtMode:
           headers['X-sap-adt-sessiontype'] === undefined ? 'unspecified' : (this.config.sessionType ?? 'unspecified'),
-        hasContext: /(?:^|;\s*)sap-contextid=/.test(cookieHeader ?? ''),
+        hasContext: /(?:^|;\s*)sap-contextid=/.test(headers.Cookie ?? ''),
       });
       if (method === 'GET' && response.status === 200 && !usableCsrfToken(response)) {
         // Check login pages, but preserve the header-only legacy discovery fallback.
@@ -1340,8 +1340,9 @@ export class AdtHttpClient {
         if (generation === this.securitySessionGate.generation) {
           // Store once at the headers boundary, before releasing the bootstrap owner.
           this.storeCookies(response);
-          const token = usableCsrfToken(response);
-          if (token) this.csrfToken = token;
+          // Ordinary responses (including 404) can carry a token without proving a Fetch probe succeeded.
+          const token = fetchingCsrf ? usableCsrfToken(response) : response.headers.get('x-csrf-token');
+          if (token && token !== 'Required') this.csrfToken = token;
         } else if (fetchingCsrf) {
           await response.body?.cancel();
           throw new AdtNetworkError('SAP session changed during CSRF bootstrap. Retry the request.');
